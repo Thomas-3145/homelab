@@ -1,0 +1,6 @@
+proxmox_api_url          = "https://192.168.10.20:8006"
+proxmox_api_token_id     = "user@pam!token-name"
+proxmox_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+ssh_public_key           = "ssh-rsa AAAA... user@host"
+target_node              = "pve"
+template_id              = 9000
