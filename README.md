@@ -186,7 +186,7 @@ This project is built in phases. See [docs/roadmap.md](docs/roadmap.md) for deta
 ## Blog Series
 
 Follow my journey building this homelab on my blog:
-- [Blog link] - (add your blog URL)
+- https://3145.blog/
 
 ## License
 
