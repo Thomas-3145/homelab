@@ -1,0 +1,63 @@
+# Secrets and sensitive files
+*.tfvars
+!*.tfvars.example
+*.secret
+*.env
+!*.env.example
+.secrets/
+secrets/
+*-secret.yaml
+*-secret.yml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform.lock.hcl
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ansible
+*.retry
+.vault_pass
+.vault_password
+*.vault
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+.kube/
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+temp/
+tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Node
+node_modules/
+package-lock.json
