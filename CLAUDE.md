@@ -67,7 +67,7 @@ homelab/
 ### Prerequisites
 
 - Proxmox API token configured in `terraform/proxmox/terraform.tfvars`
-- AlmaLinux 9 cloud-init template created on Proxmox (template ID in variables)
+- Ubuntu Server cloud-init template created on Proxmox (template ID in variables)
 
 ### Common Operations
 
@@ -266,7 +266,7 @@ Several critical services currently run on Media Pi (Docker) and must be migrate
 - **Solution**: `terraform force-unlock LOCK_ID`
 
 **Problem**: "Error creating VM: template not found"
-- **Cause**: AlmaLinux template not created or wrong ID
+- **Cause**: Ubuntu Server template not created or wrong ID
 - **Solution**: Check `var.template_id` in terraform.tfvars matches Proxmox template
 
 ### Ansible Issues

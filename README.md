@@ -76,7 +76,7 @@ This repository contains the complete infrastructure setup for my homelab - from
 ```
 homelab/
 ├── terraform/              # Infrastructure provisioning
-│   ├── proxmox/           # Proxmox VMs (AlmaLinux 9)
+│   ├── proxmox/           # Proxmox VMs (Ubuntu Server)
 │   └── aws/               # AWS resources (future)
 │
 ├── ansible/                # Configuration management

@@ -19,7 +19,7 @@
 
 ### Objectives
 - Set up Terraform with Proxmox provider
-- Create AlmaLinux 9 cloud-init template
+- Create Ubuntu Server cloud-init template
 - Define k3s node VMs in code
 - Make infrastructure reproducible and versionable
 
@@ -57,11 +57,11 @@ provider "proxmox" {
 
 **Deliverable**: Working Terraform provider connection
 
-#### 1.3 AlmaLinux 9 Template
+#### 1.3 Ubuntu Server Template
 Two options:
 
 **Option A: Manual (Simpler for first time)**
-1. Download AlmaLinux 9 cloud image
+1. Download Ubuntu Server cloud image
 2. Create VM template in Proxmox
 3. Add cloud-init drive
 4. Convert to template
@@ -72,12 +72,12 @@ Two options:
 - Can be version controlled
 
 ```bash
-# Download AlmaLinux cloud image
-wget https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2
+# Download Ubuntu Server cloud image (22.04 LTS or 24.04 LTS)
+wget https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
 
 # Import to Proxmox
-qm create 9000 --name almalinux-9-template --memory 2048 --net0 virtio,bridge=vmbr0
-qm importdisk 9000 AlmaLinux-9-GenericCloud-latest.x86_64.qcow2 local-lvm
+qm create 9000 --name ubuntu-server-template --memory 2048 --net0 virtio,bridge=vmbr0
+qm importdisk 9000 jammy-server-cloudimg-amd64.img local-lvm
 qm set 9000 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
 qm set 9000 --ide2 local-lvm:cloudinit
 qm set 9000 --boot c --bootdisk scsi0
@@ -86,7 +86,7 @@ qm set 9000 --agent enabled=1
 qm template 9000
 ```
 
-**Deliverable**: AlmaLinux 9 template ready for cloning
+**Deliverable**: Ubuntu Server template ready for cloning
 
 #### 1.4 Define k3s VMs in Terraform
 Create `terraform/proxmox/vms.tf`:
@@ -95,7 +95,7 @@ resource "proxmox_vm_qemu" "k3s_control_plane" {
   count       = 3
   name        = "k3s-cp-0${count.index + 1}"
   target_node = "proxmox"  # Your Proxmox node name
-  clone       = "almalinux-9-template"
+  clone       = "ubuntu-server-template"
 
   # Resource allocation
   cores   = 2
@@ -146,7 +146,7 @@ terraform apply
 **Deliverable**: Reproducible infrastructure that can be created/destroyed on demand
 
 ### Success Criteria
-- ✅ Terraform successfully creates 3 AlmaLinux 9 VMs
+- ✅ Terraform successfully creates 3 Ubuntu Server VMs
 - ✅ VMs have correct IPs in VLAN 10
 - ✅ SSH access works with key authentication
 - ✅ Infrastructure can be destroyed and recreated
@@ -162,7 +162,7 @@ terraform apply
 **Goal**: Prepare nodes and install k3s cluster with high availability
 
 ### Objectives
-- Configure AlmaLinux nodes (firewall, SELinux, packages)
+- Configure Ubuntu Server nodes (firewall, AppArmor, packages)
 - Install k3s on control plane nodes (HA setup)
 - Join Homelab Pi as worker node
 - Install Longhorn for distributed storage
@@ -207,9 +207,9 @@ all:
 #### 2.2 Node Preparation Playbook
 Create `ansible/playbooks/01-prepare-nodes.yml`:
 - Update all packages
-- Install required packages (curl, nfs-utils, iscsi-initiator-utils)
-- Configure firewall (firewalld for AlmaLinux)
-- Configure SELinux (permissive mode for k3s)
+- Install required packages (curl, nfs-common, open-iscsi)
+- Configure firewall (ufw for Ubuntu)
+- AppArmor (enabled by default on Ubuntu)
 - Disable swap
 - Enable kernel modules for k3s
 
@@ -219,37 +219,55 @@ Create `ansible/playbooks/01-prepare-nodes.yml`:
   hosts: k3s_cluster
   become: yes
   tasks:
-    - name: Update all packages
-      dnf:
-        name: "*"
-        state: latest
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
 
     - name: Install required packages
-      dnf:
+      apt:
         name:
           - curl
           - wget
           - git
-          - nfs-utils
-          - iscsi-initiator-utils
+          - nfs-common
+          - open-iscsi
           - python3-pip
         state: present
 
-    - name: Configure firewalld
-      firewalld:
-        port: "{{ item }}"
-        permanent: yes
+    - name: Enable and configure UFW
+      ufw:
         state: enabled
-      loop:
-        - 6443/tcp  # k3s API
-        - 10250/tcp # kubelet
-        - 2379-2380/tcp # etcd
-      notify: reload firewalld
+        policy: deny
+        direction: incoming
 
-    - name: Set SELinux to permissive
-      selinux:
-        policy: targeted
-        state: permissive
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+
+    - name: Allow k3s API server
+      ufw:
+        rule: allow
+        port: '6443'
+        proto: tcp
+
+    - name: Allow kubelet
+      ufw:
+        rule: allow
+        port: '10250'
+        proto: tcp
+
+    - name: Allow etcd
+      ufw:
+        rule: allow
+        port: '2379:2380'
+        proto: tcp
 
     - name: Disable swap
       command: swapoff -a
@@ -326,8 +344,8 @@ Create `ansible/playbooks/03-install-longhorn.yml`:
   become: yes
   tasks:
     - name: Install open-iscsi
-      dnf:
-        name: iscsi-initiator-utils
+      apt:
+        name: open-iscsi
         state: present
 
     - name: Start iscsid service
