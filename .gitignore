@@ -10,11 +10,14 @@ secrets/
 *-secret.yml
 
 # Terraform
-.terraform/
 *.tfstate
 *.tfstate.*
-*.tfstate.backup
+.terraform/
 .terraform.lock.hcl
+terraform.tfvars
+*.auto.tfvars
+crash.log
+crash.*.log
 override.tf
 override.tf.json
 *_override.tf
