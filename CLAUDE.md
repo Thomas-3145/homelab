@@ -43,9 +43,9 @@ homelab/
 ### Target Architecture
 
 **Control Plane** (3 nodes for HA):
-- k3s-cp-01: 192.168.10.21 (VM on Proxmox, 2 CPU, 4GB RAM, AlmaLinux 9)
-- k3s-cp-02: 192.168.10.22 (VM on Proxmox, 2 CPU, 4GB RAM, AlmaLinux 9)
-- k3s-cp-03: 192.168.10.23 (VM on Proxmox, 2 CPU, 4GB RAM, AlmaLinux 9)
+- k3s-cp-01: 192.168.10.21 (VM on Proxmox, 2 CPU, 4GB RAM, Ubuntu Server)
+- k3s-cp-02: 192.168.10.22 (VM on Proxmox, 2 CPU, 4GB RAM, Ubuntu Server)
+- k3s-cp-03: 192.168.10.23 (VM on Proxmox, 2 CPU, 4GB RAM, Ubuntu Server)
 
 **Worker Nodes**:
 - homelab-pi: 192.168.10.11 (Raspberry Pi 5, 8GB RAM, ARM64) - Physical node
