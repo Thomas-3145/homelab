@@ -23,8 +23,7 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
   }
 
   network_device {
-    bridge  = "vmbr0"
-    vlan_id = 10
+    bridge = "vmbr0"
   }
 
   initialization {
