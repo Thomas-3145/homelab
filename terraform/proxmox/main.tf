@@ -37,7 +37,8 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
 
     user_account {
       username = "ubuntu"
-      keys     = [var.ssh_public_key]
+      # SSH keys will be configured via Ansible instead
+      # Proxmox provider has issues with key injection
     }
   }
 }
