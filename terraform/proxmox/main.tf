@@ -4,12 +4,6 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
   name      = "k3s-cp-0${count.index + 1}"
   node_name = var.target_node
 
-  timeouts {
-    create = "30m"
-    update = "30m"
-    delete = "10m"
-  }
-
   clone {
     vm_id = var.template_id
   }
