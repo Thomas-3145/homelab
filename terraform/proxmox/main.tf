@@ -19,11 +19,12 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
   disk {
     datastore_id = "local-lvm"
     interface    = "scsi0"
-    size         = 20
+    size         = 32
   }
 
   network_device {
-    bridge = "vmbr0"
+    bridge  = "vmbr0"
+    vlan_id = 10
   }
 
   initialization {
@@ -36,6 +37,7 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
 
     user_account {
       username = "ubuntu"
+      keys     = [var.ssh_public_key]
     }
   }
 }
