@@ -4,6 +4,10 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
   name      = "k3s-cp-0${count.index + 1}"
   node_name = var.target_node
 
+  agent {
+    enabled = false
+  }
+
   clone {
     vm_id = var.template_id
   }
@@ -36,9 +40,8 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
 
     user_account {
       username = "ubuntu"
-      password = "ubuntu"  # Temporary password, will change via Ansible
-      # SSH keys will be configured via Ansible instead
-      # Proxmox provider has issues with key injection
+      password = "ubuntu"
+      keys     = [file("~/.ssh/id_rsa_4096.pub")]
     }
   }
 }
