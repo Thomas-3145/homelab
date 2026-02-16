@@ -31,23 +31,23 @@ This repository contains the complete infrastructure setup for my homelab - from
     ┌─────┴─────┐      │       ┌────┴────┐
     │           │      │       │         │
     ▼           ▼      │       ▼         │
-┌─────────┐  ┌─────┐  │   ┌──────┐     │
-│Proxmox  │  │Home │  │   │Media │     │
-│ .10.20  │  │lab  │  │   │Pi    │     │
-│ 32GB    │  │Pi   │  │   │.20.10│     │
-│ 6-core  │  │.10  │  │   │8GB   │     │
-│         │  │.11  │  │   │512GB │     │
-└────┬────┘  └──┬──┘  │   └──────┘     │
-     │          │     │                 │
-     │ k3s HA Cluster│                 │
-     │ (3 control    │                 │
-     │  planes)      │                 │
-     └───────────────┘                 │
-                                       │
-                                  ┌────┴────┐
-                                  │   NFS   │
-                                  │ Storage │
-                                  └─────────┘
+┌─────────┐  ┌─────┐  │   ┌──────┐       │
+│Proxmox  │  │Home │  │   │Media │       │
+│ .10.20  │  │lab  │  │   │Pi    │       │
+│ 32GB    │  │Pi   │  │   │.20.10│       │
+│ 6-core  │  │.10  │  │   │8GB   │       │
+│         │  │.11  │  │   │512GB │       │
+└────┬────┘  └──┬──┘  │   └──────┘       │
+     │          │     │                  │
+     │ k3s HA Cluster│                   │
+     │ (3 control    │                   │
+     │  planes)      │                   │
+     └───────────────┘                   │
+                                         │
+                                    ┌────┴────┐
+                                    │   NFS   │
+                                    │ Storage │
+                                    └─────────┘
 ```
 
 **Infrastructure:**
