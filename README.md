@@ -10,7 +10,7 @@ This repository contains the complete infrastructure setup for my homelab - from
 - 🚀 **GitOps-based**: Everything defined in code, deployed automatically
 - 🏗️ **Infrastructure as Code**: Terraform for provisioning, Ansible for configuration
 - ☸️ **Kubernetes (k3s)**: Lightweight, production-ready orchestration
-- 🔄 **High Availability**: Multi-node setup across physical and cloud infrastructure
+- 🔄 **High Availability**: 3-node HA control plane with embedded etcd
 - 📊 **Full Observability**: Prometheus + Grafana monitoring stack
 - 🔒 **Security First**: Cert-manager for SSL, proper network segmentation
 
@@ -19,41 +19,33 @@ This repository contains the complete infrastructure setup for my homelab - from
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   GL.iNet Flint 2 Router                    │
-│       OpenWrt • AdGuard DNS • Tailscale • VLANs            │
+│          OpenWrt • AdGuard DNS • Tailscale • VLANs          │
 └──────────────────────┬──────────────────────────────────────┘
+                       │
+                  VLAN 10 (homelab)
+                  192.168.10.0/24
                        │
           ┌────────────┼────────────┐
           │            │            │
           ▼            ▼            ▼
-    VLAN 10 (homelab)  │       VLAN 20 (media)
-    192.168.10.0/24    │       192.168.20.0/24
-          │            │            │
-    ┌─────┴─────┐      │       ┌────┴────┐
-    │           │      │       │         │
-    ▼           ▼      │       ▼         │
-┌─────────┐  ┌─────┐  │   ┌──────┐       │
-│Proxmox  │  │Home │  │   │Media │       │
-│ .10.20  │  │lab  │  │   │Pi    │       │
-│ 32GB    │  │Pi   │  │   │.20.10│       │
-│ 6-core  │  │.10  │  │   │8GB   │       │
-│         │  │.11  │  │   │512GB │       │
-└────┬────┘  └──┬──┘  │   └──────┘       │
-     │          │     │                  │
-     │ k3s HA Cluster│                   │
-     │ (3 control    │                   │
-     │  planes)      │                   │
-     └───────────────┘                   │
-                                         │
-                                    ┌────┴────┐
-                                    │   NFS   │
-                                    │ Storage │
-                                    └─────────┘
+    ┌──────────┐  ┌─────────┐  ┌─────────┐
+    │ Proxmox  │  │ Homelab │  │  Cloud  │
+    │ .10.20   │  │ Pi      │  │ (future)│
+    │ 32GB RAM │  │ .10.11  │  │  AWS    │
+    │ 6-core   │  │ 8GB RAM │  │         │
+    └────┬─────┘  └────┬────┘  └─────────┘
+         │             │
+         │  k3s HA Cluster
+         │  ┌──────────────────────┐
+         ├──│ k3s-cp-01  .10.21   │
+         ├──│ k3s-cp-02  .10.22   │
+         └──│ k3s-cp-03  .10.23   │
+            └──────────────────────┘
 ```
 
 **Infrastructure:**
 - **Proxmox Host** (192.168.10.20): HP EliteDesk 800 G4 - i5-8500T, 32GB RAM, 1.2TB storage
-- **Homelab Pi** (192.168.10.11): Raspberry Pi 5 - 8GB RAM, 256GB NVMe
-- **Media Pi** (192.168.20.10): Raspberry Pi 5 - 8GB RAM, 512GB NVMe (NAS/Storage)
+- **Homelab Pi** (192.168.10.11): Raspberry Pi 5 - 8GB RAM, 256GB NVMe (future k3s worker)
 - **Cloud** (planned): AWS integration for hybrid cloud setup
 
 ## Tech Stack
@@ -148,34 +140,32 @@ cd terraform/proxmox
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your Proxmox details
 
-# 3. Deploy infrastructure
-terraform init
-terraform apply
+# 3. Provision VMs
+terraform init && terraform apply
 
-# 4. Bootstrap k3s cluster
-cd ../../ansible
-ansible-playbook -i inventory/hosts.yml playbooks/bootstrap-cluster.yml
+# 4. Prepare nodes (DNS, swap, packages)
+ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/prepare-k3s.yml
 
-# 5. Install ArgoCD and deploy apps
-kubectl apply -k kubernetes/infrastructure/argocd/
-kubectl apply -f kubernetes/bootstrap/
+# 5. Install k3s HA cluster + fetch kubeconfig
+ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/install-k3s.yml
 
-# Done! ArgoCD handles the rest.
+# 6. Verify
+kubectl get nodes
 ```
 
 ## Roadmap
 
 This project is built in phases. See [docs/roadmap.md](docs/roadmap.md) for detailed implementation plan.
 
-**Current Status: 🏗️ Fase 1 - Terraform & Infrastructure**
+**Current Status: 🏗️ Fase 3 - GitOps Bootstrap**
 
 - ✅ Repository structure created
-- ✅ Documentation written
-- 🚧 Terraform for Proxmox VMs
-- ⏳ Ansible playbooks
-- ⏳ k3s cluster setup
-- ⏳ GitOps implementation
-- ⏳ Application migration
+- ✅ Terraform provisioning Proxmox VMs
+- ✅ Ansible preparing nodes and installing k3s
+- ✅ HA k3s cluster running (3 control plane nodes)
+- ⏳ ArgoCD / GitOps implementation
+- ⏳ Application deployment
+- ⏳ Monitoring stack
 
 ## Documentation
 
