@@ -1,0 +1,82 @@
+---
+# Installs a HA k3s cluster with embedded etcd across 3 control plane nodes.
+# Run: ansible-playbook -i inventory/hosts.yml playbooks/install-k3s.yml
+#
+# Play 1: Bootstrap first node with --cluster-init (creates etcd cluster)
+# Play 2: Join remaining nodes to the cluster via token
+# Play 3: Fetch kubeconfig to local machine for kubectl access
+
+# --- Play 1: Bootstrap the cluster ----------------------------------------
+- name: Initialise k3s cluster
+  hosts: k3s_init
+  become: true
+
+  tasks:
+    - name: Install k3s (cluster-init)
+      ansible.builtin.shell:
+        cmd: curl -sfL https://get.k3s.io | sh -
+        creates: /usr/local/bin/k3s
+      environment:
+        INSTALL_K3S_EXEC: "server --cluster-init"
+
+    - name: Wait for k3s API
+      ansible.builtin.wait_for:
+        port: 6443
+
+    # Token is needed by other nodes to join the cluster
+    - name: Read node token
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: node_token_raw
+
+    # Store as fact so Play 2 can access it via hostvars
+    - name: Store token as fact
+      ansible.builtin.set_fact:
+        k3s_token: "{{ node_token_raw.content | b64decode | trim }}"
+
+# --- Play 2: Join remaining servers ---------------------------------------
+- name: Join remaining servers
+  hosts: k3s_servers
+  become: true
+
+  tasks:
+    - name: Install k3s (join server)
+      ansible.builtin.shell:
+        cmd: curl -sfL https://get.k3s.io | sh -
+        creates: /usr/local/bin/k3s
+      environment:
+        INSTALL_K3S_EXEC: "server"
+        K3S_URL: "https://192.168.10.21:6443"
+        K3S_TOKEN: "{{ hostvars['k3s-cp-01'].k3s_token }}"
+
+    - name: Wait for k3s API
+      ansible.builtin.wait_for:
+        port: 6443
+
+# --- Play 3: Fetch kubeconfig to local machine ----------------------------
+- name: Fetch kubeconfig
+  hosts: k3s_init
+  become: true
+
+  tasks:
+    - name: Read kubeconfig
+      ansible.builtin.slurp:
+        src: /etc/rancher/k3s/k3s.yaml
+      register: kubeconfig_raw
+
+    - name: Save kubeconfig locally
+      ansible.builtin.copy:
+        content: "{{ kubeconfig_raw.content | b64decode }}"
+        dest: ~/.kube/config
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+
+    # k3s writes 127.0.0.1 in kubeconfig, replace with actual node IP
+    - name: Replace localhost with control plane IP
+      ansible.builtin.replace:
+        path: ~/.kube/config
+        regexp: '127\.0\.0\.1'
+        replace: '192.168.10.21'
+      delegate_to: localhost
+      become: false
