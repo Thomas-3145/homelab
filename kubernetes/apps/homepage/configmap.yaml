@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-config
+  namespace: homepage
+data:
+  settings.yaml: |
+    title: Thomas Homelab
+    language: sv
+  bookmarks.yaml: ""
+  services.yaml: ""
+  widgets.yaml: |
+    - resources:
+        cpu: true
+        memory: true
+        disk: /host
