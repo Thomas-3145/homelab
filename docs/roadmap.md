@@ -152,7 +152,7 @@ terraform apply
 - ✅ Infrastructure can be destroyed and recreated
 - ✅ All code committed to Git
 
-### Time Estimate: 1-2 weeks
+### Status: ✅ COMPLETE
 ### Blog Post: "Automating Proxmox VMs with Terraform"
 
 ---
@@ -162,9 +162,9 @@ terraform apply
 **Goal**: Prepare nodes and install k3s cluster with high availability
 
 ### Objectives
-- Configure Ubuntu Server nodes (firewall, AppArmor, packages)
+- Configure Ubuntu Server nodes (DNS, packages, swap)
 - Install k3s on control plane nodes (HA setup)
-- Join Homelab Pi as worker node
+- Join Homelab Pi as worker node (future)
 - Install Longhorn for distributed storage
 
 ### Tasks
@@ -337,57 +337,24 @@ Create `ansible/playbooks/02-install-k3s.yml`:
 **Deliverable**: 3-node HA k3s cluster + 1 worker
 
 #### 2.4 Install Longhorn
-Create `ansible/playbooks/03-install-longhorn.yml`:
-```yaml
-- name: Install Longhorn prerequisites
-  hosts: k3s_cluster
-  become: yes
-  tasks:
-    - name: Install open-iscsi
-      apt:
-        name: open-iscsi
-        state: present
-
-    - name: Start iscsid service
-      systemd:
-        name: iscsid
-        enabled: yes
-        state: started
-
-- name: Deploy Longhorn
-  hosts: k3s-cp-01
-  tasks:
-    - name: Install Longhorn via Helm
-      shell: |
-        kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/v1.6.0/deploy/longhorn.yaml
-```
+Deploy Longhorn for distributed storage (via ArgoCD in Fase 3 or manually).
 
 **Deliverable**: Longhorn installed and providing storage
 
 #### 2.5 Kubeconfig Setup
-```bash
-# Copy kubeconfig from control plane
-scp thomas@192.168.10.21:/etc/rancher/k3s/k3s.yaml ~/.kube/config
-
-# Update server address
-sed -i 's/127.0.0.1/192.168.10.21/g' ~/.kube/config
-
-# Test cluster access
-kubectl get nodes
-kubectl get pods -A
-```
+Handled automatically by `install-k3s.yml` Play 3 — fetches kubeconfig and replaces localhost IP.
 
 **Deliverable**: kubectl working from local machine
 
 ### Success Criteria
-- ✅ All nodes configured and hardened
+- ✅ All nodes configured (DNS, swap, packages)
 - ✅ 3-node HA k3s control plane running
-- ✅ Homelab Pi joined as worker
-- ✅ Longhorn providing distributed storage
+- ⏳ Homelab Pi joined as worker
+- ⏳ Longhorn providing distributed storage
 - ✅ kubectl commands work from local machine
 - ✅ All nodes show "Ready" status
 
-### Time Estimate: 1-2 weeks
+### Status: 🚧 IN PROGRESS (cluster running, worker + storage remaining)
 ### Blog Post: "Building a HA k3s Cluster with Ansible"
 
 ---
@@ -547,14 +514,13 @@ spec:
 
 ---
 
-## Fase 4: Application Migration
+## Fase 4: Application Deployment
 
-**Goal**: Migrate applications from Docker to Kubernetes
+**Goal**: Deploy applications on the k3s cluster
 
 ### Objectives
 - Deploy Ghost blog with persistent storage
 - Deploy Vaultwarden with backups
-- Deploy self-hosted GitHub runner
 - Configure ingress and SSL for all apps
 
 ### Tasks
@@ -652,14 +618,6 @@ spec:
                   number: 80
 ```
 
-**Migration steps:**
-1. Export Ghost data from Docker
-2. Deploy to k3s
-3. Import data
-4. Update Cloudflare DNS
-5. Test thoroughly
-6. Shut down Docker version
-
 **Deliverable**: Ghost blog running in k3s with SSL
 
 #### 4.2 Vaultwarden Deployment
@@ -670,43 +628,13 @@ Similar structure as Ghost, but with:
 
 **Deliverable**: Vaultwarden running in k3s
 
-#### 4.3 Self-hosted GitHub Runner
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: github-runner
-  namespace: ci
-spec:
-  replicas: 1
-  template:
-    spec:
-      containers:
-        - name: runner
-          image: myoung34/github-runner:latest
-          env:
-            - name: RUNNER_NAME
-              value: "homelab-runner"
-            - name: REPO_URL
-              value: "https://github.com/yourusername/homelab"
-            - name: ACCESS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: github-token
-                  key: token
-```
-
-**Deliverable**: Self-hosted runner for CI/CD
-
 ### Success Criteria
 - ✅ Ghost blog accessible via HTTPS
 - ✅ Vaultwarden running with automated backups
-- ✅ GitHub runner processing workflow jobs
-- ✅ All data migrated successfully
-- ✅ Old Docker containers can be shut down
+- ✅ All apps deployed via GitOps
 
 ### Time Estimate: 2 weeks
-### Blog Post: "Migrating Production Apps to Kubernetes"
+### Blog Post: "Deploying Apps on Kubernetes"
 
 ---
 
@@ -858,7 +786,6 @@ Create `terraform/aws/`:
 Connect all nodes:
 - Proxmox VMs
 - Homelab Pi
-- Media Pi
 - AWS EC2
 
 **Deliverable**: Secure multi-site connectivity
@@ -910,5 +837,5 @@ Use Kubernetes node affinity:
 
 ---
 
-**Last Updated**: 2026-02-09
-**Current Phase**: Fase 1 - Terraform & Infrastructure
+**Last Updated**: 2026-02-18
+**Current Phase**: Fase 2/3 - Ansible & GitOps
