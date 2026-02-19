@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homepage
+  namespace: homepage
+  labels:
+    app: homepage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homepage
+  template:
+    metadata:
+      labels:
+        app: homepage
+    spec:
+      initContainers:
+        - name: copy-config
+          image: busybox
+          command: ["sh", "-c", "cp /config-source/* /app/config/"]
+          volumeMounts:
+            - name: config-source
+              mountPath: /config-source
+            - name: config
+              mountPath: /app/config
+      containers:
+        - name: homepage
+          image: ghcr.io/gethomepage/homepage:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: HOMEPAGE_ALLOWED_HOSTS
+              value: "homepage.local,localhost:8080"
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+            - name: host-root
+              mountPath: /host
+              readOnly: true
+      volumes:
+        - name: config-source
+          configMap:
+            name: homepage-config
+        - name: config
+          emptyDir: {}
+        - name: host-root
+          hostPath:
+            path: /
