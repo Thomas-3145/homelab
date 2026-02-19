@@ -1,6 +1,12 @@
 ---
 # Prepares Ubuntu VMs for k3s installation.
 # Run: ansible-playbook -i inventory/hosts.yml playbooks/prepare-k3s.yml
+#
+# - Fixes DNS (AdGuard on VLAN 8 unreachable from VLAN 10)
+# - Updates packages
+# - Disables swap (required by Kubernetes)
+# - Sets hostnames to match inventory
+
 - name: Prepare nodes for k3s
   hosts: k3s_control_plane
   become: true
@@ -37,7 +43,6 @@
         cache_valid_time: 3600
 
     # -- k3s prerequisites --
-    # Kubernetes requires swap to be disabled
     - name: Disable swap (runtime)
       ansible.builtin.command: swapoff -a
       changed_when: false
