@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: headlamp
+  namespace: headlamp
+spec:
+  selector:
+    app: headlamp
+  ports:
+    - port: 80
+      targetPort: 4466
