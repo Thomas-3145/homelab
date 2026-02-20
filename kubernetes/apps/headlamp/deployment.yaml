@@ -19,5 +19,7 @@ spec:
       containers:
         - name: headlamp
           image: ghcr.io/headlamp-k8s/headlamp:latest
+          args:
+            - "-in-cluster"
           ports:
             - containerPort: 4466
