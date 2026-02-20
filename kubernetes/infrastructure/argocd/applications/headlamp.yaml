@@ -1,18 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: homepage
+  name: headlamp
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/Thomas-3145/homelab.git
 
-    path: kubernetes/apps/homepage
+    path: kubernetes/apps/headlamp
     targetRevision: main
   destination:
     server: https://kubernetes.default.svc
-    namespace: homepage
+    namespace: headlamp
   syncPolicy:
     automated:
       selfHeal: true
