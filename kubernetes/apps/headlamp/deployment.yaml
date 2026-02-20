@@ -15,6 +15,7 @@ spec:
       labels:
         app: headlamp
     spec:
+      serviceAccountName: headlamp
       containers:
         - name: headlamp
           image: ghcr.io/headlamp-k8s/headlamp:latest
