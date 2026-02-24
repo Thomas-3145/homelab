@@ -1,0 +1,57 @@
+---
+# Joins worker nodes to an existing k3s cluster as agents.
+# Run: ansible-playbook -i inventory/hosts.yml playbooks/join-workers.yml
+#
+# Play 1: Fetch the join token from the first control plane node
+# Play 2: Prepare and join worker nodes
+
+# --- Play 1: Get token from control plane -----------------------------------
+- name: Fetch join token
+  hosts: k3s_init
+  become: true
+
+  tasks:
+    - name: Read node token
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: node_token_raw
+
+    - name: Store token as fact
+      ansible.builtin.set_fact:
+        k3s_token: "{{ node_token_raw.content | b64decode | trim }}"
+
+# --- Play 2: Join workers ---------------------------------------------------
+- name: Join worker nodes
+  hosts: k3s_workers
+  become: true
+
+  tasks:
+    # Raspberry Pi OS uses dphys-swapfile, not fstab swap
+    - name: Disable dphys-swapfile
+      ansible.builtin.systemd:
+        name: dphys-swapfile
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - name: Turn off swap (runtime)
+      ansible.builtin.command: swapoff -a
+      changed_when: false
+
+    - name: Install k3s agent
+      ansible.builtin.shell:
+        cmd: curl -sfL https://get.k3s.io | sh -
+        creates: /usr/local/bin/k3s
+      environment:
+        INSTALL_K3S_EXEC: "agent"
+        K3S_URL: "https://192.168.10.21:6443"
+        K3S_TOKEN: "{{ hostvars['k3s-cp-01'].k3s_token }}"
+
+    - name: Wait for k3s-agent service
+      ansible.builtin.systemd:
+        name: k3s-agent
+        state: started
+      register: k3s_agent_status
+      retries: 3
+      delay: 5
+      until: k3s_agent_status is not failed
