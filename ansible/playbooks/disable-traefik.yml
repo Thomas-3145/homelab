@@ -1,0 +1,59 @@
+---
+# Disables Traefik and klipper-lb (servicelb) on an existing k3s cluster.
+# Run: ansible-playbook -i inventory/hosts.yml playbooks/disable-traefik.yml
+
+- name: Disable Traefik and servicelb on k3s servers
+  hosts: k3s_control_plane
+  become: true
+
+  tasks:
+    - name: Ensure k3s config directory exists
+      ansible.builtin.file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: "0755"
+
+    - name: Write k3s config with Traefik and servicelb disabled
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        content: |
+          disable:
+            - traefik
+            - servicelb
+        mode: "0644"
+      register: k3s_config
+
+    - name: Restart k3s
+      ansible.builtin.systemd:
+        name: k3s
+        state: restarted
+      when: k3s_config.changed
+
+    - name: Wait for k3s API to be ready
+      ansible.builtin.wait_for:
+        port: 6443
+      when: k3s_config.changed
+
+- name: Clean up Traefik and klipper-lb resources
+  hosts: k3s_init
+  become: true
+
+  tasks:
+    - name: Delete Traefik HelmChart resource
+      ansible.builtin.command:
+        cmd: kubectl delete helmchart traefik traefik-crd -n kube-system --ignore-not-found
+      changed_when: true
+
+    - name: Delete klipper-lb daemonset
+      ansible.builtin.command:
+        cmd: kubectl delete daemonset svclb-traefik -n kube-system --ignore-not-found
+      changed_when: true
+
+    - name: Wait for Traefik pods to terminate
+      ansible.builtin.command:
+        cmd: kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik --no-headers
+      register: traefik_pods
+      until: traefik_pods.stdout == ""
+      retries: 12
+      delay: 5
+      changed_when: false
