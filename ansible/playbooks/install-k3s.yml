@@ -17,7 +17,7 @@
         cmd: curl -sfL https://get.k3s.io | sh -
         creates: /usr/local/bin/k3s
       environment:
-        INSTALL_K3S_EXEC: "server --cluster-init"
+        INSTALL_K3S_EXEC: "server --cluster-init --disable=traefik --disable=servicelb"
 
     - name: Wait for k3s API
       ansible.builtin.wait_for:
@@ -45,7 +45,7 @@
         cmd: curl -sfL https://get.k3s.io | sh -
         creates: /usr/local/bin/k3s
       environment:
-        INSTALL_K3S_EXEC: "server"
+        INSTALL_K3S_EXEC: "server --disable=traefik --disable=servicelb"
         K3S_URL: "https://192.168.10.21:6443"
         K3S_TOKEN: "{{ hostvars['k3s-cp-01'].k3s_token }}"
 
