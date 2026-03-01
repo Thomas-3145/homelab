@@ -67,10 +67,12 @@ data:
           dateStyle: long
           timeStyle: short
     - openmeteo:
+        label: Väder
         latitude: 59.290527
         longitude: 17.967611
+        timezone: Europe/Stockholm
         units: metric
-        cache: 15
+        cache: 5
     - kubernetes:
         cluster:
           show: true
