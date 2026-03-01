@@ -39,16 +39,6 @@ data:
         - cert-manager:
             icon: cert-manager.svg
             description: Certifikathantering
-    - System:
-        - Proxmox:
-            icon: proxmox.svg
-            href: https://100.87.35.119:8006
-            description: Hypervisor
-            widget:
-              type: proxmox
-              url: https://100.87.35.119:8006
-              username: root@pam!homepage
-              password: 6d0c5412-1273-4b6e-a81a-0237fbcb7919
     - Tjänster:
         - Jellyfin:
             icon: jellyfin.svg
@@ -70,6 +60,24 @@ data:
             icon: vaultwarden.svg
             href: https://vault.3145.blog/
             description: Lösenordshantering
+    - System:
+        - Uptime Kuma:
+            icon: uptime-kuma.svg
+            href: https://kuma.3145.blog
+            description: Övervakning
+            widget:
+              type: uptimekuma
+              url: https://kuma.3145.blog
+              slug: homepage
+        - Proxmox:
+            icon: proxmox.svg
+            href: https://100.87.35.119:8006
+            description: Hypervisor
+            widget:
+              type: proxmox
+              url: https://100.87.35.119:8006
+              username: root@pam!homepage
+              password: 6d0c5412-1273-4b6e-a81a-0237fbcb7919
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
