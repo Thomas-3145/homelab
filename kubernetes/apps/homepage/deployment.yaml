@@ -15,6 +15,7 @@ spec:
       labels:
         app: homepage
     spec:
+      serviceAccountName: homepage
       initContainers:
         - name: copy-config
           image: busybox
@@ -35,15 +36,9 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /app/config
-            - name: host-root
-              mountPath: /host
-              readOnly: true
       volumes:
         - name: config-source
           configMap:
             name: homepage-config
         - name: config
           emptyDir: {}
-        - name: host-root
-          hostPath:
-            path: /

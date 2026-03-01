@@ -7,10 +7,20 @@ data:
   settings.yaml: |
     title: Thomas Homelab
     language: sv
+  kubernetes.yaml: |
+    mode: cluster
   bookmarks.yaml: ""
   services.yaml: ""
   widgets.yaml: |
-    - resources:
-        cpu: true
-        memory: true
-        disk: /host
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+          label: "cluster"
+        nodes:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
