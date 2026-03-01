@@ -12,6 +12,16 @@ data:
   bookmarks.yaml: ""
   services.yaml: ""
   widgets.yaml: |
+    - datetime:
+        locale: sv
+        format:
+          dateStyle: long
+          timeStyle: short
+    - openmeteo:
+        latitude: 59.290527
+        longitude: 17.967611
+        units: metric
+        cache: 15
     - kubernetes:
         cluster:
           show: true
