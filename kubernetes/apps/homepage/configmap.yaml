@@ -48,6 +48,14 @@ data:
               username: root@pam!homepage
               password: 6d0c5412-1273-4b6e-a81a-0237fbcb7919
     - Tjänster:
+        - Jellyfin:
+            icon: jellyfin.svg
+            href: https://jellyfin.3145.blog
+            description: Mediaserver
+            widget:
+              type: jellyfin
+              url: https://jellyfin.3145.blog
+              key: 1dcb1c823db0452ead5e44148a35ed7a
         - Ghost:
             icon: ghost.svg
             href: https://3145.blog/
@@ -60,15 +68,7 @@ data:
             icon: vaultwarden.svg
             href: https://vault.3145.blog/
             description: Lösenordshantering
-    - Media:
-        - Jellyfin:
-            icon: jellyfin.svg
-            href: https://jellyfin.3145.blog
-            description: Mediaserver
-            widget:
-              type: jellyfin
-              url: https://jellyfin.3145.blog
-              key: 1dcb1c823db0452ead5e44148a35ed7a
+    - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
             href: https://sonarr.3145.blog
@@ -91,9 +91,8 @@ data:
             description: Undertexter
             widget:
               type: bazarr
-              url: https://bazarr.3145.blog
+              url: http://100.110.160.88:6767/
               key: 726e5cefb0d5307ae9a1c4e51f13accb
-    - Nedladdningar:
         - qBittorrent:
             icon: qbittorrent.svg
             href: https://qbittorrent.3145.blog
