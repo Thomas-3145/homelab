@@ -15,6 +15,9 @@ data:
     quicklaunch:
       searchDescriptions: true
       provider: google
+    layout:
+      Nedladdningar:
+        initiallyCollapsed: true
   kubernetes.yaml: |
     mode: cluster
   bookmarks.yaml: ""
@@ -91,7 +94,6 @@ data:
               url: https://bazarr.3145.blog
               key: 726e5cefb0d5307ae9a1c4e51f13accb
     - Nedladdningar:
-        header: false
         - qBittorrent:
             icon: qbittorrent.svg
             href: https://qbittorrent.3145.blog
