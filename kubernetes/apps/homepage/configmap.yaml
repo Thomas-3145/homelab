@@ -16,6 +16,8 @@ data:
       searchDescriptions: true
       provider: google
     layout:
+      Kluster:
+        initiallyCollapsed: true
       Nedladdningar:
         initiallyCollapsed: true
   kubernetes.yaml: |
