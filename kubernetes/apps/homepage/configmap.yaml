@@ -45,6 +45,14 @@ data:
               username: root@pam!homepage
               password: 6d0c5412-1273-4b6e-a81a-0237fbcb7919
     - Tjänster:
+        - Jellyfin:
+            icon: jellyfin.svg
+            href: https://jellyfin.3145.blog
+            description: Mediaserver
+            widget:
+              type: jellyfin
+              url: https://jellyfin.3145.blog
+              key: 1dcb1c823db0452ead5e44148a35ed7a
         - Ghost:
             icon: ghost.svg
             href: https://3145.blog/
@@ -57,6 +65,47 @@ data:
             icon: vaultwarden.svg
             href: https://vault.3145.blog/
             description: Lösenordshantering
+    - Media:
+        - Sonarr:
+            icon: sonarr.svg
+            href: https://sonarr.3145.blog
+            description: TV-serier
+            widget:
+              type: sonarr
+              url: https://sonarr.3145.blog
+              key: 52e1d37d93c5473c918c3b0fd50a9d97
+        - Radarr:
+            icon: radarr.svg
+            href: https://radarr.3145.blog
+            description: Filmer
+            widget:
+              type: radarr
+              url: https://radarr.3145.blog
+              key: e08acb52a08e486ebd95379c2360da90
+        - Bazarr:
+            icon: bazarr.svg
+            href: https://bazarr.3145.blog
+            description: Undertexter
+            widget:
+              type: bazarr
+              url: https://bazarr.3145.blog
+              key: 726e5cefb0d5307ae9a1c4e51f13accb
+    - Nedladdningar:
+        - qBittorrent:
+            icon: qbittorrent.svg
+            href: https://qbittorrent.3145.blog
+            description: Torrent-klient
+            widget:
+              type: qbittorrent
+              url: https://qbittorrent.3145.blog
+        - Prowlarr:
+            icon: prowlarr.svg
+            href: https://prowlarr.3145.blog
+            description: Indexer-hantering
+            widget:
+              type: prowlarr
+              url: https://prowlarr.3145.blog
+              key: 377574a1ec424a6381f483d625df98ae
   widgets.yaml: |
     - search:
         provider: google
