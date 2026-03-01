@@ -67,7 +67,7 @@ data:
             description: Övervakning
             widget:
               type: uptimekuma
-              url: https://kuma.3145.blog
+              url: http://100.110.160.88:3001
               slug: homepage
         - Proxmox:
             icon: proxmox.svg
