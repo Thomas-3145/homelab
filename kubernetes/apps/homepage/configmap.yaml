@@ -7,11 +7,56 @@ data:
   settings.yaml: |
     title: Thomas Homelab
     language: sv
+    headerStyle: boxedWidgets
+    quicklaunch:
+      searchDescriptions: true
+      provider: google
+    layout:
+      Kluster:
+        style: row
+        columns: 4
+      System:
+        style: row
+        columns: 2
+      Tjänster:
+        style: row
+        columns: 2
   kubernetes.yaml: |
     mode: cluster
   bookmarks.yaml: ""
-  services.yaml: ""
+  services.yaml: |
+    - Kluster:
+        - ArgoCD:
+            icon: argocd.png
+            href: http://argocd.local
+            description: GitOps
+        - Headlamp:
+            icon: headlamp.png
+            href: http://headlamp.local
+            description: Kubernetes Dashboard
+        - ingress-nginx:
+            icon: nginx.png
+            description: Ingress Controller
+        - cert-manager:
+            icon: cert-manager.png
+            description: Certifikathantering
+    - System:
+        - Proxmox:
+            icon: proxmox.png
+            href: https://192.168.10.20:8006
+            description: Hypervisor
+    - Tjänster:
+        - Ghost:
+            icon: ghost.png
+            href: http://home.3145.blog
+            description: Blogg
+        - Vaultwarden:
+            icon: vaultwarden.png
+            description: Lösenordshantering
   widgets.yaml: |
+    - search:
+        provider: google
+        target: _blank
     - datetime:
         locale: sv
         format:
