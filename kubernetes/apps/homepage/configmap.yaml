@@ -13,13 +13,13 @@ data:
       provider: google
     layout:
       Kluster:
-        style: row
+        style: column
         columns: 4
       System:
-        style: row
+        style: column
         columns: 2
       Tjänster:
-        style: row
+        style: column
         columns: 2
   kubernetes.yaml: |
     mode: cluster
