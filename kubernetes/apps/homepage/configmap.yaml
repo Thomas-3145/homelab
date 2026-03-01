@@ -48,10 +48,15 @@ data:
     - Tjänster:
         - Ghost:
             icon: ghost.png
-            href: http://home.3145.blog
+            href: https://3145.blog/
             description: Blogg
+        - Ghost Admin:
+            icon: ghost.png
+            href: https://3145.blog/ghost
+            description: Adminpanel
         - Vaultwarden:
             icon: vaultwarden.png
+            href: https://vault.3145.blog/
             description: Lösenordshantering
   widgets.yaml: |
     - search:
