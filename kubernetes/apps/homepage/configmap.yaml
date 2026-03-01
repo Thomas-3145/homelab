@@ -7,55 +7,54 @@ data:
   settings.yaml: |
     title: Thomas Homelab
     language: sv
-    headerStyle: boxedWidgets
+    theme: dark
+    color: slate
+    headerStyle: clean
+    statusStyle: dot
+    hideVersion: true
     quicklaunch:
       searchDescriptions: true
       provider: google
-    layout:
-      Kluster:
-        style: column
-        columns: 4
-      System:
-        style: column
-        columns: 2
-      Tjänster:
-        style: column
-        columns: 2
   kubernetes.yaml: |
     mode: cluster
   bookmarks.yaml: ""
   services.yaml: |
     - Kluster:
         - ArgoCD:
-            icon: argocd.png
+            icon: argocd.svg
             href: http://argocd.local
             description: GitOps
         - Headlamp:
-            icon: headlamp.png
+            icon: headlamp.svg
             href: http://headlamp.local
             description: Kubernetes Dashboard
         - ingress-nginx:
-            icon: nginx.png
+            icon: nginx.svg
             description: Ingress Controller
         - cert-manager:
-            icon: cert-manager.png
+            icon: cert-manager.svg
             description: Certifikathantering
     - System:
         - Proxmox:
-            icon: proxmox.png
-            href: https://192.168.10.20:8006
+            icon: proxmox.svg
+            href: https://100.87.35.119:8006
             description: Hypervisor
+            widget:
+              type: proxmox
+              url: https://100.87.35.119:8006
+              username: root@pam!homepage
+              password: 6d0c5412-1273-4b6e-a81a-0237fbcb7919
     - Tjänster:
         - Ghost:
-            icon: ghost.png
+            icon: ghost.svg
             href: https://3145.blog/
             description: Blogg
         - Ghost Admin:
-            icon: ghost.png
+            icon: ghost.svg
             href: https://3145.blog/ghost
             description: Adminpanel
         - Vaultwarden:
-            icon: vaultwarden.png
+            icon: vaultwarden.svg
             href: https://vault.3145.blog/
             description: Lösenordshantering
   widgets.yaml: |
