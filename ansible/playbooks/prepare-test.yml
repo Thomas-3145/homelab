@@ -23,8 +23,9 @@
       ansible.builtin.meta: flush_handlers
 
     - name: Install Tailscale
-      ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
-      creates: /usr/bin/tailscale
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://tailscale.com/install.sh | sh
+        creates: /usr/bin/tailscale
 
     # -- System updates --
     - name: Update apt cache and upgrade packages
