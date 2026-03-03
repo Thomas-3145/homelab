@@ -3,10 +3,12 @@ kind: Ingress
 metadata:
   name: argocd-server
   namespace: argocd
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
   rules:
-    - host: argocd.local
+    - host: argocd.3145.blog
       http:
         paths:
           - path: /
@@ -16,3 +18,7 @@ spec:
                 name: argocd-server
                 port:
                   number: 80
+  tls:
+    - hosts:
+        - argocd.3145.blog
+      secretName: argocd-tls
