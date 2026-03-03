@@ -1,21 +1,9 @@
 ---
-# Prepares Ubuntu VMs for k3s installation.
-# Run: ansible-playbook -i inventory/hosts.yml playbooks/prepare-k3s.yml
-#
-# - Fixes DNS (AdGuard on VLAN 8 unreachable from VLAN 10)
-# - Updates packages
-# - Disables swap (required by Kubernetes)
-# - Sets hostnames to match inventory
-
-- name: Prepare nodes for k3s
-  hosts: k3s_control_plane
+- name: Prepare test VM, tailscale and basic updates
+  hosts: test
   become: true
 
   tasks:
-    # -- DNS fix --
-    # VMs use systemd-resolved which defaults to the router (AdGuard).
-    # AdGuard on VLAN 8 is not reachable from VLAN 10, so apt update fails.
-    # Workaround: override DNS with public resolvers via drop-in config.
     - name: Ensure resolved.conf.d directory exists
       ansible.builtin.file:
         path: /etc/systemd/resolved.conf.d
@@ -31,9 +19,12 @@
           FallbackDNS=9.9.9.9
       notify: Restart systemd-resolved
 
-    # Force DNS restart now, before apt needs it
     - name: Flush handlers
       ansible.builtin.meta: flush_handlers
+
+    - name: Install Tailscale
+      ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+      creates: /usr/bin/tailscale
 
     # -- System updates --
     - name: Update apt cache and upgrade packages
@@ -42,23 +33,9 @@
         upgrade: dist
         cache_valid_time: 3600
 
-    # -- k3s prerequisites --
-    - name: Disable swap (runtime)
-      ansible.builtin.command: swapoff -a
-      changed_when: false
-
-    - name: Remove swap from fstab
-      ansible.builtin.lineinfile:
-        path: /etc/fstab
-        regexp: '\sswap\s'
-        state: absent
-
-    - name: Set hostname
-      ansible.builtin.hostname:
-        name: "{{ inventory_hostname }}"
-
   handlers:
     - name: Restart systemd-resolved
       ansible.builtin.systemd:
         name: systemd-resolved
         state: restarted
+
