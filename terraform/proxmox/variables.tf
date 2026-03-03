@@ -30,3 +30,14 @@ variable "template_id" {
   type        = number
   default     = 9000
 }
+
+variable "test_vms" {
+    description = "VMs att testa på"
+    type        = map(object({
+        ip      = string
+        cores   = number
+        memory  = number
+        disk    = number
+    }))
+    default     = {}
+}
