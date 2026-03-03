@@ -26,7 +26,7 @@ data:
   services.yaml: |
     - Kluster:
         - ArgoCD:
-            icon: argocd.svg
+            icon: si-argocd
             href: http://argocd.local
             description: GitOps
         - Headlamp:
@@ -39,6 +39,10 @@ data:
         - cert-manager:
             icon: cert-manager.svg
             description: Certifikathantering
+        - AdGuardHome:
+            icon: si-adguard
+            href: http://192.168.8.1:3000/
+            description: DNS-filtrering
     - Tjänster:
         - Jellyfin:
             icon: jellyfin.svg
@@ -49,11 +53,11 @@ data:
               url: https://jellyfin.3145.blog
               key: 1dcb1c823db0452ead5e44148a35ed7a
         - Ghost:
-            icon: ghost.svg
+            icon: si-ghost
             href: https://3145.blog/
             description: Blogg
         - Ghost Admin:
-            icon: ghost.svg
+            icon: si-ghost
             href: https://3145.blog/ghost
             description: Adminpanel
         - Vaultwarden:
