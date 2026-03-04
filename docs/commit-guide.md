@@ -30,11 +30,13 @@ Scope is optional but recommended.
 ```bash
 feat(terraform): add monitoring VM
 fix(ansible): correct DNS resolver config
+test(terraform): add validation for VM config
 docs: update roadmap with phase 4
 refactor: rename .yml files to .yaml
 chore(deps): bump ingress-nginx to 4.12
 ci: add release workflow
-feat!: migrate from Traefik to ingress-nginx
+feat!: migrate from Traefik to ingress-nginx (major bump!)
+
 ```
 
 ## What happens on push
