@@ -4,3 +4,19 @@ proxmox_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ssh_public_key           = "ssh-rsa AAAA... user@host"
 target_node              = "pve"
 template_id              = 9000
+
+
+test_vms = {
+    "test-01" = {
+      ip     = "192.168.10.x"
+      cores  = 2
+      memory = 4096
+      disk   = 40
+    }
+    "test-02" = {
+      ip     = "192.168.10.x"
+      cores  = 4
+      memory = 2048
+      disk   = 30
+    }
+  }
