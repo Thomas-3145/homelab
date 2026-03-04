@@ -1,6 +1,6 @@
 ---
 # Installs a HA k3s cluster with embedded etcd across 3 control plane nodes.
-# Run: ansible-playbook -i inventory/hosts.yml playbooks/install-k3s.yml
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/install-k3s.yaml
 #
 # Play 1: Bootstrap first node with --cluster-init (creates etcd cluster)
 # Play 2: Join remaining nodes to the cluster via token

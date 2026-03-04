@@ -308,7 +308,7 @@ The 7-phase roadmap in `docs/roadmap.md` is well-structured. A few notes:
 
 ### Phase 2 (Ansible & k3s)
 
-- [ ] Create Ansible inventory (`ansible/inventory/hosts.yml`)
+- [ ] Create Ansible inventory (`ansible/inventory/hosts.yaml`)
 - [ ] Write node preparation playbook (SSH hardening, firewall, NTP, swap off, kernel modules)
 - [ ] Write k3s installation playbook (3 CP nodes with `--cluster-init`, disable Traefik)
 - [ ] Write Pi worker join playbook

@@ -1,6 +1,6 @@
 ---
 # Prepares Ubuntu VMs for k3s installation.
-# Run: ansible-playbook -i inventory/hosts.yml playbooks/prepare-k3s.yml
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/prepare-k3s.yaml
 #
 # - Fixes DNS (AdGuard on VLAN 8 unreachable from VLAN 10)
 # - Updates packages
