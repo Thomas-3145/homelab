@@ -694,70 +694,97 @@ Send notifications to Discord/Slack/email.
 
 ---
 
-## Fase 6: CI/CD Pipeline
+## Fase 6: CI/CD Pipeline (Gitea + Woodpecker CI)
 
-**Goal**: Automated testing and deployment via GitHub Actions
+**Goal**: Self-hosted CI/CD pipeline with full control, running on the k3s cluster
 
 ### Objectives
-- Validate Terraform changes
-- Lint Kubernetes manifests
-- Test ArgoCD sync
-- Automated backups
+- Deploy Gitea as self-hosted Git server on k3s
+- Mirror GitHub repos to Gitea
+- Deploy Woodpecker CI connected to Gitea
+- Build automated pipelines: lint, build, test, deploy
+- Complement with GitHub Actions for public repo checks
 
 ### Tasks
 
-#### 6.1 GitHub Actions Workflows
-Create `.github/workflows/terraform-validate.yml`:
+#### 6.1 Gitea Deployment
+Deploy Gitea on k3s via ArgoCD:
+- Helm chart or plain manifests in `kubernetes/apps/gitea/`
+- Persistent storage via Longhorn
+- Ingress at `git.3145.blog` with TLS
+- ARM64-compatible image
+
+**Deliverable**: Gitea running and accessible at git.3145.blog
+
+#### 6.2 GitHub Mirror Setup
+- Configure Gitea to mirror homelab repo from GitHub (built-in feature)
+- Set up mirror schedule (e.g. every 15 min or webhook-triggered)
+- Can also push private infra repos directly to Gitea (no GitHub needed)
+
+**Deliverable**: GitHub repos automatically mirrored to Gitea
+
+#### 6.3 Woodpecker CI Deployment
+Deploy Woodpecker CI on k3s via ArgoCD:
+- Woodpecker server + agent(s) in `kubernetes/apps/woodpecker/`
+- Connect to Gitea via OAuth2
+- Persistent storage for build logs
+- Ingress at `ci.3145.blog` with TLS
+
+**Deliverable**: Woodpecker CI running and connected to Gitea
+
+#### 6.4 Build Pipelines
+Create `.woodpecker.yml` pipelines:
+
+**Pipeline 1: Validate infrastructure**
 ```yaml
-name: Terraform Validate
-on:
-  pull_request:
-    paths:
-      - 'terraform/**'
-jobs:
-  validate:
-    runs-on: self-hosted  # Your runner!
-    steps:
-      - uses: actions/checkout@v3
-      - name: Terraform init
-        run: terraform init
-      - name: Terraform validate
-        run: terraform validate
-      - name: Terraform plan
-        run: terraform plan
+steps:
+  - name: lint-yaml
+    image: cytopia/yamllint
+    commands:
+      - yamllint kubernetes/
+
+  - name: validate-manifests
+    image: ghcr.io/yannh/kubeconform:latest
+    commands:
+      - kubeconform kubernetes/
 ```
 
-**Deliverable**: Automated validation
-
-#### 6.2 Kubernetes Manifest Linting
+**Pipeline 2: Build & Deploy (GitOps)**
 ```yaml
-name: K8s Lint
-on:
-  pull_request:
-    paths:
-      - 'kubernetes/**'
-jobs:
-  lint:
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v3
-      - name: Validate YAML
-        run: |
-          kubectl apply --dry-run=client -f kubernetes/
-      - name: Run kubeconform
-        run: kubeconform kubernetes/
+steps:
+  - name: build-image
+    image: plugins/docker
+    settings:
+      repo: registry.3145.blog/myapp
+      tags: ${CI_COMMIT_SHA}
+
+  - name: update-manifests
+    image: alpine/git
+    commands:
+      - # Update image tag in k8s manifests
+      - # ArgoCD auto-syncs the change
 ```
 
-**Deliverable**: Catch errors before deployment
+**Deliverable**: Automated CI/CD pipeline triggered on push
+
+#### 6.5 GitHub Actions (Complement)
+Keep lightweight GitHub Actions for public repo checks:
+- Terraform validate on PR
+- YAML linting on PR
+- These run on GitHub's runners (no self-hosted needed)
+
+Heavy lifting (build, deploy, integration tests) runs on Woodpecker.
+
+**Deliverable**: Dual CI setup — GitHub for public checks, Woodpecker for internal pipeline
 
 ### Success Criteria
-- ✅ All changes validated automatically
-- ✅ Failed checks block PR merge
-- ✅ Automated backups running
-- ✅ Pipeline runs on self-hosted runner
+- ✅ Gitea running on k3s with GitHub mirror
+- ✅ Woodpecker CI triggered on push to Gitea
+- ✅ Pipeline validates, builds, and deploys automatically
+- ✅ ArgoCD picks up changes from pipeline
+- ✅ Full self-hosted CI/CD — no dependency on external services
 
-### Time Estimate: 1 week
-### Blog Post: "Building CI/CD for Infrastructure as Code"
+### Blog Post: "Self-Hosted CI/CD with Gitea and Woodpecker on k3s"
 
 ---
 
@@ -812,6 +839,8 @@ Use Kubernetes node affinity:
 ## Future Enhancements
 
 **After core phases:**
+- [ ] Helm support in ArgoCD (needed for Prometheus stack in Fase 5)
+  - [ ] First Helm app: Stakater Reloader (auto-restarts pods on ConfigMap/Secret changes)
 - [ ] Service mesh (Istio/Linkerd)
 - [ ] Multi-cluster GitOps
 - [ ] Advanced observability (Loki, Tempo)
