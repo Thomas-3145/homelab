@@ -170,7 +170,7 @@ terraform apply
 ### Tasks
 
 #### 2.1 Ansible Inventory Setup
-Create `ansible/inventory/hosts.yml`:
+Create `ansible/inventory/hosts.yaml`:
 ```yaml
 all:
   children:
@@ -205,7 +205,7 @@ all:
 **Deliverable**: Ansible can reach all nodes
 
 #### 2.2 Node Preparation Playbook
-Create `ansible/playbooks/01-prepare-nodes.yml`:
+Create `ansible/playbooks/01-prepare-nodes.yaml`:
 - Update all packages
 - Install required packages (curl, nfs-common, open-iscsi)
 - Configure firewall (ufw for Ubuntu)
@@ -282,7 +282,7 @@ Create `ansible/playbooks/01-prepare-nodes.yml`:
 **Deliverable**: All nodes prepared and ready for k3s
 
 #### 2.3 k3s HA Installation
-Create `ansible/playbooks/02-install-k3s.yml`:
+Create `ansible/playbooks/02-install-k3s.yaml`:
 
 **Step 1**: Install first control plane node
 ```yaml
@@ -342,7 +342,7 @@ Deploy Longhorn for distributed storage (via ArgoCD in Fase 3 or manually).
 **Deliverable**: Longhorn installed and providing storage
 
 #### 2.5 Kubeconfig Setup
-Handled automatically by `install-k3s.yml` Play 3 — fetches kubeconfig and replaces localhost IP.
+Handled automatically by `install-k3s.yaml` Play 3 — fetches kubeconfig and replaces localhost IP.
 
 **Deliverable**: kubectl working from local machine
 
@@ -733,7 +733,7 @@ Deploy Woodpecker CI on k3s via ArgoCD:
 **Deliverable**: Woodpecker CI running and connected to Gitea
 
 #### 6.4 Build Pipelines
-Create `.woodpecker.yml` pipelines:
+Create `.woodpecker.yaml` pipelines:
 
 **Pipeline 1: Validate infrastructure**
 ```yaml

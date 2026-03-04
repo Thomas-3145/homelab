@@ -1,6 +1,6 @@
 ---
 # Disables Traefik and klipper-lb (servicelb) on an existing k3s cluster.
-# Run: ansible-playbook -i inventory/hosts.yml playbooks/disable-traefik.yml
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/disable-traefik.yaml
 
 - name: Disable Traefik and servicelb on k3s servers
   hosts: k3s_control_plane

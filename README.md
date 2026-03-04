@@ -147,10 +147,10 @@ cp terraform.tfvars.example terraform.tfvars
 terraform init && terraform apply
 
 # 4. Prepare nodes (DNS, swap, packages)
-ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/prepare-k3s.yml
+ansible-playbook -i ansible/inventory/hosts.yaml ansible/playbooks/prepare-k3s.yaml
 
 # 5. Install k3s HA cluster + fetch kubeconfig
-ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/install-k3s.yml
+ansible-playbook -i ansible/inventory/hosts.yaml ansible/playbooks/install-k3s.yaml
 
 # 6. Verify
 kubectl get nodes

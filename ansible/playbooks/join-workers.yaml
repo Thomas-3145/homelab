@@ -1,6 +1,6 @@
 ---
 # Joins worker nodes to an existing k3s cluster as agents.
-# Run: ansible-playbook -i inventory/hosts.yml playbooks/join-workers.yml
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/join-workers.yaml
 #
 # Play 1: Fetch the join token from the first control plane node
 # Play 2: Prepare and join worker nodes
