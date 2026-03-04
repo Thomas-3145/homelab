@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/Thomas-3145/homelab/compare/v1.0.0...v1.0.1) (2026-03-04)
+
+
+### Bug Fixes
+
+* **commitlint-guide:** tog bor den då icke relevant ([a0f3d8f](https://github.com/Thomas-3145/homelab/commit/a0f3d8fa77f173791959e920226602be1f949017))
+
 # 1.0.0 (2026-03-04)
 
 
