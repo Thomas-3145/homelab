@@ -92,6 +92,9 @@ homelab/
 │
 ├── scripts/                # Helper scripts
 ├── docs/                   # Documentation
+│   ├── adr/               # Architecture Decision Records
+│   ├── runbooks/          # Operational procedures
+│   └── roadmap.md         # Implementation roadmap
 └── README.md              # This file
 ```
 
