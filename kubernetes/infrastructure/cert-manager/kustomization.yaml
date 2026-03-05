@@ -4,7 +4,6 @@ kind: Kustomization
 resources:
   - clusterissuer-letsencrypt-prod.yaml
   - clusterissuer-letsencrypt-staging.yaml
-  - test-certificate.yaml
 
 generators:
   - ksops-generator.yaml
