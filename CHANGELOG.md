@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/Thomas-3145/homelab/compare/v1.1.0...v1.2.0) (2026-03-05)
+
+
+### Features
+
+* **secrets:** add SOPS + KSOPS for encrypted secret management ([eacc318](https://github.com/Thomas-3145/homelab/commit/eacc318c5b769e1bc29f952beb0317e9e1bd26ad))
+
 # [1.1.0](https://github.com/Thomas-3145/homelab/compare/v1.0.1...v1.1.0) (2026-03-05)
 
 
