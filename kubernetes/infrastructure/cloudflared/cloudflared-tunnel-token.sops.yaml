@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: cloudflared-tunnel-token
+    namespace: cloudflared
+type: Opaque
+stringData:
+    tunnel-token: ENC[AES256_GCM,data:s7SIQU6l0vPv7tZGCiQQNLlbwimzvbXhJ2zcsUNWiBRwmmqj/k8aqg40hQq1iztaYYhS/5t+kPV6pAw3A+WtpGCZFvbbSPBJiBVspbqQVO34H7hLPt5uL+29or6/cAFN7hdJA7NjcO2j1YJzfnrfSz7MmkJs+DmSgxttyuouLmq2WdOG9kmQAmlOtIPfYESUHQCteGIur5vTg0v9o41PhfhU2fHyl0hRLVu/Mq1BEdHvffpud8RdFw==,iv:4Z+5EOuYD/x7vzmQ+54fepKtvLI1ImY4cwFmytMqn4w=,tag:zEMT27zZp64pt8fvJKoCeA==,type:str]
+sops:
+    kms: []
+    gcp_kms: []
+    azure_kv: []
+    hc_vault: []
+    age:
+        - recipient: age19fpxtk9nspxlukvn7jff2g2z0vy62kedrp6hcada28s2mjxrgfeqp8azln
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBCdDA2OW1yZGwzd24vR0Mx
+            WCt0c0dSNTVCcTdaZ2swVlRhUFdOZXRFVjBvCmxGWm9WaWlXdWo4Z3BlekpHdDRj
+            VkJKeEducm9SN0pGblF1QU5sR2N1TUEKLS0tIHk5VEFBeWJGTWhlb1N5S3VUaHc4
+            aUV3bStBQkpWbnh1YndDaVZZZUdkdlUKAWE5Ht6/HbsNj/dqCcHOucbv1QL6FfS7
+            xTtbUS/DFvBFxup6ixujs4zcm7kzZZTQur9Hv+CpM8HWv+GD8733Lg==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-03-05T15:39:30Z"
+    mac: ENC[AES256_GCM,data:+NOO+Rkta3uYTDjAC90tLEdfC2MAKRvR2q+4Ih8XcLBHuBYwFg+tUK8QcNHTias3qoHRzzXwf2D+wtZ0+NZcsKMg4mfs+dA4PM2uqe1cL0gG3+N76fFQBdzkQsIEQva+qRXuDVBLAwbMztJK7W5f5hOYERy7p6UO6gHGeBdDGWc=,iv:jaEDuyX2RZrIPigIE+fWjYcgPQUGsBPVxULhLTljzVM=,tag:be3Uyp0nxzQ9ovP06AVQKw==,type:str]
+    pgp: []
+    encrypted_regex: ^(data|stringData)$
+    version: 3.9.4

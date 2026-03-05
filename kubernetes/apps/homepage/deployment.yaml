@@ -30,6 +30,9 @@ spec:
           image: ghcr.io/gethomepage/homepage:latest
           ports:
             - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: homepage-secrets
           env:
             - name: HOMEPAGE_ALLOWED_HOSTS
               value: "home.3145.blog"
