@@ -52,6 +52,10 @@ data:
               type: jellyfin
               url: https://jellyfin.3145.blog
               key: 1dcb1c823db0452ead5e44148a35ed7a
+        - IT-Tools:
+            icon: it-tools.svg
+            href: http://it-tools.local
+            description: Developer utilities
         - Ghost:
             icon: ghost.png
             href: https://3145.blog/
