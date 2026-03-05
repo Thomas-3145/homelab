@@ -51,7 +51,7 @@ data:
             widget:
               type: jellyfin
               url: https://jellyfin.3145.blog
-              key: 1dcb1c823db0452ead5e44148a35ed7a
+              key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
         - IT-Tools:
             icon: it-tools.svg
             href: http://it-tools.local
@@ -84,8 +84,8 @@ data:
             widget:
               type: proxmox
               url: https://100.87.35.119:8006
-              username: root@pam!homepage
-              password: 6d0c5412-1273-4b6e-a81a-0237fbcb7919
+              username: {{HOMEPAGE_VAR_PROXMOX_USER}}
+              password: {{HOMEPAGE_VAR_PROXMOX_PASSWORD}}
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
@@ -94,7 +94,7 @@ data:
             widget:
               type: sonarr
               url: https://sonarr.3145.blog
-              key: 52e1d37d93c5473c918c3b0fd50a9d97
+              key: {{HOMEPAGE_VAR_SONARR_KEY}}
         - Radarr:
             icon: radarr.svg
             href: https://radarr.3145.blog
@@ -102,7 +102,7 @@ data:
             widget:
               type: radarr
               url: https://radarr.3145.blog
-              key: e08acb52a08e486ebd95379c2360da90
+              key: {{HOMEPAGE_VAR_RADARR_KEY}}
         - Bazarr:
             icon: bazarr.svg
             href: https://bazarr.3145.blog
@@ -110,7 +110,7 @@ data:
             widget:
               type: bazarr
               url: http://100.110.160.88:6767/
-              key: 726e5cefb0d5307ae9a1c4e51f13accb
+              key: {{HOMEPAGE_VAR_BAZARR_KEY}}
         - qBittorrent:
             icon: qbittorrent.svg
             href: https://qbittorrent.3145.blog
@@ -125,7 +125,7 @@ data:
             widget:
               type: prowlarr
               url: https://prowlarr.3145.blog
-              key: 377574a1ec424a6381f483d625df98ae
+              key: {{HOMEPAGE_VAR_PROWLARR_KEY}}
   widgets.yaml: |
     - search:
         provider: google
