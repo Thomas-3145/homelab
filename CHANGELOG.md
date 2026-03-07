@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/Thomas-3145/homelab/compare/v1.3.0...v1.3.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **longhorn:** tog bort pre-upgrade checker hook ([3899f3c](https://github.com/Thomas-3145/homelab/commit/3899f3c79688c131f54ff7ee237612eb3e264a34))
+
 # [1.3.0](https://github.com/Thomas-3145/homelab/compare/v1.2.0...v1.3.0) (2026-03-07)
 
 
