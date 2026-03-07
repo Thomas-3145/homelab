@@ -26,16 +26,68 @@ A key discovery during planning: Velero without the Longhorn CSI plugin (`velero
 Implement a 3-2-1 backup strategy with two independent backup paths:
 
 **Application backup (k3s workloads):**
-Velero with CSI snapshots → Garage (S3) on Homelab Pi → PBS on Media Pi → Cloudflare R2 (off-site)
+Velero with CSI snapshots → Garage (S3) on Homelab Pi → Media Pi (consolidated) → Cloudflare R2 (off-site)
 
 **System backup (Proxmox VMs):**
-Proxmox VM backup → PBS on Media Pi → Cloudflare R2 (off-site)
+Proxmox VM backup → PBS on Media Pi (consolidated) → Cloudflare R2 (off-site)
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                     k3s Cluster                          │
+│                                                          │
+│   ┌──────────┐     ┌────────┐     ┌─────────────────┐    │
+│   │ Longhorn │────►│ Velero │────►│ Garage (S3)     │    │
+│   │ (volymer)│ CSI │        │ S3  │ Homelab Pi 3145 │    │
+│   └──────────┘snap └────────┘push └────────┬────────┘    │
+│                                            │             │
+└────────────────────────────────────────────┼─────────────┘
+                                             │
+                                          S3 sync
+                                             │
+┌────────────────────────────┐               │
+│ Proxmox (The Beast)        │               │
+│                            │               │
+│  ┌──────┐┌──────┐┌──────┐  │               │
+│  │CP-01 ││CP-02 ││CP-03 │  │               │
+│  └──────┘└──────┘└──────┘  │               │
+│                            │               │
+└─────────────┬──────────────┘               │
+              │                              │
+         VM backup                           │
+              │                              │
+              ▼                              ▼
+┌──────────────────────────────────────────────────────────┐
+│                 Media Pi (2TB SSD)                       │
+│                 Consolidation point                      │
+│                                                          │
+│   ┌───────────────────┐   ┌───────────────────────────┐  │
+│   │ PBS               │   │ Garage copy               │  │
+│   │ VM backups ~40GB  │   │ App backups ~10-20GB      │  │
+│   └─────────┬─────────┘   └─────────────┬─────────────┘  │
+│             │                           │                │
+│             └─────────┬─────────────────┘                │
+│                       │                                  │
+└───────────────────────┼──────────────────────────────────┘
+                        │
+                     S3 sync
+                        │
+                        ▼
+┌──────────────────────────────────────────────────────────┐
+│              Cloudflare R2 (off-site)                    │
+│              Immutable backups (Object Lock)             │
+│              VM images + App data                        │
+└──────────────────────────────────────────────────────────┘
+```
+
+Media Pi acts as the single consolidation point. All backups — both app data and VM images — flow through Media Pi before being synced to R2. This simplifies off-site sync to a single process from one machine.
 
 ### Copy distribution
 
 | Data type | Copy 1 (live) | Copy 2 (local backup) | Copy 3 (consolidated) | Off-site |
 |-----------|---------------|----------------------|----------------------|----------|
-| App data (Velero) | The Beast (k3s) | Homelab Pi (Garage) | Media Pi (PBS) | Cloudflare R2 |
+| App data (Velero) | The Beast (k3s) | Homelab Pi (Garage) | Media Pi | Cloudflare R2 |
 | VM images | The Beast (Proxmox) | — | Media Pi (PBS) | Cloudflare R2 |
 
 ### Implementation order
@@ -74,9 +126,10 @@ The roadmap had Phase 3 (apps) before Phase 4 (backups). Reversed because migrat
 - Two independent restore paths: full VM restore (PBS) or granular app restore (Velero)
 - Off-site copy (R2) protects against physical disasters
 - Object Lock on R2 protects against ransomware and compromised credentials
+- Single consolidation point (Media Pi) simplifies off-site sync — one machine, one process to R2
 
 ### Negative
 - More components to set up before app migration can begin (Longhorn, Garage, Velero)
 - Garage and Velero add complexity to the cluster
-- PBS on Media Pi is a single point for consolidated backups (mitigated by R2 off-site)
+- Media Pi is a single point for consolidated backups (mitigated by R2 off-site)
 - R2 replication is a future task — until then, off-site protection is not in place
