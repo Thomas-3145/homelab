@@ -86,6 +86,15 @@ data:
               url: https://100.87.35.119:8006
               username: {{HOMEPAGE_VAR_PROXMOX_USER}}
               password: {{HOMEPAGE_VAR_PROXMOX_PASSWORD}}
+        - PBS:
+            icon: proxmox.svg
+            href: https://100.110.160.88:8007
+            description: Backup Server (Media Pi)
+            widget:
+              type: proxmoxbackupserver
+              url: https://100.110.160.88:8007
+              username: {{HOMEPAGE_VAR_PBS_USER}}
+              password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
