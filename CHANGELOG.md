@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/Thomas-3145/homelab/compare/v1.3.1...v1.4.0) (2026-03-07)
+
+
+### Features
+
+* **longhorn:** lagt till Longhorn distributed storage ([2435214](https://github.com/Thomas-3145/homelab/commit/243521446461ba4a908a9839b8afc4254e3e6701))
+
 ## [1.3.1](https://github.com/Thomas-3145/homelab/compare/v1.3.0...v1.3.1) (2026-03-07)
 
 
