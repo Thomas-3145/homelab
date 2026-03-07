@@ -45,7 +45,7 @@ This repository contains the complete infrastructure setup for my homelab - from
 
 **Infrastructure:**
 - **Proxmox Host** (192.168.10.20): HP EliteDesk 800 G4 - i5-8500T, 32GB RAM, 1.2TB storage
-- **Homelab Pi** (192.168.10.11): Raspberry Pi 5 - 8GB RAM, 256GB NVMe (future k3s worker)
+- **Homelab Pi** (192.168.10.11): Raspberry Pi 5 - 8GB RAM, 512GB NVMe (k3s worker)
 - **Cloud** (planned): AWS integration for hybrid cloud setup
 
 ## Tech Stack
@@ -60,42 +60,36 @@ This repository contains the complete infrastructure setup for my homelab - from
 | **Ingress** | ingress-nginx | Reverse proxy & load balancer |
 | **Certificates** | cert-manager | Automated SSL/TLS via Let's Encrypt |
 | **Load Balancer** | MetalLB | Bare-metal load balancer for services |
-| **Monitoring** | Prometheus + Grafana | Metrics & visualization |
-| **CI/CD** | GitHub Actions | Automated testing & deployment |
+| **Secrets** | SOPS + KSOPS | Encrypted secrets in Git |
+| **Tunnel** | Cloudflared | Cloudflare Tunnel for external access |
+| **Monitoring** | Prometheus + Grafana | Metrics & visualization (planned) |
 
 ## Repository Structure
 
 ```
 homelab/
-├── terraform/              # Infrastructure provisioning
-│   ├── proxmox/           # Proxmox VMs (Ubuntu Server)
-│   └── aws/               # AWS resources (future)
+├── terraform/
+│   └── proxmox/           # VM provisioning (bpg/proxmox provider)
 │
-├── ansible/                # Configuration management
+├── ansible/
 │   ├── inventory/         # Host definitions
-│   ├── playbooks/         # Automation playbooks
-│   └── roles/             # Reusable Ansible roles
+│   └── playbooks/         # k3s setup, node preparation
 │
-├── kubernetes/             # Kubernetes manifests (GitOps)
-│   ├── bootstrap/         # Initial ArgoCD setup
+├── kubernetes/
+│   ├── bootstrap/         # ArgoCD root app (App of Apps)
 │   ├── infrastructure/    # Core cluster components
-│   │   ├── argocd/       # GitOps engine
-│   │   ├── cert-manager/ # SSL certificate management
-│   │   ├── longhorn/     # Distributed storage
-│   │   ├── metallb/      # Load balancer
-│   │   └── ingress-nginx/# Ingress controller
+│   │   ├── argocd/       # GitOps engine + Application manifests
+│   │   ├── cert-manager/ # SSL via Let's Encrypt + Cloudflare
+│   │   ├── cloudflared/  # Cloudflare Tunnel
+│   │   └── metallb/      # Bare-metal load balancer
 │   └── apps/              # Applications
-│       ├── ghost/        # Blog platform
-│       ├── vaultwarden/  # Password manager
-│       ├── github-runner/# Self-hosted CI runner
-│       └── monitoring/   # Observability stack
+│       ├── homepage/     # Dashboard (home.3145.blog)
+│       ├── headlamp/     # K8s dashboard (headlamp.3145.blog)
+│       └── it-tools/     # IT toolkit (tools.3145.blog)
 │
-├── scripts/                # Helper scripts
-├── docs/                   # Documentation
-│   ├── adr/               # Architecture Decision Records
-│   ├── runbooks/          # Operational procedures
-│   └── roadmap.md         # Implementation roadmap
-└── README.md              # This file
+└── docs/
+    ├── adr-Architecture-Decision-Records/
+    └── roadmap.md
 ```
 
 ## GitOps Workflow
@@ -135,7 +129,7 @@ Once bootstrapped, all changes are made by:
 **Quick Start:**
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/homelab.git
+git clone https://github.com/ThBuKj/homelab.git
 cd homelab
 
 # 2. Configure Terraform variables
@@ -160,21 +154,23 @@ kubectl get nodes
 
 This project is built in phases. See [docs/roadmap.md](docs/roadmap.md) for detailed implementation plan.
 
-**Current Status: 🏗️ Fase 3 - GitOps Bootstrap**
+**Current Status: Fase 3 almost complete**
 
-- ✅ Repository structure created
 - ✅ Terraform provisioning Proxmox VMs
 - ✅ Ansible preparing nodes and installing k3s
-- ✅ HA k3s cluster running (3 control plane nodes)
-- ⏳ ArgoCD / GitOps implementation
-- ⏳ Application deployment
-- ⏳ Monitoring stack
+- ✅ HA k3s cluster running (3 CP + 1 worker)
+- ✅ ArgoCD with App of Apps pattern
+- ✅ MetalLB (192.168.10.200-220)
+- ✅ ingress-nginx + cert-manager (Let's Encrypt)
+- ✅ SOPS + KSOPS for encrypted secrets
+- ✅ Cloudflare Tunnel
+- ⏳ Longhorn (distributed storage)
+- ⏳ Application migration (Ghost, Vaultwarden)
 
 ## Documentation
 
 - [Roadmap](docs/roadmap.md) - Detailed implementation plan
-- Network architecture - (coming soon)
-- Disaster recovery plan - (coming soon)
+- [ADR-001: Backup Strategy](docs/adr-Architecture-Decision-Records/001-backup-strategy.md)
 
 ## Blog Series
 

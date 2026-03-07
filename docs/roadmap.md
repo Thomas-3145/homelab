@@ -41,8 +41,8 @@ Create `terraform/proxmox/providers.tf`:
 terraform {
   required_providers {
     proxmox = {
-      source  = "telmate/proxmox"
-      version = "~> 2.9"
+      source  = "bpg/proxmox"
+      version = "~> 0.95"
     }
   }
 }
@@ -349,12 +349,12 @@ Handled automatically by `install-k3s.yaml` Play 3 — fetches kubeconfig and re
 ### Success Criteria
 - ✅ All nodes configured (DNS, swap, packages)
 - ✅ 3-node HA k3s control plane running
-- ⏳ Homelab Pi joined as worker
+- ✅ Homelab Pi joined as worker
 - ⏳ Longhorn providing distributed storage
 - ✅ kubectl commands work from local machine
 - ✅ All nodes show "Ready" status
 
-### Status: 🚧 IN PROGRESS (cluster running, worker + storage remaining)
+### Status: ✅ COMPLETE (cluster running, worker joined)
 ### Blog Post: "Building a HA k3s Cluster with Ansible"
 
 ---
@@ -412,7 +412,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/yourusername/homelab.git
+    repoURL: https://github.com/ThBuKj/homelab.git
     targetRevision: main
     path: kubernetes/infrastructure
   destination:
@@ -441,7 +441,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/yourusername/homelab.git
+    repoURL: https://github.com/ThBuKj/homelab.git
     targetRevision: main
     path: kubernetes/infrastructure/cert-manager
   destination:
@@ -473,7 +473,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 192.168.10.100-192.168.10.120
+    - 192.168.10.200-192.168.10.220
 ```
 
 **Deliverable**: Services can get external IPs
@@ -503,13 +503,16 @@ spec:
 
 ### Success Criteria
 - ✅ ArgoCD installed and accessible
-- ✅ Root app deployed and syncing
-- ✅ All infrastructure components deployed automatically
-- ✅ MetalLB assigning IPs to services
-- ✅ cert-manager issuing SSL certificates
+- ✅ Root app deployed and syncing (App of Apps)
+- ✅ MetalLB assigning IPs (192.168.10.200-220)
+- ✅ ingress-nginx deployed as LoadBalancer
+- ✅ cert-manager issuing SSL certificates (Let's Encrypt + Cloudflare)
+- ✅ SOPS + KSOPS for encrypted secrets
+- ✅ Cloudflare Tunnel for external access
 - ✅ Changes to GitHub trigger auto-deployment
+- ⏳ Longhorn (distributed storage)
 
-### Time Estimate: 1 week
+### Status: 🚧 IN PROGRESS (Longhorn remaining)
 ### Blog Post: "Implementing GitOps with ArgoCD"
 
 ---
@@ -954,5 +957,5 @@ Use Kubernetes node affinity:
 
 ---
 
-**Last Updated**: 2026-02-18
-**Current Phase**: Fase 2/3 - Ansible & GitOps
+**Last Updated**: 2026-03-07
+**Current Phase**: Fase 3 (Longhorn remaining) → Fase 4 (App migration)
