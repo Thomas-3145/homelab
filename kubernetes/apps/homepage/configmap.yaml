@@ -94,7 +94,7 @@ data:
               type: proxmoxbackupserver
               url: https://100.110.160.88:8007
               username: {{HOMEPAGE_VAR_PBS_USER}}
-              password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
+              password: {{HOMEPAGE_VAR_PBS_TOKEN}}
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
