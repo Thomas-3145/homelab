@@ -1,0 +1,22 @@
+---
+# Installs Longhorn prerequisites on all k3s nodes.
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/prepare-longhorn.yaml
+
+- name: Install Longhorn prerequisites
+  hosts: k3s_control_plane:k3s_workers
+  become: true
+
+  tasks:
+    - name: Install open-iscsi and util-linux
+      ansible.builtin.apt:
+        name:
+          - open-iscsi
+          - util-linux
+        state: present
+        update_cache: true
+
+    - name: Enable and start iscsid
+      ansible.builtin.systemd:
+        name: iscsid
+        enabled: true
+        state: started
