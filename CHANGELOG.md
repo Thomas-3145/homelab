@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/Thomas-3145/homelab/compare/v1.2.0...v1.3.0) (2026-03-07)
+
+
+### Features
+
+* **longhorn:** lagt till Longhorn storage och Ansible förberedelser ([bbbb7e5](https://github.com/Thomas-3145/homelab/commit/bbbb7e56822ba59d027adc0b9f3a892527635198))
+
 # [1.2.0](https://github.com/Thomas-3145/homelab/compare/v1.1.0...v1.2.0) (2026-03-05)
 
 
