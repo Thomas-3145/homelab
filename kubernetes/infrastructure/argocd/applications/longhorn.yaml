@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: longhorn
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.longhorn.io
+    chart: longhorn
+    targetRevision: 1.8.*
+    helm:
+      releaseName: longhorn
+      valuesObject:
+        defaultSettings:
+          defaultReplicaCount: 2
+          taintToleration: "node-role.kubernetes.io/control-plane:NoSchedule"
+        ingress:
+          enabled: true
+          ingressClassName: nginx
+          host: longhorn.3145.blog
+          tls: true
+          tlsSecret: longhorn-tls
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
