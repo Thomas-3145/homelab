@@ -17,6 +17,8 @@ spec:
         defaultSettings:
           defaultReplicaCount: 2
           taintToleration: "node-role.kubernetes.io/control-plane:NoSchedule"
+        longhornAdmissionWebhook:
+          failurePolicy: Ignore
         preUpgradeChecker:
           jobEnabled: false
         ingress:
