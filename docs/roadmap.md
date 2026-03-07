@@ -836,6 +836,94 @@ Use Kubernetes node affinity:
 
 ---
 
+## Fase 8: Platform Engineering & Security Hardening
+
+**Goal**: Harden the cluster with policy enforcement, centralized secrets, and a developer portal
+
+### 8.1 Kyverno – Policy Engine (~1 week)
+
+**What**: Kubernetes-native policy engine. Enforces rules as standard YAML manifests — no new languages.
+
+**Why**: Security hardening + portfolio value. Shows you think about compliance and best practices.
+
+**Deploy via ArgoCD** in `kubernetes/infrastructure/kyverno/`:
+- Install Kyverno via Helm chart
+- Deploy policies as ClusterPolicy resources
+
+**Starter policies:**
+- [ ] Require resource limits on all pods
+- [ ] Disallow `latest` image tag
+- [ ] Require specific labels (app, team)
+- [ ] Block privileged containers
+- [ ] Enforce read-only root filesystem
+
+**Prerequisites**: ArgoCD (already done)
+**Deliverable**: Cluster-wide policy enforcement via GitOps
+
+---
+
+### 8.2 HashiCorp Vault – Secrets Management (~2-3 weeks)
+
+**What**: Centralized secrets management with dynamic credentials, rotation, and audit logging.
+
+**Why**: Replaces SOPS/KSOPS with a more scalable solution. Essential skill for production environments.
+
+**Deploy via ArgoCD** in `kubernetes/infrastructure/vault/`:
+- Install Vault via Helm chart (HA mode with integrated storage)
+- Configure Kubernetes auth method
+- Use External Secrets Operator to sync Vault secrets to K8s Secrets
+
+**Tasks:**
+- [ ] Deploy Vault server on k3s
+- [ ] Configure auto-unseal (transit or cloud KMS)
+- [ ] Set up Kubernetes auth method
+- [ ] Deploy External Secrets Operator
+- [ ] Migrate Ghost secrets from SOPS to Vault
+- [ ] Migrate Vaultwarden secrets from SOPS to Vault
+- [ ] Configure audit logging
+
+**Prerequisites**: Running apps (Ghost, Vaultwarden) to integrate with
+**Deliverable**: All application secrets managed via Vault
+
+---
+
+### 8.3 Backstage – Developer Portal (~3-4 weeks)
+
+**What**: Spotify's open-source developer portal. Single pane of glass for all services, docs, and infrastructure.
+
+**Why**: Demonstrates platform engineering thinking — highly valued by employers. Ties together everything built so far.
+
+**Deploy via ArgoCD** in `kubernetes/apps/backstage/`:
+- Build custom Backstage image with plugins
+- PostgreSQL database for catalog
+- Ingress at `backstage.3145.blog` with TLS
+
+**Integrations:**
+- [ ] ArgoCD plugin – deployment status in Backstage
+- [ ] Kubernetes plugin – pod status, logs
+- [ ] TechDocs – render existing markdown docs as searchable portal
+- [ ] GitHub plugin – link to repositories
+
+**Software Catalog:**
+- [ ] Write `catalog-info.yaml` for each service (Ghost, Vaultwarden, Homepage, etc.)
+- [ ] Define system/component relationships
+- [ ] Create software templates for new services
+
+**Prerequisites**: Vault (for secrets), multiple running services to catalog
+**Deliverable**: Developer portal at backstage.3145.blog with full service catalog
+
+---
+
+### Success Criteria
+- [ ] Kyverno enforcing policies cluster-wide
+- [ ] Vault managing all application secrets
+- [ ] Backstage cataloging all services with ArgoCD integration
+- [ ] Everything deployed via GitOps
+
+### Blog Post: "From Cluster to Platform: Kyverno, Vault & Backstage"
+
+---
+
 ## Future Enhancements
 
 **After core phases:**
