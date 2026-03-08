@@ -21,18 +21,19 @@
             - traefik
             - servicelb
         mode: "0644"
-      register: k3s_config
+      notify:
+        - Restart k3s
+        - Wait for k3s API to be ready
 
+  handlers:
     - name: Restart k3s
       ansible.builtin.systemd:
         name: k3s
         state: restarted
-      when: k3s_config.changed
 
     - name: Wait for k3s API to be ready
       ansible.builtin.wait_for:
         port: 6443
-      when: k3s_config.changed
 
 - name: Clean up Traefik and klipper-lb resources
   hosts: k3s_init
