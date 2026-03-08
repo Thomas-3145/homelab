@@ -14,9 +14,10 @@ variable "proxmox_api_token_secret" {
   sensitive   = true
 }
 
-variable "ssh_public_key" {
-  description = "SSH public key for cloud-init"
+variable "ssh_public_key_path" {
+  description = "Path to SSH public key for cloud-init"
   type        = string
+  default     = "~/.ssh/id_rsa_4096.pub"
 }
 
 variable "target_node" {
@@ -32,7 +33,7 @@ variable "template_id" {
 }
 
 variable "test_vms" {
-  description = "VMs att testa på"
+  description = "Test VMs to provision"
   type = map(object({
     ip     = string
     cores  = number
