@@ -1,5 +1,17 @@
 # Homelab Infrastructure
 
+![CI](https://github.com/Thomas-3145/homelab/actions/workflows/lint.yaml/badge.svg)
+![k3s](https://img.shields.io/badge/k3s-v1.31-326CE5?logo=kubernetes&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-1.x-844FBA?logo=terraform&logoColor=white)
+![Ansible](https://img.shields.io/badge/Ansible-Managed-EE0000?logo=ansible&logoColor=white)
+![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?logo=argo&logoColor=white)
+![Longhorn](https://img.shields.io/badge/Longhorn-v1.11-5F259F?logo=rancher&logoColor=white)
+![Nodes](https://img.shields.io/badge/Nodes-4_(3_CP_+_1_ARM64)-2496ED?logo=proxmox&logoColor=white)
+![IaC Lines](https://img.shields.io/badge/Lines_of_IaC-1.5k+-green?logo=codeclimate&logoColor=white)
+![K8s Manifests](https://img.shields.io/badge/K8s_Manifests-29-326CE5?logo=kubernetes&logoColor=white)
+![Security](https://img.shields.io/badge/Trivy-0_Critical-success?logo=aquasecurity&logoColor=white)
+![SOPS](https://img.shields.io/badge/Secrets-SOPS_Encrypted-black?logo=mozilla&logoColor=white)
+
 > Modern homelab setup with GitOps, demonstrating Infrastructure as Code (IaC) and cloud-native practices.
 
 ## Overview
@@ -11,7 +23,7 @@ This repository contains the complete infrastructure setup for my homelab - from
 - 🏗️ **Infrastructure as Code**: Terraform for provisioning, Ansible for configuration
 - ☸️ **Kubernetes (k3s)**: Lightweight, production-ready orchestration
 - 🔄 **High Availability**: 3-node HA control plane with embedded etcd
-- 📊 **Full Observability**: Prometheus + Grafana monitoring stack
+- 📊 **Observability**: Prometheus + Grafana monitoring stack (planned)
 - 🔒 **Security First**: Cert-manager for SSL, proper network segmentation
 
 ## Architecture
@@ -52,7 +64,7 @@ This repository contains the complete infrastructure setup for my homelab - from
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
-| **IaC** | Terraform | Provision VMs on Proxmox & AWS resources |
+| **IaC** | Terraform | Provision VMs on Proxmox |
 | **Configuration** | Ansible | Configure nodes, install k3s |
 | **Orchestration** | k3s | Lightweight Kubernetes distribution |
 | **GitOps** | ArgoCD | Automated deployment from Git |
@@ -81,6 +93,8 @@ homelab/
 │   │   ├── argocd/       # GitOps engine + Application manifests
 │   │   ├── cert-manager/ # SSL via Let's Encrypt + Cloudflare
 │   │   ├── cloudflared/  # Cloudflare Tunnel
+│   │   ├── ingress-nginx/# Ingress controller (via ArgoCD)
+│   │   ├── longhorn/     # Distributed storage (via ArgoCD)
 │   │   └── metallb/      # Bare-metal load balancer
 │   └── apps/              # Applications
 │       ├── homepage/     # Dashboard (home.3145.blog)
@@ -95,19 +109,19 @@ homelab/
 ## GitOps Workflow
 
 ```
-Developer                 GitHub                   Cluster
-    │                        │                        │
-    │  1. Push changes       │                        │
-    ├───────────────────────>│                        │
-    │                        │                        │
-    │                        │  2. ArgoCD detects     │
-    │                        │     changes            │
-    │                        ├───────────────────────>│
-    │                        │                        │
-    │                        │  3. Syncs & deploys    │
-    │                        │                        │
-    │                        │  4. Apps updated   ✓   │
-    │                        │<───────────────────────│
+ ┌──────────┐       ┌──────────┐       ┌──────────────┐
+ │Developer │       │  GitHub  │       │  k3s Cluster │
+ └────┬─────┘       └─────┬────┘       └───────┬──────┘
+      │  1. git push      │                    │
+      └──────────────────>│  2. ArgoCD polls   │
+                          │<───────────────────│
+                          │                    │
+                          │  3. Detect changes │
+                          │───────────────────>│
+                          │                    │
+                          │  4. Sync & deploy  │
+                          │               ✅   │
+                          │───────────────────>│
 ```
 
 Once bootstrapped, all changes are made by:
@@ -129,7 +143,7 @@ Once bootstrapped, all changes are made by:
 **Quick Start:**
 ```bash
 # 1. Clone repository
-git clone https://github.com/ThBuKj/homelab.git
+git clone https://github.com/Thomas-3145/homelab.git
 cd homelab
 
 # 2. Configure Terraform variables
@@ -154,7 +168,7 @@ kubectl get nodes
 
 This project is built in phases. See [docs/roadmap.md](docs/roadmap.md) for detailed implementation plan.
 
-**Current Status: Fase 3 almost complete**
+**Current Status: Fase 3 complete, entering Fase 4**
 
 - ✅ Terraform provisioning Proxmox VMs
 - ✅ Ansible preparing nodes and installing k3s
@@ -164,7 +178,8 @@ This project is built in phases. See [docs/roadmap.md](docs/roadmap.md) for deta
 - ✅ ingress-nginx + cert-manager (Let's Encrypt)
 - ✅ SOPS + KSOPS for encrypted secrets
 - ✅ Cloudflare Tunnel
-- ⏳ Longhorn (distributed storage)
+- ✅ Longhorn distributed storage (snapshot restore verified)
+- ✅ CI pipeline (Terraform, YAML, Ansible, Kubeconform, Trivy)
 - ⏳ Monitoring (Prometheus + Grafana)
 - ⏳ Application migration (Ghost, Vaultwarden)
 
@@ -183,5 +198,3 @@ Follow my journey building this homelab on my blog:
 MIT License - Feel free to use this as inspiration for your own homelab!
 
 ---
-
-**Built with** ☕ **and a passion for learning**
