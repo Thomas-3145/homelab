@@ -41,7 +41,7 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
     user_account {
       username = "ubuntu"
       password = "ubuntu"
-      keys     = [file("~/.ssh/id_rsa_4096.pub")]
+      keys     = [file(pathexpand(var.ssh_public_key_path))]
     }
   }
 }
@@ -91,7 +91,7 @@ resource "proxmox_virtual_environment_vm" "test" {
     user_account {
       username = "ubuntu"
       password = "ubuntu"
-      keys     = [file("~/.ssh/id_rsa_4096.pub")]
+      keys     = [file(pathexpand(var.ssh_public_key_path))]
     }
   }
 }
