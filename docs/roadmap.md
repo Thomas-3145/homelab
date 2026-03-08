@@ -517,7 +517,7 @@ spec:
 
 ---
 
-## Fase 4: Application Deployment
+## Fase 4: Monitoring & Observability
 
 **Goal**: Deploy applications on the k3s cluster
 
@@ -528,7 +528,7 @@ spec:
 
 ### Tasks
 
-#### 4.1 Ghost Blog Deployment
+#### 5.1 Ghost Blog Deployment
 Create manifests in `kubernetes/apps/ghost/`:
 
 **PersistentVolumeClaim** (Longhorn storage):
@@ -623,7 +623,7 @@ spec:
 
 **Deliverable**: Ghost blog running in k3s with SSL
 
-#### 4.2 Vaultwarden Deployment
+#### 5.2 Vaultwarden Deployment
 Similar structure as Ghost, but with:
 - Smaller PVC (5Gi)
 - Scheduled backups to cloud
@@ -641,7 +641,7 @@ Similar structure as Ghost, but with:
 
 ---
 
-## Fase 5: Monitoring & Observability
+## Fase 5: Application Deployment
 
 **Goal**: Full visibility into cluster health and performance
 
@@ -653,7 +653,7 @@ Similar structure as Ghost, but with:
 
 ### Tasks
 
-#### 5.1 Prometheus Stack
+#### 4.1 Prometheus Stack
 Deploy kube-prometheus-stack via Helm:
 ```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -666,7 +666,7 @@ Or via ArgoCD Application manifest.
 
 **Deliverable**: Prometheus scraping metrics
 
-#### 5.2 Grafana Dashboards
+#### 4.2 Grafana Dashboards
 Import standard dashboards:
 - Kubernetes cluster overview
 - Node metrics
@@ -675,7 +675,7 @@ Import standard dashboards:
 
 **Deliverable**: Visual monitoring
 
-#### 5.3 Alertmanager Configuration
+#### 4.3 Alertmanager Configuration
 Configure alerts for:
 - Node down
 - Pod crashloop
@@ -958,4 +958,4 @@ Use Kubernetes node affinity:
 ---
 
 **Last Updated**: 2026-03-07
-**Current Phase**: Fase 3 (Longhorn remaining) → Fase 4 (App migration)
+**Current Phase**: Fase 3 (Longhorn remaining) → Fase 4 (Monitoring & Observability)

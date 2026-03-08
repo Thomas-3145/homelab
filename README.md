@@ -165,6 +165,7 @@ This project is built in phases. See [docs/roadmap.md](docs/roadmap.md) for deta
 - ✅ SOPS + KSOPS for encrypted secrets
 - ✅ Cloudflare Tunnel
 - ⏳ Longhorn (distributed storage)
+- ⏳ Monitoring (Prometheus + Grafana)
 - ⏳ Application migration (Ghost, Vaultwarden)
 
 ## Documentation
