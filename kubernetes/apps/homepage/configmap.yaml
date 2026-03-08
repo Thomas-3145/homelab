@@ -33,6 +33,10 @@ data:
             icon: argo-cd.svg
             href: http://argocd.local
             description: GitOps
+            widget:
+              type: argocd
+              url: https://argocd-server.argocd.svc.cluster.local
+              key: {{HOMEPAGE_VAR_ARGOCD_KEY}}
         - PBS:
             icon: proxmox.svg
             href: https://100.110.160.88:8007
@@ -42,6 +46,13 @@ data:
               url: https://100.110.160.88:8007
               username: {{HOMEPAGE_VAR_PBS_USER}}
               password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
+        - Longhorn:
+            icon: longhorn.svg
+            href: http://longhorn.local
+            description: Distributed Storage
+            widget:
+              type: longhorn
+              url: http://longhorn-frontend.longhorn-system.svc.cluster.local
         - Headlamp:
             icon: headlamp.svg
             href: http://headlamp.local
