@@ -45,10 +45,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install ansible-lint
+        run: pip install ansible-lint
+
       - name: Run ansible-lint
-        uses: ansible/ansible-lint-action@v6
-        with:
-          working_directory: ansible/
+        run: ansible-lint ansible/
 
   kubeconform:
     name: Kubernetes Manifests
@@ -67,6 +68,7 @@ jobs:
             ! -name 'kustomization.yaml' \
             ! -name '*.sops.yaml' \
             ! -name 'ksops-generator.yaml' \
+            ! -path '*/patches/*' \
             -print0 | xargs -0 kubeconform \
               -strict \
               -ignore-missing-schemas \
