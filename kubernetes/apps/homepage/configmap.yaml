@@ -15,9 +15,6 @@ data:
     quicklaunch:
       searchDescriptions: true
       provider: google
-    providers:
-      longhorn:
-        url: http://longhorn-frontend.longhorn-system.svc.cluster.local
     layout:
       Kluster:
         initiallyCollapsed: true
@@ -32,14 +29,6 @@ data:
             icon: si-adguard
             href: http://192.168.8.1:3000/
             description: DNS-filtrering
-        - ArgoCD:
-            icon: argo-cd.svg
-            href: http://argocd.local
-            description: GitOps
-            widget:
-              type: argocd
-              url: http://argocd-server.argocd.svc.cluster.local
-              key: {{HOMEPAGE_VAR_ARGOCD_KEY}}
         - PBS:
             icon: proxmox.svg
             href: https://100.110.160.88:8007
@@ -102,6 +91,14 @@ data:
               url: https://100.87.35.119:8006
               username: {{HOMEPAGE_VAR_PROXMOX_USER}}
               password: {{HOMEPAGE_VAR_PROXMOX_PASSWORD}}
+        - ArgoCD:
+            icon: argo-cd.svg
+            href: http://argocd.local
+            description: GitOps
+            widget:
+              type: argocd
+              url: http://argocd-server.argocd.svc.cluster.local
+              key: {{HOMEPAGE_VAR_ARGOCD_KEY}}
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
@@ -158,11 +155,6 @@ data:
         timezone: Europe/Stockholm
         units: metric
         cache: 5
-    - longhorn:
-        expanded: true
-        total: true
-        labels: true
-        nodes: false
     - kubernetes:
         cluster:
           show: true
