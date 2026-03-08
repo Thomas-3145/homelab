@@ -15,6 +15,9 @@ data:
     quicklaunch:
       searchDescriptions: true
       provider: google
+    providers:
+      longhorn:
+        url: http://longhorn-frontend.longhorn-system.svc.cluster.local
     layout:
       Kluster:
         initiallyCollapsed: true
@@ -35,7 +38,7 @@ data:
             description: GitOps
             widget:
               type: argocd
-              url: https://argocd-server.argocd.svc.cluster.local
+              url: http://argocd-server.argocd.svc.cluster.local
               key: {{HOMEPAGE_VAR_ARGOCD_KEY}}
         - PBS:
             icon: proxmox.svg
@@ -46,13 +49,6 @@ data:
               url: https://100.110.160.88:8007
               username: {{HOMEPAGE_VAR_PBS_USER}}
               password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
-        - Longhorn:
-            icon: longhorn.svg
-            href: http://longhorn.local
-            description: Distributed Storage
-            widget:
-              type: longhorn
-              url: http://longhorn-frontend.longhorn-system.svc.cluster.local
         - Headlamp:
             icon: headlamp.svg
             href: http://headlamp.local
@@ -162,6 +158,11 @@ data:
         timezone: Europe/Stockholm
         units: metric
         cache: 5
+    - longhorn:
+        expanded: true
+        total: true
+        labels: true
+        nodes: false
     - kubernetes:
         cluster:
           show: true
