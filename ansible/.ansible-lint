@@ -1,0 +1,5 @@
+---
+skip_list:
+  # k3s and Tailscale use curl|sh as their official install method
+  - command-instead-of-module
+  - risky-shell-pipe
