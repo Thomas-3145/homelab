@@ -1,365 +1,269 @@
 # Architecture Review & Recommendations
 
-> **Date**: 2026-02-14
-> **Reviewer**: Claude Opus 4.6
+> **Date**: 2026-03-08 (Updated)
+> **Original Review**: 2026-02-14 (Claude Opus 4.6, Phase 1)
+> **Updated Review**: 2026-03-08 (Claude Opus 4.6, Phase 3-4)
 > **Project**: Thomas's Homelab - K3s Infrastructure
-> **Current Phase**: Phase 1 (Terraform) - Complete
+> **Current Phase**: Phase 3 complete, entering Phase 4
 
 ---
 
 ## Executive Summary
 
-The project has a **solid foundation**: clean repository structure, well-planned 7-phase roadmap, and working Terraform that provisions 3 control plane VMs on Proxmox. Documentation quality is excellent for both human readers and AI assistants.
+### Original Assessment (Feb 2026)
+
+The project had a solid foundation with clean Terraform, well-planned roadmap, and 3 control plane VMs provisioned on Proxmox. The recommendation was to shift from planning to execution.
+
+### Updated Assessment (Mar 2026)
+
+Execution has been **excellent**. In three weeks, the project went from "Terraform works" to a fully operational GitOps-managed k3s cluster with:
+- HA control plane (3 nodes) + ARM64 worker
+- ArgoCD with App of Apps pattern
+- MetalLB + ingress-nginx + cert-manager (full ingress stack)
+- Longhorn distributed storage (v1.11.x)
+- SOPS/KSOPS for encrypted secrets in Git
+- Cloudflare Tunnel for external access
+- PBS for VM backups
+- NUT UPS for graceful shutdowns
+- 6+ deployed applications
 
 **Key findings:**
-1. **Security** - Good baseline (.gitignore excludes secrets), but Terraform config lacks hardening and the VMs have no firewall or SSH hardening yet
-2. **Architecture** - 3 control plane VMs on a single Proxmox host means HA is only at the k3s level, not at the hardware level. This is fine for learning but worth acknowledging
-3. **Scalability** - The design scales well to hybrid cloud. Adding the Pi as a worker + future AWS nodes is a natural progression
-4. **Gaps** - No Ansible, no k3s, no apps yet. The roadmap covers all of this but execution is at the very beginning
+1. **Architecture** — Production-quality patterns. GitOps-first approach is disciplined and consistent
+2. **Security** — SOPS/KSOPS is a better choice than the originally recommended Sealed Secrets. Network segmentation solid with VLANs + Tailscale
+3. **Code quality** — Pre-commit hooks, conventional commits, clean YAML. Professional standard
+4. **Gaps** — No monitoring stack yet, no network policies, Terraform state still local, SOPS bootstrap not automated
+5. **Portfolio value** — High. This demonstrates real infrastructure engineering, not just tutorials copy-pasted
 
-**Overall assessment**: Well-architected for a learning project. The roadmap is realistic and the design decisions are sound. Focus should now shift from planning to execution.
-
----
-
-## Detailed Analysis
-
-### 1. Terraform (terraform/proxmox/)
-
-#### What's good
-- Clean separation: `main.tf`, `providers.tf`, `variables.tf`
-- Uses `bpg/proxmox` provider (better maintained than `telmate/proxmox`)
-- Secrets properly marked `sensitive = true` in variables
-- `.gitignore` correctly excludes `.tfvars`, `.tfstate`, and `.terraform/`
-- Cloud-init for automated VM provisioning
-
-#### Issues & Recommendations
-
-**T1. Missing Terraform outputs** (Priority: Medium)
-No `outputs.tf` exists. Add one to expose VM IPs, names, and IDs for use in Ansible dynamic inventory or scripts.
-
-```hcl
-# terraform/proxmox/outputs.tf
-output "control_plane_ips" {
-  value = [for vm in proxmox_virtual_environment_vm.k3s_control_plane :
-    vm.initialization[0].ip_config[0].ipv4[0].address
-  ]
-}
-```
-
-**T2. No Terraform state backend** (Priority: Medium)
-State is local-only (`terraform.tfstate` on disk). If the laptop dies, state is lost.
-
-Options ranked by simplicity:
-1. **Git-ignored local file + manual backup** (current - acceptable for now)
-2. **Terraform Cloud free tier** (remote state, locking, no cost)
-3. **S3 + DynamoDB** (overkill for homelab)
-
-Recommendation: Move to Terraform Cloud when you reach Phase 6 (CI/CD). For now, ensure the state file is backed up.
-
-**T3. No terraform.tfvars.example** (Priority: Low)
-Other developers (or future-you after a fresh clone) won't know what variables to set. Create a sanitized example:
-
-```hcl
-# terraform/proxmox/terraform.tfvars.example
-proxmox_api_url          = "https://192.168.10.20:8006"
-proxmox_api_token_id     = "user@pam!token-name"
-proxmox_api_token_secret = "change-me"
-ssh_public_key           = "ssh-rsa AAAA..."
-target_node              = "pve"
-template_id              = 9000
-```
-
-**T4. VM disk size is 20GB** (Priority: Low)
-The roadmap examples show 32GB. 20GB works for k3s control plane but will be tight if Longhorn uses local storage. Consider 32GB for future-proofing.
-
-**T5. No VLAN tag on network** (Priority: Medium)
-The `network_device` block uses `bridge = "vmbr0"` but doesn't specify a VLAN tag. If your Proxmox bridge is VLAN-aware, you should add `vlan_id = 10` to ensure traffic stays in the homelab VLAN. Verify this matches your Proxmox network setup.
-
-**T6. SSH key not injected via cloud-init** (Priority: High)
-The `user_account` block only sets `username = "ubuntu"` but the `ssh_public_key` variable defined in `variables.tf` is never used in `main.tf`. This means either:
-- SSH keys are set via the Proxmox template (fragile), or
-- Password auth is used (insecure)
-
-Fix by adding to the `initialization` block:
-```hcl
-user_account {
-  username = "ubuntu"
-  keys     = [var.ssh_public_key]
-}
-```
+**Overall: 8/10** — A mature, well-architected homelab that demonstrates strong DevOps fundamentals.
 
 ---
 
-### 2. Security Assessment
+## What Changed Since Original Review
 
-#### Current state
-- **.gitignore**: Properly excludes secrets, state files, vault passwords - well done
-- **Proxmox API**: Uses token auth (not root password) - correct approach
-- **TLS**: `insecure = true` for self-signed cert on Proxmox - acceptable for homelab LAN
-- **VMs**: No hardening applied yet (no Ansible = no firewall, no fail2ban, no SSH hardening)
+### Completed Recommendations
 
-#### Recommendations
+| Original Rec | Status | Notes |
+|---|---|---|
+| T3: terraform.tfvars.example | ✅ Done | Created with sanitized values |
+| T1: outputs.tf | ✅ Done | Exports CP IPs, names, IDs |
+| S4: Secrets management | ✅ Done | SOPS/KSOPS (not Sealed Secrets as suggested) |
+| N1: MetalLB | ✅ Done | 192.168.10.200-220 pool |
+| N2: ingress-nginx | ✅ Done | Replaced Traefik |
+| N3: Cloudflare Tunnel | ✅ Done | cloudflared in cluster |
+| Phase 2: Ansible | ✅ Done | 7 playbooks, clean inventory |
+| Phase 3: ArgoCD | ✅ Done | App of Apps, 10 applications |
 
-**S1. Rotate Proxmox API token** (Priority: High - if ever committed)
-Verify with `git log -p --all -S "proxmox_api_token"` that the API token was never committed to git history. If it was, rotate it immediately and consider using `git filter-repo` to scrub history.
+### Still Outstanding
 
-**S2. Create a dedicated Proxmox API user** (Priority: High)
-The roadmap mentions `root@pam!terraform-token`. Using root for API access is overly permissive. Create a dedicated user:
-
-```bash
-# On Proxmox
-pveum user add terraform@pve
-pveum role add TerraformRole -privs "VM.Allocate VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Cloudinit VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Monitor VM.Audit VM.PowerMgmt Datastore.AllocateSpace Datastore.Audit SDN.Use"
-pveum aclmod / -user terraform@pve -role TerraformRole
-pveum user token add terraform@pve terraform-token
-```
-
-**S3. SSH hardening via Ansible** (Priority: High - Phase 2)
-When you write Ansible playbooks, include:
-- Disable password authentication
-- Disable root login
-- Change SSH port (optional, defense-in-depth)
-- Install and configure `fail2ban`
-- Configure UFW with minimal open ports
-
-**S4. Secrets management strategy** (Priority: Medium - Phase 3)
-For Kubernetes secrets, recommended approach for homelab:
-1. **Sealed Secrets** - simple, works offline, Git-friendly. Best fit for your setup.
-2. External Secrets Operator - overkill without a cloud secrets manager
-3. SOPS + age - good alternative, encrypts files in-place
-
-Recommendation: Use **Sealed Secrets** for its simplicity and because it's a great portfolio piece to demonstrate.
+| Original Rec | Status | Notes |
+|---|---|---|
+| T2: Remote state backend | ❌ Still local | Low risk for single-user, but fragile |
+| T5: VLAN tag in Terraform | ❓ Unverified | Bridge may handle this at Proxmox level |
+| S2: Dedicated Proxmox API user | ❓ Unverified | May still use root@pam |
+| S3: SSH hardening | Partial | Ansible sets keys, but no fail2ban/UFW playbook |
+| N4: Network policies | ❌ Not done | Flannel doesn't support them without extra work |
 
 ---
 
-### 3. Cluster Architecture Analysis
+## Detailed Analysis (Updated)
 
-#### Current design: 3 CP VMs on 1 Proxmox host + 1 Pi worker
+### 1. Terraform
+
+**Status: Solid, unchanged since Phase 1**
+
+The Terraform code is clean and functional. Provider pinning (`bpg/proxmox >= 0.50.0`), proper variable handling, and cloud-init integration all work well.
+
+**Remaining issues:**
+- **Local state only** — If the machine dies, state is lost. Acceptable for homelab but worth backing up. Consider adding a periodic `terraform state pull > backup.tfstate` to PBS.
+- **No data sources** — Template VM ID 9000 is assumed to exist. A `data` source could validate this.
+- **Agent disabled** — `agent.enabled = false` works but Proxmox guest agent would provide better VM management (IP reporting, graceful shutdown).
+
+### 2. Ansible
+
+**Status: Professional quality, well-structured**
+
+7 playbooks covering the full lifecycle: node prep → k3s install → worker join → Traefik removal → Longhorn prep.
 
 **Strengths:**
-- HA at the k3s level (etcd quorum with 3 nodes)
-- Mixed architecture (amd64 + arm64) demonstrates real-world multi-arch
-- Resource allocation is reasonable (2 CPU, 4GB RAM per CP node = 6 CPU, 12GB total)
+- Three-play design in install-k3s.yaml (bootstrap → join → kubeconfig) is elegant
+- Proper handler usage for service restarts
+- Handles Pi 5 quirks (dphys-swapfile vs fstab for swap)
+- Tailscale IP in inventory shows network sophistication
 
-**Weaknesses:**
-- All 3 CP nodes on same physical host = single point of failure at hardware level
-- Proxmox host failure = complete control plane loss
-- 32GB RAM total on HP, with 12GB for CPs + Proxmox overhead leaves ~16GB for Proxmox itself
+**Room for improvement:**
+- Playbooks are flat — could benefit from roles for reusability
+- Hardcoded IPs (192.168.10.21) appear in multiple places
+- No Ansible Vault for local secrets
+- Missing: fail2ban, UFW, unattended-upgrades playbook (currently done manually)
 
-**Honest assessment**: This is perfectly fine for a homelab learning environment. True HA requires multiple physical hosts, which isn't realistic with current hardware. The architecture still teaches important K8s HA concepts (etcd, leader election, control plane redundancy) even if hardware-level HA isn't achieved.
+### 3. Kubernetes & GitOps
 
-#### Alternative considered: 2 CP + 1 worker on Proxmox, Pi as worker
+**Status: Excellent — the strongest part of the project**
 
-This would save 4GB RAM but loses the ability to demonstrate a proper 3-node etcd quorum. The current choice (3 CP) is better for learning and portfolio demonstration.
-
-#### Recommendation for cluster design
-
-Keep the current 3 CP + 1 Pi worker design. When you reach Phase 7 (hybrid cloud), adding an AWS node as a second worker demonstrates real hybrid architecture. The control plane stays local (low latency for etcd), workers are distributed.
-
+The App of Apps pattern is textbook:
 ```
-┌──────────────────────────────────┐
-│ Proxmox (192.168.10.20)         │
-│  ├── k3s-cp-01 (server)         │
-│  ├── k3s-cp-02 (server)         │
-│  └── k3s-cp-03 (server)         │
-└──────────────────────────────────┘
-           │
-    k3s cluster join
-           │
-┌──────────┴──────────┐    ┌──────────────┐
-│ Homelab Pi (.10.11) │    │ AWS EC2      │
-│ worker (arm64)      │    │ worker (fut.)│
-└─────────────────────┘    └──────────────┘
+root-app.yaml → applications/ → {metallb, ingress-nginx, cert-manager,
+                                  longhorn, cloudflared, homepage,
+                                  headlamp, it-tools, ...}
 ```
 
----
+**What's well done:**
+- Every component managed by ArgoCD — no manual `kubectl apply`
+- Automated sync with selfHeal and prune enabled
+- SOPS/KSOPS integration via ArgoCD repo-server patch
+- Consistent structure across all Application manifests
+- Proper sync waves for dependency ordering
+- Version pinning with minor wildcard (e.g., `1.11.*`)
 
-### 4. Storage Strategy
+**SOPS/KSOPS integration:**
+The repo-server patch adds an initContainer that installs ksops and kustomize, mounts age keys, and sets XDG_CONFIG_HOME. This is clean but worth documenting as a bootstrap dependency — the `sops-age-key` Secret must be created manually before ArgoCD can decrypt anything.
 
-#### Recommendation: Start simple, evolve later
+**Applications deployed:**
+| App | Type | Quality |
+|-----|------|---------|
+| ArgoCD | GitOps controller | ✅ Well-configured |
+| MetalLB | Load balancer | ✅ With ignoreDifferences fix |
+| ingress-nginx | Ingress controller | ✅ Standard setup |
+| cert-manager | TLS certificates | ✅ Cloudflare DNS solver |
+| Longhorn | Distributed storage | ✅ Upgraded to 1.11.x |
+| cloudflared | Tunnel | ✅ SOPS-encrypted token |
+| Homepage | Dashboard | ✅ Rich config with widgets |
+| Headlamp | K8s UI | ✅ Clean deployment |
+| IT-Tools | Utilities | ✅ Simple and working |
 
-| Phase | Storage approach | Why |
-|-------|-----------------|-----|
-| Phase 2-3 | `local-path` (k3s default) | Already included, zero setup, works immediately |
-| Phase 4 | Longhorn (2 replicas) | Needed when apps require persistent data that survives node failure |
-| Phase 7 | Longhorn + S3 backup | DR to cloud |
+### 4. Security
 
-**Longhorn considerations with your hardware:**
-- Each CP VM has 20GB disk. Longhorn replication across 3 nodes means 3x storage consumption
-- Recommendation: Add a second disk to VMs (50GB+) dedicated to Longhorn, separate from the OS disk
-- Pi 5 with NVMe can also contribute to Longhorn pool (good for arm64 replica)
-- Media Pi should NOT be in the Longhorn pool (different VLAN, different purpose)
-
-**For Ghost specifically**: SQLite is the default and works fine. Don't add MySQL/PostgreSQL complexity unless you need it. Use a Longhorn PVC for the content directory.
-
----
-
-### 5. Networking Recommendations
-
-**N1. MetalLB** (Recommended)
-Assign a pool in your VLAN 10 range, e.g., `192.168.10.200-192.168.10.220`. This gives LoadBalancer-type services external IPs. Essential for ingress.
-
-**N2. Ingress controller: ingress-nginx** (Recommended)
-You planned this already. Good choice - more widely used in production than Traefik, better for portfolio demonstration. K3s ships with Traefik by default, so disable it with `--disable=traefik` (already in your roadmap).
-
-**N3. DNS strategy**
-- Internal: Use your AdGuard Home on the router for `*.homelab.local` pointing to MetalLB IP
-- External: Cloudflare for `3145.blog` pointing to your public IP (or Cloudflare Tunnel)
-- Recommendation: Use **Cloudflare Tunnel** instead of port forwarding. More secure, no need to expose ports, and it's free.
-
-**N4. Consider network policies**
-Once the cluster is running, add Kubernetes NetworkPolicies to isolate namespaces. Great for security and excellent portfolio content. K3s uses Flannel by default which doesn't support NetworkPolicies - switch to Calico or install a Flannel + network policy controller.
-
----
-
-### 6. GitOps: ArgoCD vs Flux
-
-Both are excellent. For your goals:
-
-| Factor | ArgoCD | Flux |
-|--------|--------|------|
-| UI | Rich web UI | CLI-only (UI via Weave GitOps) |
-| Learning curve | Moderate | Steeper |
-| Job market demand | Higher | Growing |
-| Resource usage | Heavier (~500MB RAM) | Lighter (~200MB RAM) |
-| Portfolio value | Strong (employers know it) | Good |
-
-**Recommendation: ArgoCD.** The web UI is valuable for demonstrating your setup in blog posts and interviews. Job postings mention ArgoCD more frequently. The App of Apps pattern in your roadmap is the right approach.
-
----
-
-### 7. Monitoring Stack
-
-**Recommendation: kube-prometheus-stack via Helm**
-
-This gives you Prometheus, Grafana, Alertmanager, and node-exporter in one deployment. Add Loki for logs in a later phase.
-
-**Resource warning**: The full kube-prometheus-stack is memory-hungry (~1-2GB). On your resource-constrained cluster:
-- Reduce Prometheus retention to 7 days
-- Disable components you don't need initially (Thanos sidecar, etc.)
-- Set resource limits to prevent OOM kills
-
----
-
-### 8. Roadmap Assessment
-
-The 7-phase roadmap in `docs/roadmap.md` is well-structured. A few notes:
-
-**Phase 2 (Ansible)** - Add these to the playbook plan:
-- SSH key distribution and hardening
-- Time synchronization (chrony/NTP) - critical for etcd
-- Set hostname properly on each node
-
-**Phase 3 (ArgoCD)** - The roadmap examples use `yourusername` in GitHub URLs. Remember to update these.
-
-**Phase 4 (Migration)** - The Ghost migration strategy is sound (parallel deploy, DNS cutover). One addition: export Ghost content as JSON backup before migration, in case the PVC migration has issues.
-
-**Phase 5 (Monitoring)** - Consider adding Uptime Kuma alongside Prometheus. It's lightweight, gives you external endpoint monitoring, and you already use it.
-
-**Phase 6 (CI/CD)** - Using a self-hosted GitHub runner in k3s is clever but be aware: the runner needs Docker-in-Docker or Kaniko for building images. This adds complexity. Start with simple validate/lint workflows.
-
----
-
-### 9. Career & Portfolio Value
-
-**High-impact things to demonstrate:**
-1. **IaC with Terraform** - You have this. Add `terraform.tfvars.example` and `outputs.tf` to make it complete.
-2. **Configuration management with Ansible** - Idempotent playbooks with roles, not just shell scripts.
-3. **GitOps with ArgoCD** - App of Apps pattern, auto-sync, self-healing.
-4. **Monitoring** - Custom Grafana dashboards with SLI/SLO thinking.
-5. **Sealed Secrets** - Shows you understand secret management in K8s.
-6. **Network Policies** - Shows security awareness.
-7. **CI/CD** - Validate infra changes automatically.
-
-**Blog post ideas that show depth:**
-- "Why I chose k3s over k8s for my homelab (and what I'd do differently)"
-- "Lessons from running a 3-node etcd cluster on a single host"
-- "GitOps in practice: How I deploy with zero manual kubectl"
-- "ARM64 + AMD64: Building a multi-arch K8s cluster"
-- "From Docker Compose to Kubernetes: A migration guide"
-
----
-
-### 10. Documentation Quality
+**Improved significantly since original review.**
 
 **Strengths:**
-- CLAUDE.md provides excellent context for AI assistants
-- Roadmap is detailed with code examples
-- README has clear architecture diagram
-- .gitignore is comprehensive
+- SOPS/KSOPS — secrets encrypted in Git, never plaintext
+- Cloudflare Tunnel — no port forwarding, no exposed services
+- VLAN segmentation — homelab isolated from LAN
+- Tailscale — encrypted mesh for cross-VLAN communication
+- Pre-commit hooks — enforce code quality before it reaches Git
+- Let's Encrypt TLS — all ingresses use HTTPS
 
-**Issues:**
-- README.md line 7: typo "contqns" should be "contains" (already in working directory as uncommitted change)
-- README references `terraform.tfvars.example` in getting started, but this file doesn't exist
-- Roadmap shows `telmate/proxmox` provider in examples but you actually use `bpg/proxmox`
+**Still missing:**
+- **Network Policies** — all pods can reach all pods. Flannel doesn't support NetworkPolicy natively. Options: Calico CNI, or Cilium (more complex but powerful)
+- **Pod Security Standards** — no restrictions on privileged containers, root users, or capabilities
+- **RBAC granularity** — ServiceAccounts exist but no fine-grained role definitions beyond defaults
+- **SOPS bootstrap documentation** — how to recover if the age key is lost?
+- **Terraform state encryption** — local state file is readable by anyone with disk access
 
----
+### 5. Documentation
 
-## Concrete TODO List
+**Exceptional quality.** The roadmap alone is 961 lines with clear success criteria per phase.
 
-### Immediate (before starting Phase 2)
+| Doc | Quality | Notes |
+|-----|---------|-------|
+| README.md | ✅ | Professional with architecture diagram |
+| roadmap.md | ✅ | 8 phases, detailed tasks, code examples |
+| ADR-001 (backup) | ✅ | Full decision journey documented |
+| commit-guide.md | ✅ | Clear conventional commits guide |
+| CLAUDE.md | ✅ | Excellent AI assistant context |
 
-- [ ] **Fix README typo**: "contqns" → "contains" on line 7
-- [ ] **Create `terraform/proxmox/terraform.tfvars.example`**: Sanitized version for documentation
-- [ ] **Create `terraform/proxmox/outputs.tf`**: Export VM IPs and names
-- [ ] **Fix SSH key injection in main.tf**: Add `keys = [var.ssh_public_key]` to `user_account` block
-- [ ] **Verify VLAN tagging**: Confirm `vmbr0` bridge handles VLAN 10 correctly, add `vlan_id` if needed
-- [ ] **Verify Proxmox API user**: Ensure it's not using `root@pam`, create dedicated user if so
-
-### Phase 2 (Ansible & k3s)
-
-- [ ] Create Ansible inventory (`ansible/inventory/hosts.yaml`)
-- [ ] Write node preparation playbook (SSH hardening, firewall, NTP, swap off, kernel modules)
-- [ ] Write k3s installation playbook (3 CP nodes with `--cluster-init`, disable Traefik)
-- [ ] Write Pi worker join playbook
-- [ ] Set up kubeconfig on local machine
-- [ ] Verify all nodes `Ready` with `kubectl get nodes`
-- [ ] Consider increasing VM disk to 32GB before k3s install
-
-### Phase 3 (GitOps)
-
-- [ ] Install ArgoCD via Kustomize
-- [ ] Set up App of Apps pattern with your actual GitHub repo URL
-- [ ] Deploy MetalLB with IP pool `192.168.10.200-220`
-- [ ] Deploy ingress-nginx
-- [ ] Deploy cert-manager with Cloudflare DNS solver
-- [ ] Install Sealed Secrets for secret management
-- [ ] Configure Cloudflare Tunnel (instead of port forwarding)
-
-### Phase 4 (Apps)
-
-- [ ] Deploy Ghost with Longhorn PVC
-- [ ] Export Ghost data from Docker as JSON backup
-- [ ] Deploy Vaultwarden with NetworkPolicy
-- [ ] DNS cutover for 3145.blog
-- [ ] Deploy Uptime Kuma for external monitoring
-
-### Future considerations
-
-- [ ] Move Terraform state to remote backend (Phase 6)
-- [ ] Add Loki for log aggregation (Phase 5)
-- [ ] Evaluate Calico for NetworkPolicy support (Phase 3 or 4)
-- [ ] Set up Velero for K8s backup/restore
-- [ ] Add GitHub Actions for Terraform validate and K8s manifest linting (Phase 6)
+**Issue:** The roadmap still shows Phase 3 as in-progress and some code examples reference `telmate/proxmox` provider (you use `bpg/proxmox`). Worth a cleanup pass.
 
 ---
 
-## Architecture Decision Records (ADR)
+## New Recommendations
 
-For reference, key decisions and their rationale:
+### High Priority
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| K8s distribution | k3s | Lightweight, ARM-friendly, single binary, good for homelab |
-| Terraform provider | bpg/proxmox | Better maintained than telmate, fewer permission issues |
-| VM OS | Ubuntu Server | Wide community support, cloud-init compatible, LTS available |
-| Control plane count | 3 nodes | Proper etcd quorum, demonstrates HA concepts |
-| GitOps tool | ArgoCD | Better UI, higher job market demand, good for blog content |
-| Ingress | ingress-nginx | Industry standard, well-documented, good portfolio value |
-| Storage | Longhorn → local-path initially | Start simple, add distributed storage when apps need it |
-| Secrets | Sealed Secrets (planned) | Simple, Git-friendly, works offline, good for homelab |
-| Load balancer | MetalLB | Standard for bare-metal K8s, integrates with ingress |
+**R1. Complete backup chain before app migration** (Phase 4 prerequisite)
+The ADR-001 decision is sound: Longhorn → Garage → Velero → R2. Don't migrate Ghost/Vaultwarden until at least Garage + Velero are working. A failed migration of your password manager would be painful.
+
+**R2. Document SOPS bootstrap process**
+Create a `docs/sops-bootstrap.md` or add to README:
+1. How to generate age key
+2. How to create the `sops-age-key` Secret in cluster
+3. How to recover if key is lost
+4. Where the private key is stored (and backed up)
+
+This is critical knowledge that currently exists only in your head.
+
+**R3. Add resource limits to all deployments**
+None of the deployed apps have CPU/memory requests or limits. One runaway pod could starve the cluster. At minimum, add limits to Homepage, Headlamp, and IT-Tools.
+
+### Medium Priority
+
+**R4. Monitoring stack** (Phase 5)
+You're running blind right now. kube-prometheus-stack gives you:
+- Node health (CPU, RAM, disk per node)
+- Pod restarts and failures
+- Longhorn volume health
+- etcd cluster metrics
+
+With your resource constraints, set Prometheus retention to 3-7 days and disable components you don't need.
+
+**R5. Ansible roles refactor**
+Current flat playbook structure works but doesn't scale. Reorganize:
+```
+ansible/roles/
+  common/       # DNS, swap, packages
+  k3s-server/   # CP node setup
+  k3s-agent/    # Worker setup
+  longhorn/     # Storage prerequisites
+  hardening/    # SSH, fail2ban, UFW
+```
+
+**R6. Terraform state backup**
+Add a cron job or script to back up `terraform.tfstate` to PBS or Garage. If your machine dies, you lose the ability to manage VMs through Terraform.
+
+### Low Priority
+
+**R7. Network Policies**
+Consider Calico CNI for NetworkPolicy support. At minimum, isolate namespaces so Homepage can't reach cert-manager internals.
+
+**R8. Pod Security Standards**
+Add `pod-security.kubernetes.io/enforce: baseline` labels to namespaces. This prevents privileged containers without requiring Kyverno.
+
+**R9. Update roadmap.md**
+Mark Phase 1-3 as complete, update code examples that reference wrong provider, and adjust timelines.
 
 ---
 
-*This review is based on the repository state at commit `994a1a3`. It should be updated as the project progresses through its phases.*
+## Architecture Decision Records Update
+
+| Decision | Original Choice | Current Status |
+|----------|----------------|----------------|
+| K8s distribution | k3s | ✅ Correct — running well |
+| Terraform provider | bpg/proxmox | ✅ Correct |
+| VM OS | Ubuntu Server | ✅ Correct |
+| Control plane count | 3 nodes | ✅ Working HA |
+| GitOps tool | ArgoCD | ✅ Excellent choice |
+| Ingress | ingress-nginx | ✅ Deployed, replaced Traefik |
+| Storage | Longhorn | ✅ v1.11.x, 2 replicas |
+| Secrets | ~~Sealed Secrets~~ → SOPS/KSOPS | ✅ Better choice — encrypts in Git |
+| Load balancer | MetalLB | ✅ L2 mode, 192.168.10.200-220 |
+| External access | Cloudflare Tunnel | ✅ Added (not in original plan) |
+| VM backups | PBS on Media Pi | ✅ Added (ARM64 build) |
+| Object storage | ~~MinIO~~ → Garage | Planned (not deployed yet) |
+| K8s backups | Velero + CSI | Planned (not deployed yet) |
+
+---
+
+## Portfolio Readiness
+
+### Ready to show employers now:
+- Infrastructure as Code (Terraform + Ansible)
+- GitOps with ArgoCD (App of Apps pattern)
+- HA Kubernetes cluster (mixed architecture)
+- Encrypted secrets management (SOPS/KSOPS)
+- Professional documentation and ADRs
+- Clean Git history with conventional commits
+
+### Complete before highlighting on CV:
+1. **Backup chain** (Garage + Velero) — shows production thinking
+2. **Monitoring** (Prometheus + Grafana) — shows observability awareness
+3. **At least one app migration** (Ghost) — shows real-world Kubernetes usage
+
+### Interview talking points:
+- "I reversed my roadmap order to implement backups before migrating critical services"
+- "I chose SOPS over Sealed Secrets because I wanted secrets encrypted in Git, not just in the cluster"
+- "The cluster runs mixed amd64/arm64 — real multi-arch, not just a label"
+- "Every change goes through Git. I haven't run kubectl apply manually since Phase 3"
+
+---
+
+*This review is based on the repository state at commit `a495295` (rewritten) and live cluster state on 2026-03-08.*
