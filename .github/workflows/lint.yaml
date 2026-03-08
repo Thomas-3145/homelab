@@ -49,7 +49,7 @@ jobs:
         run: pip install ansible-lint
 
       - name: Run ansible-lint
-        run: ansible-lint ansible/
+        run: ansible-lint -c ansible/.ansible-lint ansible/
 
   kubeconform:
     name: Kubernetes Manifests
