@@ -1,0 +1,168 @@
+---
+# Prepares test-01 VM for kubeadm.
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/prepare-kubeadm.yaml
+#
+# After this playbook completes, SSH in and run:
+#   sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+
+- name: Prepare test VM for kubeadm
+  hosts: test
+  become: true
+
+  tasks:
+    # -- DNS fix (VLAN 10 can't reach AdGuard on VLAN 8) --
+    - name: Ensure resolved.conf.d directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/resolved.conf.d
+        state: directory
+        mode: "0755"
+
+    - name: Configure DNS (systemd-resolved)
+      ansible.builtin.copy:
+        dest: /etc/systemd/resolved.conf.d/dns.conf
+        content: |
+          [Resolve]
+          DNS=1.1.1.1 8.8.8.8
+          FallbackDNS=9.9.9.9
+        mode: "0644"
+      notify: Restart systemd-resolved
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+
+    # -- System updates --
+    - name: Update apt cache and upgrade packages
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        cache_valid_time: 3600
+
+    # -- Swap --
+    - name: Disable swap (runtime)
+      ansible.builtin.command: swapoff -a
+      changed_when: false
+
+    - name: Remove swap from fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: '\sswap\s'
+        state: absent
+
+    # -- Kernel modules --
+    - name: Load kernel modules for containerd
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k8s.conf
+        content: |
+          overlay
+          br_netfilter
+        mode: "0644"
+
+    - name: Load overlay module
+      community.general.modprobe:
+        name: overlay
+
+    - name: Load br_netfilter module
+      community.general.modprobe:
+        name: br_netfilter
+
+    # -- Sysctl --
+    - name: Set sysctl params for Kubernetes
+      ansible.posix.sysctl:
+        name: "{{ item }}"
+        value: "1"
+        sysctl_file: /etc/sysctl.d/k8s.conf
+        reload: true
+      loop:
+        - net.bridge.bridge-nf-call-iptables
+        - net.bridge.bridge-nf-call-ip6tables
+        - net.ipv4.ip_forward
+
+    # -- Containerd --
+    - name: Install containerd
+      ansible.builtin.apt:
+        name: containerd
+        state: present
+
+    - name: Create containerd config directory
+      ansible.builtin.file:
+        path: /etc/containerd
+        state: directory
+        mode: "0755"
+
+    - name: Generate default containerd config
+      ansible.builtin.command: containerd config default
+      register: containerd_config
+      changed_when: false
+
+    - name: Write containerd config
+      ansible.builtin.copy:
+        dest: /etc/containerd/config.toml
+        content: "{{ containerd_config.stdout }}"
+        mode: "0644"
+      notify: Restart containerd
+
+    - name: Enable SystemdCgroup in containerd
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: 'SystemdCgroup = false'
+        replace: 'SystemdCgroup = true'
+      notify: Restart containerd
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+
+    # -- kubeadm, kubelet, kubectl --
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gpg
+        state: present
+
+    - name: Add Kubernetes apt key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes apt repository
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/kubernetes.list
+        content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /"
+        mode: "0644"
+
+    - name: Install kubeadm, kubelet, kubectl
+      ansible.builtin.apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+        update_cache: true
+
+    - name: Hold kubeadm, kubelet, kubectl versions
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+    # -- Hostname --
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+
+  handlers:
+    - name: Restart systemd-resolved
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: restarted
+
+    - name: Restart containerd
+      ansible.builtin.systemd:
+        name: containerd
+        state: restarted
+        enabled: true
