@@ -29,6 +29,7 @@ spec:
           tlsSecret: longhorn-tls
           annotations:
             cert-manager.io/cluster-issuer: letsencrypt-prod
+            gethomepage.dev/enabled: "false"
   destination:
     server: https://kubernetes.default.svc
     namespace: longhorn-system
