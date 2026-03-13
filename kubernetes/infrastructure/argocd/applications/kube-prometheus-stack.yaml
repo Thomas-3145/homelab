@@ -21,6 +21,9 @@ spec:
                 operator: Exists
                 effect: NoSchedule
         grafana:
+          grafana.ini:
+            auth.basic:
+              enabled: true
           ingress:
             enabled: true
             ingressClassName: nginx
