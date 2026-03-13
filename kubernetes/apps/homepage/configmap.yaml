@@ -16,11 +16,11 @@ data:
       searchDescriptions: true
       provider: google
     layout:
-      Tjänster:
       System:
-      Nedladdningar:
-        initiallyCollapsed: true
       Kluster:
+        initiallyCollapsed: true
+      Tjänster:
+      Nedladdningar:
         initiallyCollapsed: true
   kubernetes.yaml: |
     mode: cluster
