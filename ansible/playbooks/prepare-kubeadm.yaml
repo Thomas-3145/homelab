@@ -58,12 +58,12 @@
         mode: "0644"
 
     - name: Load overlay module
-      community.general.modprobe:
-        name: overlay
+      ansible.builtin.command: modprobe overlay
+      changed_when: false
 
     - name: Load br_netfilter module
-      community.general.modprobe:
-        name: br_netfilter
+      ansible.builtin.command: modprobe br_netfilter
+      changed_when: false
 
     # -- Sysctl --
     - name: Set sysctl params for Kubernetes
