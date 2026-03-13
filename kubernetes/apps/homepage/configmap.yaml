@@ -26,31 +26,6 @@ data:
     mode: cluster
   bookmarks.yaml: ""
   services.yaml: |
-    - Tjänster:
-        - Jellyfin:
-            icon: jellyfin.svg
-            href: https://jellyfin.3145.blog
-            description: Mediaserver
-            widget:
-              type: jellyfin
-              url: https://jellyfin.3145.blog
-              key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
-        - IT-Tools:
-            icon: it-tools.svg
-            href: http://it-tools.local
-            description: Developer utilities
-        - Ghost:
-            icon: ghost.png
-            href: https://3145.blog/
-            description: Blogg
-        - Ghost Admin:
-            icon: ghost.png
-            href: https://3145.blog/ghost
-            description: Adminpanel
-        - Vaultwarden:
-            icon: vaultwarden.svg
-            href: https://vault.3145.blog/
-            description: Lösenordshantering
     - System:
         - Uptime Kuma:
             icon: uptime-kuma.svg
@@ -86,6 +61,60 @@ data:
               url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local
               username: {{HOMEPAGE_VAR_GRAFANA_USER}}
               password: {{HOMEPAGE_VAR_GRAFANA_PASSWORD}}
+    - Kluster:
+        - AdGuardHome:
+            icon: si-adguard
+            href: http://192.168.8.1:3000/
+            description: DNS-filtrering
+            widget:
+              type: adguard
+              url: http://100.94.9.99:3000
+              username: admin
+              password: {{HOMEPAGE_VAR_ADGUARD_PASSWORD}}
+        - PBS:
+            icon: proxmox.svg
+            href: https://100.110.160.88:8007
+            description: Backup Server (Media Pi)
+            widget:
+              type: proxmoxbackupserver
+              url: https://100.110.160.88:8007
+              username: {{HOMEPAGE_VAR_PBS_USER}}
+              password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
+        - Headlamp:
+            icon: headlamp.svg
+            href: http://headlamp.local
+            description: Kubernetes Dashboard
+        - ingress-nginx:
+            icon: nginx.svg
+            description: Ingress Controller
+        - cert-manager:
+            icon: cert-manager.svg
+            description: Certifikathantering
+    - Tjänster:
+        - Jellyfin:
+            icon: jellyfin.svg
+            href: https://jellyfin.3145.blog
+            description: Mediaserver
+            widget:
+              type: jellyfin
+              url: https://jellyfin.3145.blog
+              key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
+        - IT-Tools:
+            icon: it-tools.svg
+            href: http://it-tools.local
+            description: Developer utilities
+        - Ghost:
+            icon: ghost.png
+            href: https://3145.blog/
+            description: Blogg
+        - Ghost Admin:
+            icon: ghost.png
+            href: https://3145.blog/ghost
+            description: Adminpanel
+        - Vaultwarden:
+            icon: vaultwarden.svg
+            href: https://vault.3145.blog/
+            description: Lösenordshantering
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
@@ -126,35 +155,6 @@ data:
               type: prowlarr
               url: https://prowlarr.3145.blog
               key: {{HOMEPAGE_VAR_PROWLARR_KEY}}
-    - Kluster:
-        - AdGuardHome:
-            icon: si-adguard
-            href: http://192.168.8.1:3000/
-            description: DNS-filtrering
-            widget:
-              type: adguard
-              url: http://100.94.9.99:3000
-              username: admin
-              password: {{HOMEPAGE_VAR_ADGUARD_PASSWORD}}
-        - PBS:
-            icon: proxmox.svg
-            href: https://100.110.160.88:8007
-            description: Backup Server (Media Pi)
-            widget:
-              type: proxmoxbackupserver
-              url: https://100.110.160.88:8007
-              username: {{HOMEPAGE_VAR_PBS_USER}}
-              password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
-        - Headlamp:
-            icon: headlamp.svg
-            href: http://headlamp.local
-            description: Kubernetes Dashboard
-        - ingress-nginx:
-            icon: nginx.svg
-            description: Ingress Controller
-        - cert-manager:
-            icon: cert-manager.svg
-            description: Certifikathantering
   widgets.yaml: |
     - search:
         provider: google
