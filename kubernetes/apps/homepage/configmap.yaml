@@ -82,7 +82,8 @@ data:
             widget:
               type: grafana
               url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local
-              key: {{HOMEPAGE_VAR_GRAFANA_KEY}}
+              username: {{HOMEPAGE_VAR_GRAFANA_USER}}
+              password: {{HOMEPAGE_VAR_GRAFANA_PASSWORD}}
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
