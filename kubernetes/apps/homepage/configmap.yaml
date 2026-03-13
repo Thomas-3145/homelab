@@ -104,6 +104,14 @@ data:
               type: argocd
               url: http://argocd-server.argocd.svc.cluster.local
               key: {{HOMEPAGE_VAR_ARGOCD_KEY}}
+        - Grafana:
+            icon: grafana.svg
+            href: https://grafana.3145.blog
+            description: Dashboards & Metrics
+            widget:
+              type: grafana
+              url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local
+              key: {{HOMEPAGE_VAR_GRAFANA_KEY}}
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
