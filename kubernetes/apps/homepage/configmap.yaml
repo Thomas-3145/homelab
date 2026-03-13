@@ -16,43 +16,14 @@ data:
       searchDescriptions: true
       provider: google
     layout:
-      Kluster:
-        initiallyCollapsed: true
       Nedladdningar:
+        initiallyCollapsed: true
+      Kluster:
         initiallyCollapsed: true
   kubernetes.yaml: |
     mode: cluster
   bookmarks.yaml: ""
   services.yaml: |
-    - Kluster:
-        - AdGuardHome:
-            icon: si-adguard
-            href: http://192.168.8.1:3000/
-            description: DNS-filtrering
-            widget:
-              type: adguard
-              url: http://100.94.9.99:3000
-              username: admin
-              password: {{HOMEPAGE_VAR_ADGUARD_PASSWORD}}
-        - PBS:
-            icon: proxmox.svg
-            href: https://100.110.160.88:8007
-            description: Backup Server (Media Pi)
-            widget:
-              type: proxmoxbackupserver
-              url: https://100.110.160.88:8007
-              username: {{HOMEPAGE_VAR_PBS_USER}}
-              password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
-        - Headlamp:
-            icon: headlamp.svg
-            href: http://headlamp.local
-            description: Kubernetes Dashboard
-        - ingress-nginx:
-            icon: nginx.svg
-            description: Ingress Controller
-        - cert-manager:
-            icon: cert-manager.svg
-            description: Certifikathantering
     - Tjänster:
         - Jellyfin:
             icon: jellyfin.svg
@@ -152,6 +123,35 @@ data:
               type: prowlarr
               url: https://prowlarr.3145.blog
               key: {{HOMEPAGE_VAR_PROWLARR_KEY}}
+    - Kluster:
+        - AdGuardHome:
+            icon: si-adguard
+            href: http://192.168.8.1:3000/
+            description: DNS-filtrering
+            widget:
+              type: adguard
+              url: http://100.94.9.99:3000
+              username: admin
+              password: {{HOMEPAGE_VAR_ADGUARD_PASSWORD}}
+        - PBS:
+            icon: proxmox.svg
+            href: https://100.110.160.88:8007
+            description: Backup Server (Media Pi)
+            widget:
+              type: proxmoxbackupserver
+              url: https://100.110.160.88:8007
+              username: {{HOMEPAGE_VAR_PBS_USER}}
+              password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
+        - Headlamp:
+            icon: headlamp.svg
+            href: http://headlamp.local
+            description: Kubernetes Dashboard
+        - ingress-nginx:
+            icon: nginx.svg
+            description: Ingress Controller
+        - cert-manager:
+            icon: cert-manager.svg
+            description: Certifikathantering
   widgets.yaml: |
     - search:
         provider: google
