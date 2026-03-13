@@ -16,6 +16,8 @@ data:
       searchDescriptions: true
       provider: google
     layout:
+      Tjänster:
+      System:
       Nedladdningar:
         initiallyCollapsed: true
       Kluster:
