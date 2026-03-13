@@ -20,6 +20,7 @@ data:
       Kluster:
         initiallyCollapsed: true
       Tjänster:
+        initiallyCollapsed: true
       Nedladdningar:
         initiallyCollapsed: true
   kubernetes.yaml: |
