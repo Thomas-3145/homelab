@@ -17,6 +17,8 @@ spec:
         deploymentMode: SingleBinary
         singleBinary:
           replicas: 1
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
           tolerations:
             - key: node-role.kubernetes.io/control-plane
               operator: Exists

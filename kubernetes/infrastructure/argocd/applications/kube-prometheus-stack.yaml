@@ -16,11 +16,27 @@ spec:
       valuesObject:
         prometheus:
           prometheusSpec:
+            nodeSelector:
+              node-role.kubernetes.io/control-plane: "true"
+            tolerations:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+                effect: NoSchedule
+        alertmanager:
+          alertmanagerSpec:
+            nodeSelector:
+              node-role.kubernetes.io/control-plane: "true"
             tolerations:
               - key: node-role.kubernetes.io/control-plane
                 operator: Exists
                 effect: NoSchedule
         grafana:
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
           grafana.ini:
             auth.basic:
               enabled: true
