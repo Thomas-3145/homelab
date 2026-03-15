@@ -39,6 +39,7 @@ spec:
               - mountPath: /target
                 name: plugins
         snapshotsEnabled: true
+        upgradeCRDs: false
   destination:
     server: https://kubernetes.default.svc
     namespace: velero
