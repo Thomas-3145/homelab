@@ -1,10 +1,11 @@
 # Architecture Review & Recommendations
 
-> **Date**: 2026-03-08 (Updated)
+> **Date**: 2026-03-15 (Updated)
 > **Original Review**: 2026-02-14 (Claude Opus 4.6, Phase 1)
 > **Updated Review**: 2026-03-08 (Claude Opus 4.6, Phase 3-4)
+> **Updated Review**: 2026-03-15 (Claude Sonnet 4.6, Phase 4)
 > **Project**: Thomas's Homelab - K3s Infrastructure
-> **Current Phase**: Phase 3 complete, entering Phase 4
+> **Current Phase**: Phase 4 — Garage → Velero → App migration
 
 ---
 
@@ -14,27 +15,28 @@
 
 The project had a solid foundation with clean Terraform, well-planned roadmap, and 3 control plane VMs provisioned on Proxmox. The recommendation was to shift from planning to execution.
 
-### Updated Assessment (Mar 2026)
+### Updated Assessment (Mar 2026 — Week 2)
 
-Execution has been **excellent**. In three weeks, the project went from "Terraform works" to a fully operational GitOps-managed k3s cluster with:
-- HA control plane (3 nodes) + ARM64 worker
-- ArgoCD with App of Apps pattern
-- MetalLB + ingress-nginx + cert-manager (full ingress stack)
-- Longhorn distributed storage (v1.11.x)
-- SOPS/KSOPS for encrypted secrets in Git
-- Cloudflare Tunnel for external access
-- PBS for VM backups
-- NUT UPS for graceful shutdowns
-- 6+ deployed applications
+Execution continues to be **excellent**. The monitoring stack is complete and a full security hardening pass has been done. The cluster is now in a state worth calling production-quality for a homelab.
+
+**Added since 2026-03-08:**
+- kube-prometheus-stack (Prometheus + Grafana + Alertmanager)
+- Loki + Promtail for log aggregation
+- Alertmanager → ntfy webhook for phone notifications
+- Custom PrometheusRules (NodeDown, HighMemory, LonghornDegraded, CertExpiring)
+- Security hardening: pinned all container images, added securityContext, resource limits, health probes
+- Headlamp RBAC: replaced cluster-admin with read-only ClusterRole
+- Terraform: removed hardcoded VM password
 
 **Key findings:**
 1. **Architecture** — Production-quality patterns. GitOps-first approach is disciplined and consistent
-2. **Security** — SOPS/KSOPS is a better choice than the originally recommended Sealed Secrets. Network segmentation solid with VLANs + Tailscale
-3. **Code quality** — Pre-commit hooks, conventional commits, clean YAML. Professional standard
-4. **Gaps** — No monitoring stack yet, no network policies, Terraform state still local, SOPS bootstrap not automated
-5. **Portfolio value** — High. This demonstrates real infrastructure engineering, not just tutorials copy-pasted
+2. **Security** — Significantly improved. SOPS/KSOPS for secrets, securityContext on all pods, least-privilege RBAC, pinned images
+3. **Observability** — Full stack now: metrics (Prometheus), logs (Loki), dashboards (Grafana), alerts (ntfy)
+4. **Code quality** — Pre-commit hooks, conventional commits, clean YAML. Professional standard
+5. **Gaps** — No network policies, Terraform state still local, SOPS bootstrap not documented
+6. **Portfolio value** — High. Demonstrates real infrastructure engineering end-to-end
 
-**Overall: 8/10** — A mature, well-architected homelab that demonstrates strong DevOps fundamentals.
+**Overall: 8.5/10** — Strong fundamentals, observability complete, security hardened. Remaining gap is the backup chain (Garage + Velero) before app migration.
 
 ---
 
@@ -62,6 +64,17 @@ Execution has been **excellent**. In three weeks, the project went from "Terrafo
 | S2: Dedicated Proxmox API user | ❓ Unverified | May still use root@pam |
 | S3: SSH hardening | Partial | Ansible sets keys, but no fail2ban/UFW playbook |
 | N4: Network policies | ❌ Not done | Flannel doesn't support them without extra work |
+
+### New Recommendations Completed (2026-03-15)
+
+| Rec | Status | Notes |
+|---|---|---|
+| R3: Resource limits | ✅ Done | Added to homepage, headlamp, it-tools |
+| R4: Monitoring stack | ✅ Done | kube-prometheus-stack + Loki + Promtail + ntfy |
+| Pod Security Standards | ✅ Done | securityContext on all pods (runAsNonRoot, no privilege escalation, capabilities dropped) |
+| Image pinning | ✅ Done | All images pinned to specific versions |
+| Headlamp RBAC | ✅ Done | cluster-admin → read-only ClusterRole |
+| Terraform hardcoded password | ✅ Done | Removed password = "ubuntu" from cloud-init |
 
 ---
 
@@ -145,10 +158,9 @@ The repo-server patch adds an initContainer that installs ksops and kustomize, m
 
 **Still missing:**
 - **Network Policies** — all pods can reach all pods. Flannel doesn't support NetworkPolicy natively. Options: Calico CNI, or Cilium (more complex but powerful)
-- **Pod Security Standards** — no restrictions on privileged containers, root users, or capabilities
-- **RBAC granularity** — ServiceAccounts exist but no fine-grained role definitions beyond defaults
 - **SOPS bootstrap documentation** — how to recover if the age key is lost?
 - **Terraform state encryption** — local state file is readable by anyone with disk access
+- **Renovate** — images are now pinned but will go stale without automated update PRs
 
 ### 5. Documentation
 
@@ -182,19 +194,12 @@ Create a `docs/sops-bootstrap.md` or add to README:
 
 This is critical knowledge that currently exists only in your head.
 
-**R3. Add resource limits to all deployments**
-None of the deployed apps have CPU/memory requests or limits. One runaway pod could starve the cluster. At minimum, add limits to Homepage, Headlamp, and IT-Tools.
+**R3. Add resource limits to all deployments** ✅ Done 2026-03-15
 
 ### Medium Priority
 
-**R4. Monitoring stack** (Phase 5)
-You're running blind right now. kube-prometheus-stack gives you:
-- Node health (CPU, RAM, disk per node)
-- Pod restarts and failures
-- Longhorn volume health
-- etcd cluster metrics
-
-With your resource constraints, set Prometheus retention to 3-7 days and disable components you don't need.
+**R4. Monitoring stack** ✅ Done 2026-03-15
+kube-prometheus-stack + Loki + Promtail deployed. Alertmanager → ntfy for phone notifications. Custom PrometheusRules for node, Longhorn, and certificate alerts.
 
 **R5. Ansible roles refactor**
 Current flat playbook structure works but doesn't scale. Reorganize:
@@ -254,8 +259,8 @@ Mark Phase 1-3 as complete, update code examples that reference wrong provider, 
 - Clean Git history with conventional commits
 
 ### Complete before highlighting on CV:
-1. **Backup chain** (Garage + Velero) — shows production thinking
-2. **Monitoring** (Prometheus + Grafana) — shows observability awareness
+1. **Backup chain** (Garage + Velero) — shows production thinking *(next up)*
+2. ~~**Monitoring** (Prometheus + Grafana)~~ ✅ Done
 3. **At least one app migration** (Ghost) — shows real-world Kubernetes usage
 
 ### Interview talking points:
@@ -266,4 +271,4 @@ Mark Phase 1-3 as complete, update code examples that reference wrong provider, 
 
 ---
 
-*This review is based on the repository state at commit `a495295` (rewritten) and live cluster state on 2026-03-08.*
+*Last updated 2026-03-15. Previous snapshot: commit `a495295`, cluster state 2026-03-08.*
