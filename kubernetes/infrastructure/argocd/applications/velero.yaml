@@ -39,7 +39,9 @@ spec:
               - mountPath: /target
                 name: plugins
         snapshotsEnabled: true
-        upgradeCRDs: false
+        kubectl:
+          image:
+            tag: "1.33"
   destination:
     server: https://kubernetes.default.svc
     namespace: velero
