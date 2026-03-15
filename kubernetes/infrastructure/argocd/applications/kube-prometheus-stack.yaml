@@ -44,7 +44,7 @@ spec:
             receivers:
               - name: ntfy
                 webhook_configs:
-                  - url: http://100.110.160.88:8090/homelab
+                  - url: http://192.168.20.10:8090/homelab
                     send_resolved: true
         additionalPrometheusRulesMap:
           custom-alerts:
