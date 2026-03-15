@@ -18,8 +18,14 @@ spec:
       serviceAccountName: homepage
       initContainers:
         - name: copy-config
-          image: busybox
+          image: busybox:1.37
           command: ["sh", "-c", "cp /config-source/* /app/config/"]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: config-source
               mountPath: /config-source
@@ -27,7 +33,7 @@ spec:
               mountPath: /app/config
       containers:
         - name: homepage
-          image: ghcr.io/gethomepage/homepage:latest
+          image: ghcr.io/gethomepage/homepage:v1.11.0
           ports:
             - containerPort: 3000
           envFrom:
@@ -36,6 +42,30 @@ spec:
           env:
             - name: HOMEPAGE_ALLOWED_HOSTS
               value: "home.3145.blog"
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
           volumeMounts:
             - name: config
               mountPath: /app/config
