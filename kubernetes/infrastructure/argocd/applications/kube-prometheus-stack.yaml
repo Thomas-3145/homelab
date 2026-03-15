@@ -85,6 +85,14 @@ spec:
                     annotations:
                       summary: "Longhorn disk usage above 80% on {{ $labels.node }}"
                       description: "Longhorn disk on {{ $labels.node }} is {{ $value | humanizePercentage }} full."
+                  - alert: LonghornDiskSpaceCritical
+                    expr: (longhorn_disk_usage_bytes / longhorn_disk_capacity_bytes) > 0.9
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Longhorn disk usage critical on {{ $labels.node }}"
+                      description: "Longhorn disk on {{ $labels.node }} is {{ $value | humanizePercentage }} full."
                   - alert: LonghornVolumedegraded
                     expr: longhorn_volume_robustness == 2
                     for: 5m
@@ -93,6 +101,24 @@ spec:
                     annotations:
                       summary: "Longhorn volume {{ $labels.volume }} is degraded"
                       description: "Volume {{ $labels.volume }} has degraded robustness."
+              - name: velero-alerts
+                rules:
+                  - alert: VeleroBackupFailed
+                    expr: increase(velero_backup_failure_total{schedule="daily-cluster"}[2h]) > 0
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Velero backup failed"
+                      description: "Schedule daily-cluster failed a backup in the last 2 hours."
+                  - alert: VeleroBackupMissing
+                    expr: time() - velero_backup_last_successful_timestamp{schedule="daily-cluster"} > 90000
+                    for: 30m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "No successful Velero backup in 25 hours"
+                      description: "Schedule daily-cluster has not completed a successful backup in over 25 hours."
               - name: cert-alerts
                 rules:
                   - alert: CertificateExpiringSoon
