@@ -18,7 +18,7 @@ spec:
         kubernetes.io/hostname: "3145"
       containers:
         - name: garage
-          image: ghcr.io/deuxfleurs/garage:v1.0.1
+          image: dxflrs/garage:v2.2.0
           ports:
             - name: s3
               containerPort: 3900
