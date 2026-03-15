@@ -41,7 +41,7 @@ spec:
         snapshotsEnabled: true
         kubectl:
           image:
-            tag: "1.33"
+            tag: "1.32"
   destination:
     server: https://kubernetes.default.svc
     namespace: velero
