@@ -30,6 +30,79 @@ spec:
               - key: node-role.kubernetes.io/control-plane
                 operator: Exists
                 effect: NoSchedule
+          config:
+            route:
+              receiver: ntfy
+              group_by: ['alertname', 'namespace']
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 4h
+              routes:
+                - receiver: ntfy
+                  matchers:
+                    - severity =~ "critical|warning"
+            receivers:
+              - name: ntfy
+                webhook_configs:
+                  - url: http://100.110.160.88:8090/homelab
+                    send_resolved: true
+        additionalPrometheusRulesMap:
+          custom-alerts:
+            groups:
+              - name: node-alerts
+                rules:
+                  - alert: NodeDown
+                    expr: up{job="node-exporter"} == 0
+                    for: 2m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Node {{ $labels.instance }} is down"
+                      description: "Node exporter on {{ $labels.instance }} has been unreachable for 2 minutes."
+                  - alert: NodeHighMemory
+                    expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.9
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "High memory usage on {{ $labels.instance }}"
+                      description: "Memory usage is above 90% on {{ $labels.instance }}."
+                  - alert: NodeHighCPU
+                    expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "High CPU usage on {{ $labels.instance }}"
+                      description: "CPU usage is above 90% on {{ $labels.instance }}."
+              - name: longhorn-alerts
+                rules:
+                  - alert: LonghornDiskSpaceLow
+                    expr: (longhorn_disk_usage_bytes / longhorn_disk_capacity_bytes) > 0.8
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Longhorn disk usage above 80% on {{ $labels.node }}"
+                      description: "Longhorn disk on {{ $labels.node }} is {{ $value | humanizePercentage }} full."
+                  - alert: LonghornVolumedegraded
+                    expr: longhorn_volume_robustness == 2
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Longhorn volume {{ $labels.volume }} is degraded"
+                      description: "Volume {{ $labels.volume }} has degraded robustness."
+              - name: cert-alerts
+                rules:
+                  - alert: CertificateExpiringSoon
+                    expr: certmanager_certificate_expiration_timestamp_seconds - time() < 604800
+                    for: 1h
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Certificate {{ $labels.name }} expires in less than 7 days"
+                      description: "Certificate {{ $labels.name }} in namespace {{ $labels.namespace }} expires in {{ $value | humanizeDuration }}."
         grafana:
           nodeSelector:
             node-role.kubernetes.io/control-plane: "true"
