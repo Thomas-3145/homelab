@@ -943,6 +943,7 @@ Use Kubernetes node affinity:
 ## Future Enhancements
 
 **After core phases:**
+- [ ] **Velero GFS-style retention**: Replace single daily schedule with three schedules (daily 14d TTL, weekly 90d TTL, monthly 365d TTL) to mirror PBS grandfather-father-son retention strategy
 - [ ] Helm support in ArgoCD (needed for Prometheus stack in Fase 5)
   - [ ] First Helm app: Stakater Reloader (auto-restarts pods on ConfigMap/Secret changes)
 - [ ] Service mesh (Istio/Linkerd)
