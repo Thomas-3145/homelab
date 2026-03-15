@@ -55,7 +55,7 @@ data:
               key: {{HOMEPAGE_VAR_ARGOCD_KEY}}
         - Grafana:
             icon: grafana.svg
-            href: https://grafana.3145.blog
+            href: https://grafana.3145.blog/d/b9a850a0-9e65-4b83-9c5c-8139d69340ff/cluster-overview?orgId=1&from=now-30m&to=now&timezone=browser
             description: Dashboards & Metrics
             widget:
               type: grafana
