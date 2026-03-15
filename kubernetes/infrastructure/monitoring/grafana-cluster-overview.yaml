@@ -265,7 +265,7 @@ data:
             },
             "overrides": []
           },
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
           "id": 4,
           "options": {
             "colorMode": "value",
