@@ -677,22 +677,35 @@ Import standard dashboards:
 
 #### 4.3 Alertmanager Configuration
 Configure alerts for:
-- Node down
+- ✅ Node down
 - Pod crashloop
-- Disk space low
-- Certificate expiration
+- ✅ Disk space low (Longhorn)
+- ✅ Certificate expiration
+- ✅ Node high memory/CPU
+- ✅ Longhorn volume degraded
 
-Send notifications to Discord/Slack/email.
+Send notifications via ntfy (self-hosted on Media Pi).
 
 **Deliverable**: Proactive alerting
+
+#### 4.4 Renovate — Automated Dependency Updates
+Deploy Renovate for automated PRs when Helm charts, container images, or GitHub Actions are updated:
+- Configure `renovate.json` in repo root
+- Helm chart version bumps (kube-prometheus-stack, Longhorn, cert-manager, etc.)
+- Container image tag updates (homepage, headlamp, cloudflared, it-tools)
+- GitHub Actions version pinning
+- Auto-merge for patch updates, PR for minor/major
+
+**Deliverable**: Automated dependency management via PRs
 
 ### Success Criteria
 - ✅ Prometheus collecting metrics from all nodes
 - ✅ Grafana accessible with dashboards
-- ✅ Alerts configured and tested
+- ✅ Alerts configured and tested (Alertmanager → ntfy)
 - ✅ Historical data retained for analysis
+- ✅ Loki + Promtail for log aggregation
+- ⏳ Renovate for automated updates
 
-### Time Estimate: 1 week
 ### Blog Post: "Monitoring Kubernetes with Prometheus & Grafana"
 
 ---
@@ -957,5 +970,5 @@ Use Kubernetes node affinity:
 
 ---
 
-**Last Updated**: 2026-03-07
-**Current Phase**: Fase 3 (Longhorn remaining) → Fase 4 (Monitoring & Observability)
+**Last Updated**: 2026-03-15
+**Current Phase**: Fase 4 (Renovate remaining) → Fase 5 (Garage → Velero → App Migration)
