@@ -18,10 +18,6 @@ spec:
           image: corentinth/it-tools:2024.10.22-7ca5933
           ports:
             - containerPort: 80
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
           resources:
             requests:
               cpu: 25m
