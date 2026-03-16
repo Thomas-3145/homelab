@@ -43,7 +43,6 @@ spec:
             - name: HOMEPAGE_ALLOWED_HOSTS
               value: "home.3145.blog"
           securityContext:
-            runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]

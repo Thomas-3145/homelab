@@ -25,6 +25,7 @@ spec:
             - containerPort: 4466
           securityContext:
             runAsNonRoot: true
+            runAsUser: 100
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
