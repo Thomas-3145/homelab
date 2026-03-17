@@ -15,6 +15,8 @@ spec:
       labels:
         app: homepage
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: 3145
       serviceAccountName: homepage
       initContainers:
         - name: copy-config
