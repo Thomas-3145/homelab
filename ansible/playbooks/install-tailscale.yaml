@@ -1,23 +1,23 @@
 ---
-# Installs and configures Tailscale on k3s control plane nodes.
+# Installs and configures Tailscale on all Proxmox-managed VMs.
 # Run: ansible-playbook -i inventory/hosts.yaml playbooks/install-tailscale.yaml
 #
 # Prerequisites:
 #   - Install collection: ansible-galaxy collection install -r requirements.yaml
 #   - Create an auth key at https://login.tailscale.com/admin/settings/keys (reusable, ephemeral off)
 #   - Create and encrypt the vars file:
-#       mkdir -p inventory/group_vars/k3s_control_plane
-#       echo 'vault_tailscale_authkey: "tskey-auth-xxxx"' > inventory/group_vars/k3s_control_plane/vault.sops.yaml
-#       sops -e -i inventory/group_vars/k3s_control_plane/vault.sops.yaml
+#       mkdir -p inventory/group_vars/proxmox_vms
+#       echo 'vault_tailscale_authkey: "tskey-auth-xxxx"' > inventory/group_vars/proxmox_vms/vault.sops.yaml
+#       sops -e -i inventory/group_vars/proxmox_vms/vault.sops.yaml
 
-- name: Install Tailscale on control plane nodes
-  hosts: k3s_control_plane
+- name: Install Tailscale on all Proxmox VMs
+  hosts: proxmox_vms
   become: true
 
   tasks:
     - name: Load secrets
       community.sops.load_vars:
-        file: "{{ inventory_dir }}/group_vars/k3s_control_plane/vault.sops.yaml"
+        file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.sops.yaml"
       no_log: true
 
     - name: Add Tailscale GPG key
