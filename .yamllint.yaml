@@ -8,3 +8,12 @@ rules:
   document-start: disable
   truthy:
     check-keys: false
+  # Required by ansible-lint
+  braces:
+    max-spaces-inside: 1
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: false
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
