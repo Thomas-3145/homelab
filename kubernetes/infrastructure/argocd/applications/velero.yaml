@@ -43,6 +43,7 @@ spec:
             enabled: true
             additionalLabels:
               release: kube-prometheus-stack
+        upgradeCRDs: false
         snapshotsEnabled: true
         kubectl:
           image:
