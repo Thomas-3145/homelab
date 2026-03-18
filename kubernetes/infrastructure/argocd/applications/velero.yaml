@@ -46,7 +46,8 @@ spec:
         snapshotsEnabled: true
         kubectl:
           image:
-            tag: "1.32"
+            repository: docker.io/rancher/kubectl
+            tag: "v1.32.0"
   destination:
     server: https://kubernetes.default.svc
     namespace: velero
