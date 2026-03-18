@@ -3,3 +3,7 @@ skip_list:
   # k3s and Tailscale use curl|sh as their official install method
   - command-instead-of-module
   - risky-shell-pipe
+
+exclude_paths:
+  # SOPS-encrypted files have long base64 lines that cannot be shortened
+  - "**/*.sops.yaml"
