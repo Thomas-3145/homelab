@@ -38,6 +38,11 @@ spec:
             volumeMounts:
               - mountPath: /target
                 name: plugins
+        metrics:
+          serviceMonitor:
+            enabled: true
+            additionalLabels:
+              release: kube-prometheus-stack
         snapshotsEnabled: true
         kubectl:
           image:
