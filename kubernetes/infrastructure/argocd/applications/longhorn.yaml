@@ -14,6 +14,11 @@ spec:
     helm:
       releaseName: longhorn
       valuesObject:
+        longhornManager:
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
         defaultSettings:
           defaultReplicaCount: 2
           taintToleration: "node-role.kubernetes.io/control-plane:NoSchedule"
