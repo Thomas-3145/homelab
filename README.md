@@ -23,7 +23,8 @@ This repository contains the complete infrastructure setup for my homelab - from
 - 🏗️ **Infrastructure as Code**: Terraform for provisioning, Ansible for configuration
 - ☸️ **Kubernetes (k3s)**: Lightweight, production-ready orchestration
 - 🔄 **High Availability**: 3-node HA control plane with embedded etcd
-- 📊 **Observability**: Prometheus + Grafana monitoring stack (planned)
+- 📊 **Observability**: Prometheus + Grafana + Loki + Alertmanager → ntfy
+- 💾 **3-2-1 Backups**: Velero → Garage → Media Pi → Cloudflare R2
 - 🔒 **Security First**: Cert-manager for SSL, proper network segmentation
 
 ## Architecture
@@ -74,7 +75,11 @@ This repository contains the complete infrastructure setup for my homelab - from
 | **Load Balancer** | MetalLB | Bare-metal load balancer for services |
 | **Secrets** | SOPS + KSOPS | Encrypted secrets in Git |
 | **Tunnel** | Cloudflared | Cloudflare Tunnel for external access |
-| **Monitoring** | Prometheus + Grafana | Metrics & visualization (planned) |
+| **Monitoring** | Prometheus + Grafana | Metrics & visualization |
+| **Logging** | Loki + Promtail | Log aggregation |
+| **Alerting** | Alertmanager → ntfy | Proactive notifications |
+| **Backup** | Velero + Garage | Kubernetes workload backups |
+| **Off-site** | Cloudflare R2 | Off-site backup (3-2-1 strategy) |
 
 ## Repository Structure
 
@@ -93,9 +98,13 @@ homelab/
 │   │   ├── argocd/       # GitOps engine + Application manifests
 │   │   ├── cert-manager/ # SSL via Let's Encrypt + Cloudflare
 │   │   ├── cloudflared/  # Cloudflare Tunnel
+│   │   ├── garage/       # S3-compatible object storage (backup target)
 │   │   ├── ingress-nginx/# Ingress controller (via ArgoCD)
 │   │   ├── longhorn/     # Distributed storage (via ArgoCD)
-│   │   └── metallb/      # Bare-metal load balancer
+│   │   ├── metallb/      # Bare-metal load balancer
+│   │   ├── monitoring/   # ServiceMonitors for Prometheus
+│   │   ├── pdb/          # PodDisruptionBudgets
+│   │   └── velero/       # Kubernetes backup operator
 │   └── apps/              # Applications
 │       ├── homepage/     # Dashboard (home.3145.blog)
 │       ├── headlamp/     # K8s dashboard (headlamp.3145.blog)
@@ -168,7 +177,7 @@ kubectl get nodes
 
 This project is built in phases. See [docs/roadmap.md](docs/roadmap.md) for detailed implementation plan.
 
-**Current Status: Fase 3 complete, entering Fase 4**
+**Current Status: Fase 4 complete, entering Fase 5 (app migration)**
 
 - ✅ Terraform provisioning Proxmox VMs
 - ✅ Ansible preparing nodes and installing k3s
@@ -177,10 +186,14 @@ This project is built in phases. See [docs/roadmap.md](docs/roadmap.md) for deta
 - ✅ MetalLB (192.168.10.200-220)
 - ✅ ingress-nginx + cert-manager (Let's Encrypt)
 - ✅ SOPS + KSOPS for encrypted secrets
-- ✅ Cloudflare Tunnel
-- ✅ Longhorn distributed storage (snapshot restore verified)
+- ✅ Cloudflare Tunnel (cloudflared)
+- ✅ Longhorn distributed storage (v1.11, 2 replicas)
 - ✅ CI pipeline (Terraform, YAML, Ansible, Kubeconform, Trivy)
-- ⏳ Monitoring (Prometheus + Grafana)
+- ✅ Monitoring (Prometheus + Grafana + Loki + Promtail)
+- ✅ Alerting (Alertmanager → ntfy)
+- ✅ Velero backups (daily, CSI snapshots)
+- ✅ 3-2-1 backup strategy (Garage → Media Pi → Cloudflare R2)
+- ✅ Resource limits & PodDisruptionBudgets
 - ⏳ Application migration (Ghost, Vaultwarden)
 
 ## Documentation
