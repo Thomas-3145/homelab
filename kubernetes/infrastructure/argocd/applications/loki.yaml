@@ -15,6 +15,11 @@ spec:
       releaseName: loki
       valuesObject:
         deploymentMode: SingleBinary
+        lokiCanary:
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
         singleBinary:
           replicas: 1
           nodeSelector:
