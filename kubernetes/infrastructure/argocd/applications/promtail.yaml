@@ -14,6 +14,13 @@ spec:
     helm:
       releaseName: promtail
       valuesObject:
+        resources:
+          requests:
+            memory: 64Mi
+            cpu: 10m
+          limits:
+            memory: 200Mi
+            cpu: 100m
         config:
           clients:
             - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push

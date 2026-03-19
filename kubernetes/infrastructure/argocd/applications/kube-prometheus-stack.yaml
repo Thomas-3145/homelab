@@ -15,9 +15,23 @@ spec:
       releaseName: kube-prometheus-stack
       valuesObject:
         prometheus:
-          prometheusSpec: {}
+          prometheusSpec:
+            resources:
+              requests:
+                memory: 512Mi
+                cpu: 100m
+              limits:
+                memory: 1500Mi
+                cpu: 500m
         alertmanager:
-          alertmanagerSpec: {}
+          alertmanagerSpec:
+            resources:
+              requests:
+                memory: 32Mi
+                cpu: 10m
+              limits:
+                memory: 128Mi
+                cpu: 100m
           config:
             route:
               receiver: ntfy
@@ -118,6 +132,13 @@ spec:
                       summary: "Certificate {{ $labels.name }} expires in less than 7 days"
                       description: "Certificate {{ $labels.name }} in namespace {{ $labels.namespace }} expires in {{ $value | humanizeDuration }}."
         grafana:
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 30m
+            limits:
+              memory: 600Mi
+              cpu: 200m
           grafana.ini:
             auth.basic:
               enabled: true
@@ -133,6 +154,13 @@ spec:
                 hosts:
                   - grafana.3145.blog
         nodeExporter:
+          resources:
+            requests:
+              memory: 20Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+              cpu: 100m
           tolerations:
             - key: node-role.kubernetes.io/control-plane
               operator: Exists
