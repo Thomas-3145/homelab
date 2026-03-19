@@ -510,193 +510,132 @@ spec:
 - ✅ SOPS + KSOPS for encrypted secrets
 - ✅ Cloudflare Tunnel for external access
 - ✅ Changes to GitHub trigger auto-deployment
-- ⏳ Longhorn (distributed storage)
+- ✅ Longhorn distributed storage (v1.11, 2 replicas, snapshot restore verified)
 
-### Status: 🚧 IN PROGRESS (Longhorn remaining)
+### Status: ✅ COMPLETE
 ### Blog Post: "Implementing GitOps with ArgoCD"
 
 ---
 
-## Fase 4: Monitoring & Observability
+## Fase 4: Backup & Storage
 
-**Goal**: Deploy applications on the k3s cluster
+**Goal**: Complete backup infrastructure before migrating critical applications
 
 ### Objectives
-- Deploy Ghost blog with persistent storage
-- Deploy Vaultwarden with backups
+- Deploy Garage as S3-compatible object storage
+- Deploy Velero for Kubernetes workload backups
+- Implement 3-2-1 backup strategy with off-site copies
+- Add resource limits and PodDisruptionBudgets
+
+### Completed
+
+#### 4.1 Garage (S3-Compatible Storage)
+- StatefulSet on Homelab Pi with local hostPath (not Longhorn — backup data separate from backed-up data)
+- SOPS-encrypted RPC secret, managed by ArgoCD
+- NodePort service (30900) for external access from Media Pi
+
+#### 4.2 Velero
+- Deployed via Helm, managed by ArgoCD
+- Connects to Garage via S3-compatible API
+- CSI snapshots for Longhorn volume backups
+- Daily schedule (`daily-cluster`) at 02:00, 30-day TTL
+- Prometheus alerts: VeleroBackupFailed, VeleroBackupMissing
+
+#### 4.3 3-2-1 Backup Pipeline (COMPLETE)
+Three copies, two devices, one off-site:
+
+| Copy | Location | Method |
+|------|----------|--------|
+| 1. Original | Longhorn PVCs in k3s cluster | Live data |
+| 2. On-site | Media Pi (rclone from Garage, 05:00 daily) | `rclone sync` via NodePort |
+| 3. Off-site | Cloudflare R2 (rclone from Media Pi, 06:00 daily) | `rclone sync` to WEUR bucket |
+
+VM backups handled separately: Proxmox → PBS on Media Pi (daily 04:00).
+
+#### 4.4 Resource Requests/Limits
+Added to all monitoring components (Prometheus, Grafana, Alertmanager, node-exporter, Loki, Promtail) based on `kubectl top` profiling.
+
+#### 4.5 PodDisruptionBudgets
+Added PDBs (`maxUnavailable: 1`) for: Prometheus, Grafana, Alertmanager, Loki, ingress-nginx, ArgoCD server/repo-server, cert-manager.
+
+#### 4.6 Infrastructure Hardening
+- Proxmox: e1000e EEE disabled (freeze fix), swap enabled, qemu-guest-agent on all VMs
+- Unused VMs: autostart disabled (lab VM, study VM)
+
+### Success Criteria
+- ✅ Garage running as S3-compatible backup target
+- ✅ Velero backing up all namespaces nightly
+- ✅ 3-2-1 backup strategy fully operational (Garage → Media Pi → R2)
+- ✅ Resource limits on all monitoring pods
+- ✅ PDBs protecting critical services during node drains
+- ✅ Proxmox stability issues resolved
+
+### Status: ✅ COMPLETE
+### Blog Posts: "Backing Up Kubernetes with Garage and Velero", "Velero Schedules, ServiceMonitors, and Keeping Dashboards in Git"
+
+---
+
+## Fase 5: Application Migration
+
+**Goal**: Migrate critical applications from Docker (Media Pi) to k3s
+
+### Objectives
+- Deploy Ghost blog with Longhorn-backed persistent storage
+- Deploy Vaultwarden with automated backups
 - Configure ingress and SSL for all apps
+- Verify Velero backups cover migrated apps
 
 ### Tasks
 
-#### 5.1 Ghost Blog Deployment
-Create manifests in `kubernetes/apps/ghost/`:
+#### 5.1 Ghost Blog Migration
+- Longhorn PVC for content storage
+- Ingress with cert-manager TLS
+- Verify Velero backup includes Ghost data
 
-**PersistentVolumeClaim** (Longhorn storage):
-```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ghost-data
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: longhorn
-  resources:
-    requests:
-      storage: 10Gi
-```
-
-**Deployment**:
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ghost
-  namespace: apps
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: ghost
-  template:
-    metadata:
-      labels:
-        app: ghost
-    spec:
-      containers:
-        - name: ghost
-          image: ghost:5-alpine
-          ports:
-            - containerPort: 2368
-          env:
-            - name: url
-              value: "https://blog.yourdomain.com"
-          volumeMounts:
-            - name: ghost-data
-              mountPath: /var/lib/ghost/content
-      volumes:
-        - name: ghost-data
-          persistentVolumeClaim:
-            claimName: ghost-data
-```
-
-**Service & Ingress**:
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: ghost
-  namespace: apps
-spec:
-  selector:
-    app: ghost
-  ports:
-    - port: 80
-      targetPort: 2368
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: ghost
-  namespace: apps
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-spec:
-  ingressClassName: nginx
-  tls:
-    - hosts:
-        - blog.yourdomain.com
-      secretName: ghost-tls
-  rules:
-    - host: blog.yourdomain.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: ghost
-                port:
-                  number: 80
-```
-
-**Deliverable**: Ghost blog running in k3s with SSL
-
-#### 5.2 Vaultwarden Deployment
-Similar structure as Ghost, but with:
-- Smaller PVC (5Gi)
-- Scheduled backups to cloud
-- Stronger security (NetworkPolicy)
-
-**Deliverable**: Vaultwarden running in k3s
+#### 5.2 Vaultwarden Migration
+- Longhorn PVC for database
+- Ingress with cert-manager TLS
+- Verify Velero backup includes Vaultwarden data
 
 ### Success Criteria
-- ✅ Ghost blog accessible via HTTPS
-- ✅ Vaultwarden running with automated backups
-- ✅ All apps deployed via GitOps
+- ⏳ Ghost blog accessible via HTTPS on k3s
+- ⏳ Vaultwarden running with automated backups
+- ⏳ All apps deployed via GitOps
+- ⏳ Velero backing up application data
 
-### Time Estimate: 2 weeks
+### Status: ⏳ NEXT UP
 ### Blog Post: "Deploying Apps on Kubernetes"
 
 ---
 
-## Fase 5: Application Deployment
+## Fase 6: Monitoring & Observability
 
 **Goal**: Full visibility into cluster health and performance
 
-### Objectives
-- Deploy Prometheus for metrics
-- Deploy Grafana for visualization
-- Configure dashboards
-- Set up alerting
+### Completed
 
-### Tasks
+#### 6.1 kube-prometheus-stack (Prometheus + Grafana + Alertmanager)
+- Deployed via Helm, managed by ArgoCD
+- Grafana at grafana.3145.blog with Let's Encrypt TLS
+- Cluster Overview dashboard stored as ConfigMap in Git
 
-#### 4.1 Prometheus Stack
-Deploy kube-prometheus-stack via Helm:
-```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm install kube-prometheus prometheus-community/kube-prometheus-stack \
-  --namespace monitoring \
-  --create-namespace
-```
+#### 6.2 Loki + Promtail (Log Aggregation)
+- Loki SingleBinary mode, Promtail as DaemonSet
+- Logs queryable via Grafana
 
-Or via ArgoCD Application manifest.
+#### 6.3 Alerting (Alertmanager → ntfy)
+Alerts configured:
+- ✅ NodeDown, NodeHighMemory, NodeHighCPU
+- ✅ LonghornDiskSpaceLow/Critical, LonghornVolumeDegraded
+- ✅ VeleroBackupFailed, VeleroBackupMissing
+- ✅ CertificateExpiringSoon
 
-**Deliverable**: Prometheus scraping metrics
+#### 6.4 ServiceMonitors
+- cert-manager, Longhorn, Velero metrics flowing to Prometheus
 
-#### 4.2 Grafana Dashboards
-Import standard dashboards:
-- Kubernetes cluster overview
-- Node metrics
-- Longhorn storage
-- Application metrics
-
-**Deliverable**: Visual monitoring
-
-#### 4.3 Alertmanager Configuration
-Configure alerts for:
-- ✅ Node down
-- Pod crashloop
-- ✅ Disk space low (Longhorn)
-- ✅ Certificate expiration
-- ✅ Node high memory/CPU
-- ✅ Longhorn volume degraded
-
-Send notifications via ntfy (self-hosted on Media Pi).
-
-**Deliverable**: Proactive alerting
-
-#### 4.4 Renovate — Automated Dependency Updates
-Deploy Renovate for automated PRs when Helm charts, container images, or GitHub Actions are updated:
-- Configure `renovate.json` in repo root
-- Helm chart version bumps (kube-prometheus-stack, Longhorn, cert-manager, etc.)
-- Container image tag updates (homepage, headlamp, cloudflared, it-tools)
-- GitHub Actions version pinning
-- Auto-merge for patch updates, PR for minor/major
-
-**Deliverable**: Automated dependency management via PRs
+#### 6.5 Renovate — Automated Dependency Updates (TODO)
+- ⏳ Configure `renovate.json` for Helm chart and image version bumps
+- ⏳ Auto-merge for patch updates, PR for minor/major
 
 ### Success Criteria
 - ✅ Prometheus collecting metrics from all nodes
@@ -706,11 +645,12 @@ Deploy Renovate for automated PRs when Helm charts, container images, or GitHub 
 - ✅ Loki + Promtail for log aggregation
 - ⏳ Renovate for automated updates
 
+### Status: ✅ COMPLETE (Renovate remaining)
 ### Blog Post: "Monitoring Kubernetes with Prometheus & Grafana"
 
 ---
 
-## Fase 6: CI/CD Pipeline (Gitea + Woodpecker CI)
+## Fase 7: CI/CD Pipeline (Gitea + Woodpecker CI)
 
 **Goal**: Self-hosted CI/CD pipeline with full control, running on the k3s cluster
 
@@ -804,7 +744,7 @@ Heavy lifting (build, deploy, integration tests) runs on Woodpecker.
 
 ---
 
-## Fase 7: Hybrid Cloud (AWS Integration)
+## Fase 8: Hybrid Cloud (AWS Integration)
 
 **Goal**: Extend homelab to AWS for hybrid setup
 
@@ -852,7 +792,7 @@ Use Kubernetes node affinity:
 
 ---
 
-## Fase 8: Platform Engineering & Security Hardening
+## Fase 9: Platform Engineering & Security Hardening
 
 **Goal**: Harden the cluster with policy enforcement, centralized secrets, and a developer portal
 
@@ -944,12 +884,13 @@ Use Kubernetes node affinity:
 
 **After core phases:**
 - [ ] **Velero GFS-style retention**: Replace single daily schedule with three schedules (daily 14d TTL, weekly 90d TTL, monthly 365d TTL) to mirror PBS grandfather-father-son retention strategy
-- [ ] Helm support in ArgoCD (needed for Prometheus stack in Fase 5)
-  - [ ] First Helm app: Stakater Reloader (auto-restarts pods on ConfigMap/Secret changes)
+- [ ] **NetworkPolicies**: Restrict pod-to-pod traffic (namespace isolation)
+- [ ] **Tailscale on all k3s nodes**: Install via Ansible so pods can reach Tailscale IPs from any node
+- [ ] **Renovate**: Automated dependency updates for Helm charts and container images
+- [ ] **Cloudflared GitOps**: Migrate from `--token` to `credentials-file` + local config.yaml
 - [ ] Service mesh (Istio/Linkerd)
 - [ ] Multi-cluster GitOps
-- [ ] Advanced observability (Loki, Tempo)
-- [ ] Cost optimization automation
+- [ ] Advanced observability (Tempo for tracing)
 - [ ] Chaos engineering tests
 - [ ] Security scanning (Trivy, Falco)
 
@@ -971,5 +912,5 @@ Use Kubernetes node affinity:
 
 ---
 
-**Last Updated**: 2026-03-15
-**Current Phase**: Fase 4 (Renovate remaining) → Fase 5 (Garage → Velero → App Migration)
+**Last Updated**: 2026-03-19
+**Current Phase**: Fase 5 (Ghost & Vaultwarden migration to k3s)
