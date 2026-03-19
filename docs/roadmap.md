@@ -884,9 +884,11 @@ Use Kubernetes node affinity:
 
 **After core phases:**
 - [ ] **Velero GFS-style retention**: Replace single daily schedule with three schedules (daily 14d TTL, weekly 90d TTL, monthly 365d TTL) to mirror PBS grandfather-father-son retention strategy
+- [ ] **Renovate**: Automated dependency updates — opens PRs when Helm charts or container images have new versions
+- [ ] **Descheduler**: Automatically rebalances pods across nodes when resource usage drifts (fixes the CP-01 84% RAM problem without manual pod deletions)
+- [ ] **Trivy Operator**: In-cluster vulnerability scanning of container images and manifests, results visible in Grafana
 - [ ] **NetworkPolicies**: Restrict pod-to-pod traffic (namespace isolation)
 - [ ] **Tailscale on all k3s nodes**: Install via Ansible so pods can reach Tailscale IPs from any node
-- [ ] **Renovate**: Automated dependency updates for Helm charts and container images
 - [ ] **Cloudflared GitOps**: Migrate from `--token` to `credentials-file` + local config.yaml
 - [ ] Service mesh (Istio/Linkerd)
 - [ ] Multi-cluster GitOps
