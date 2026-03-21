@@ -41,6 +41,11 @@ all:
         "3145":
           ansible_host: 100.107.236.63
           ansible_port: 22456
-      vars:
-        ansible_user: thomas
-        ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096
+          ansible_user: thomas
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096
+        k3s-worker-01:
+          ansible_host: 192.168.10.52
+          ansible_user: ubuntu
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096
+          ansible_python_interpreter: /usr/bin/python3.12
+          ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
