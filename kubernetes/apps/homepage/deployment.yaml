@@ -16,7 +16,7 @@ spec:
         app: homepage
     spec:
       nodeSelector:
-        kubernetes.io/hostname: "3145"
+        kubernetes.io/hostname: "temp-worker-node-migration"
       serviceAccountName: homepage
       initContainers:
         - name: copy-config
