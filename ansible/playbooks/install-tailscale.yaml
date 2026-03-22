@@ -22,13 +22,13 @@
 
     - name: Add Tailscale GPG key
       ansible.builtin.get_url:
-        url: https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg
+        url: https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
         dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
         mode: "0644"
 
     - name: Add Tailscale apt repository
       ansible.builtin.apt_repository:
-        repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu jammy main"
+        repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu noble main"
         filename: tailscale
         state: present
 
