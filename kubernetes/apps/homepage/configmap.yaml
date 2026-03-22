@@ -156,6 +156,8 @@ data:
             widget:
               type: qbittorrent
               url: https://qbittorrent.3145.blog
+              username: {{HOMEPAGE_VAR_QBIT_USER}}
+              password: {{HOMEPAGE_VAR_QBIT_PASSWORD}}
         - Prowlarr:
             icon: prowlarr.svg
             href: https://prowlarr.3145.blog
