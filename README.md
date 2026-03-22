@@ -35,20 +35,20 @@ The parts I've enjoyed most: Terraform, Ansible, GitOps, and getting backups rig
       192.168.10.0/24          192.168.20.0/24
               │                       │
     ┌─────────────────┐      ┌─────────────────┐
-    │  Proxmox Host   │      │    Media Pi      │
+    │  Proxmox Host   │      │      3145        │
     │  HP EliteDesk   │      │  Raspberry Pi 5  │
-    │  i5-8500T 32GB  │      │  8GB · 2TB SSD   │
-    └────────┬────────┘      └─────────────────┘
-             │
-     k3s HA Cluster
+    │  i5-8500T 32GB  │      │  8GB · 512GB SSD │
+    └────────┬────────┘      │  PBS · arr-stack │
+             │               │  Garage · ntfy   │
+     k3s HA Cluster          └─────────────────┘
      ┌────────────────────┐
      │  k3s-cp-01  .10.21 │  Control Plane (x3)
      │  k3s-cp-02  .10.22 │  embedded etcd
      │  k3s-cp-03  .10.23 │
      └────────────────────┘
      ┌────────────────────┐
-     │  k3s-worker-01     │  Homelab Pi (ARM64)
-     │  192.168.10.52     │
+     │  k3s-worker-01     │  Worker VM (temporary)
+     │  (VM on Proxmox)   │
      └────────────────────┘
 ```
 
