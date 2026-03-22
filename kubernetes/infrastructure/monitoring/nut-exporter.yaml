@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nut-exporter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nut-exporter
+  template:
+    metadata:
+      labels:
+        app: nut-exporter
+    spec:
+      containers:
+        - name: nut-exporter
+          image: hon0/nut-exporter:latest
+          args:
+            - --nut.server=192.168.10.20
+            - --nut.vars_enable=battery.charge,battery.runtime,input.voltage,output.voltage,ups.load,ups.status
+          env:
+            - name: NUT_EXPORTER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: nut-secrets
+                  key: username
+            - name: NUT_EXPORTER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nut-secrets
+                  key: password
+          ports:
+            - name: metrics
+              containerPort: 9199
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 10m
+            limits:
+              memory: 32Mi
+              cpu: 50m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nut-exporter
+  namespace: monitoring
+  labels:
+    app: nut-exporter
+spec:
+  selector:
+    app: nut-exporter
+  ports:
+    - name: metrics
+      port: 9199
+      targetPort: metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nut-exporter
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: nut-exporter
+  endpoints:
+    - port: metrics
+      path: /ups_metrics
+      params:
+        target: ["apc"]
+        vars: ["battery.charge,battery.runtime,input.voltage,output.voltage,ups.load,ups.status"]
+      interval: 30s
