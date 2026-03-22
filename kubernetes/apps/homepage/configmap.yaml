@@ -75,7 +75,7 @@ data:
         - PBS:
             icon: proxmox.svg
             href: https://100.110.160.88:8007
-            description: Backup Server (Media Pi)
+            description: Backup Server (3145)
             widget:
               type: proxmoxbackupserver
               url: https://100.110.160.88:8007
