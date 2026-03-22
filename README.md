@@ -5,15 +5,76 @@
 ![SOPS](https://img.shields.io/badge/Secrets-SOPS_Encrypted-black?logo=mozilla&logoColor=white)
 ![CI](https://github.com/Thomas-3145/homelab/actions/workflows/lint.yaml/badge.svg)
 
-I'm a student learning DevOps on the side. Instead of just reading theory about Kubernetes and Terraform, I built this — my homelab. From pretty much scratch, with zero prior knowledge of any of it.
+Complete infrastructure for my homelab — from bare metal to running applications. HA k3s cluster on Proxmox, fully managed with GitOps.
 
-I learn better by doing first — hands-on before the theory hits in school, then more practice in the homelab afterwards.
+---
 
+## What I think DevOps is
 
+Honestly, I had no idea what DevOps was when I started this.
 
-The goal is to land a job as a DevOps engineer, with a focus on infrastructure rather than the dev side. This repo is my hands-on proof of that learning.
+I knew I wanted to work with infrastructure rather than application development,
+and I knew I learned better by doing than by reading. So I bought some hardware
+and started breaking things. The term "DevOps" came later.
 
-The parts I've enjoyed most: Terraform, Ansible, GitOps, and getting backups right.
+What I've landed on: it's about owning the full picture. Not just the
+application, not just the servers — the entire flow from a git push to a
+running service, including what happens when it breaks at 2am. The parts that
+clicked hardest for me were infrastructure as code (if I can't reproduce it,
+I don't really understand it) and GitOps (Git as the single source of truth
+for everything in the cluster).
+
+I lean toward the infrastructure and platform side. I'm more interested in
+building the foundation that lets others ship confidently than in the
+application sitting on top of it. That's what this homelab is really about —
+and it's the work I want to do.
+
+---
+
+## How my homelab works
+
+1. **Terraform** provisions VMs on Proxmox
+2. **Ansible** configures nodes and installs k3s
+3. **ArgoCD** bootstraps the cluster (App of Apps pattern)
+4. All applications are deployed via GitOps from this repo — no manual `kubectl apply`
+5. **SOPS + KSOPS** encrypts secrets in Git, decrypted in-cluster at apply time
+6. **Prometheus + Loki** collect metrics and logs, **Alertmanager** sends alerts to my phone
+7. **Velero** backs up workloads nightly to **Garage** (self-hosted S3), forwarded off-site to Cloudflare R2
+
+---
+
+## Tech Stack
+
+| | |
+|---|---|
+| **Infrastructure** | Proxmox, Terraform, Ansible |
+| **Kubernetes** | k3s (HA, 3-node embedded etcd) |
+| **GitOps** | ArgoCD (App of Apps) |
+| **Networking** | VLANs, MetalLB, ingress-nginx, Cloudflare Tunnel, Tailscale |
+| **Storage** | Longhorn (distributed block storage) |
+| **Observability** | Prometheus, Grafana, Loki, Promtail, Alertmanager |
+| **Security** | SOPS + KSOPS, cert-manager (Let's Encrypt) |
+| **Backups** | Velero, Garage (S3-compatible), Cloudflare R2 |
+
+---
+
+## Design Principles
+
+- **Reproducibility**: everything defined as code — if I can't reproduce it, I don't understand it
+- **Git as source of truth**: no manual changes to the cluster, ever
+- **High availability where it matters**: 3-node control plane with embedded etcd
+- **Observability first**: monitoring and alerting were not an afterthought
+- **Backup and restore tested**, not just configured
+
+---
+
+## Challenges & Learnings
+
+- Debugged CoreDNS failing to resolve external names — traced it to an IPv6 issue with `/etc/resolv.conf`, fixed by forwarding directly to `1.1.1.1`
+- Replaced Traefik with MetalLB + ingress-nginx mid-project after understanding why bare-metal clusters need their own load balancer
+- Got SOPS working with ArgoCD (KSOPS) so secrets can live encrypted in a public repo
+- Upgraded Longhorn from 1.8 to 1.11 in production without downtime
+- Learned the difference between HA (Longhorn replication) and backup (Velero) — they solve different problems
 
 ---
 
@@ -54,69 +115,20 @@ The parts I've enjoyed most: Terraform, Ansible, GitOps, and getting backups rig
 
 ---
 
-## Stack
+## Getting Started
 
-### Terraform
-Provisions all VMs on Proxmox. Before this, I was clicking through the UI every time — Terraform made it repeatable and fast. One command to spin up the entire cluster.
+This repo isn't meant to be copy-pasted — it's built around specific hardware. But the general flow is:
 
-### Ansible
-Configures the nodes after provisioning: packages, sysctl, swap, k3s installation. Same idea as Terraform — no manual SSH and running commands by hand.
+```bash
+# 1. Provision VMs
+cd terraform/proxmox && terraform apply
 
-### k3s
-Lightweight Kubernetes. Full upstream k8s would be overkill for a homelab, k3s gives the same API surface with less overhead. I also have a separate lab VM for learning kubeadm and "raw" Kubernetes.
+# 2. Configure nodes and install k3s
+ansible-playbook -i ansible/inventory/hosts.yaml ansible/playbooks/install-k3s.yaml
 
-### ArgoCD (GitOps)
-Everything in the cluster is defined in this repo. ArgoCD watches Git and applies changes automatically — I never run `kubectl apply` manually. If I want to change something, I edit a file and push. This is the part that clicked hardest for me.
-
-### MetalLB + ingress-nginx
-Bare-metal clusters don't have a cloud load balancer. MetalLB fills that gap by assigning real IPs from my LAN range. ingress-nginx handles routing from those IPs into the cluster
-
-### cert-manager
-Automated TLS certificates via Let's Encrypt and Cloudflare DNS challenge. Every service gets HTTPS without touching anything manually.
-
-### SOPS + KSOPS
-Secrets are encrypted and committed directly to Git. I can keep the repo public without exposing passwords or API keys — the cluster decrypts them at apply time using an age key.
-
-### Cloudflare Tunnel
-Exposes services externally without opening any ports on my router. Traffic goes Cloudflare → tunnel → cluster. No port forwarding, no exposed public IP.
-
-### Longhorn
-Distributed block storage across the cluster nodes. Needed for stateful workloads (databases, etc.) that need to survive a node going down.
-
-### Prometheus + Grafana + Loki
-Metrics, dashboards, and logs in one stack. Grafana for investigation, Prometheus for collection, Loki for centralized logs from all pods.
-
-### Alertmanager + ntfy
-Alerts go to my phone via ntfy. I'd rather get a notification when something breaks than discover it when I go looking.
-
-### Velero + Garage
-Velero backs up Kubernetes workloads. Garage is a self-hosted S3-compatible store (running on the cluster) that receives those backups. Follows a 3-2-1 strategy: local, Media Pi, and Cloudflare R2 off-site.
-
-
-One goal is to be able to self-host a few services with full HA.
-
----
-
-
-## What I think DevOps is
-
-Honestly, I had no idea what DevOps was when I started this.
-
-I knew I wanted to work with infrastructure rather than application development,
-and I knew I learned better by doing than by reading. So I bought some hardware
-and started breaking things. The term "DevOps" came later.
-
-What I've landed on: it's about owning the full picture. Not just the
-application, not just the servers — the entire flow from a git push to a
-running service, including what happens when it breaks at 2am. The parts that
-clicked hardest for me were infrastructure as code (if I can't reproduce it,
-I don't really understand it) and GitOps (Git as the single source of truth
-for everything in the cluster).
-
-I lean toward the infrastructure and platform side. I'm more interested in
-building the foundation that lets others ship confidently than in the
-application sitting on top of it. That's what this homelab is really about —
-and it's the work I want to do.
+# 3. Bootstrap ArgoCD — it takes it from there
+kubectl apply -k kubernetes/bootstrap/
+```
 
 ---
 
