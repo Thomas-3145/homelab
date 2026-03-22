@@ -22,7 +22,7 @@ data:
       Tjänster:
         initiallyCollapsed: false
       Nedladdningar:
-        initiallyCollapsed: true
+        initiallyCollapsed: false
   kubernetes.yaml: |
     mode: cluster
   bookmarks.yaml: ""
