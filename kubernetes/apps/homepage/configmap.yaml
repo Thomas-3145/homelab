@@ -92,6 +92,14 @@ data:
             icon: cert-manager.svg
             description: Certifikathantering
     - Tjänster:
+        - Jellyfin:
+            icon: jellyfin.svg
+            href: https://jellyfin.3145.blog
+            description: Mediaserver
+            widget:
+              type: jellyfin
+              url: https://jellyfin.3145.blog
+              key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
         - Seerr:
             icon: seerr.svg
             href: http://100.110.160.88:5055/
@@ -133,15 +141,6 @@ data:
               type: radarr
               url: https://radarr.3145.blog
               key: {{HOMEPAGE_VAR_RADARR_KEY}}
-        - Jellyfin:
-            icon: jellyfin.svg
-            href: https://jellyfin.3145.blog
-            description: Mediaserver
-            widget:
-              type: jellyfin
-              url: https://jellyfin.3145.blog
-              key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
-
         - Bazarr:
             icon: bazarr.svg
             href: https://bazarr.3145.blog
