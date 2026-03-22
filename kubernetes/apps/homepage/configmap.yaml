@@ -18,7 +18,7 @@ data:
     layout:
       System:
       Kluster:
-        initiallyCollapsed: true
+        initiallyCollapsed: false
       Tjänster:
         initiallyCollapsed: true
       Nedladdningar:
