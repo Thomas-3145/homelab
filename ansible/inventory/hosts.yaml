@@ -36,13 +36,9 @@ all:
               ansible_host: 192.168.10.50
             k8s-book:
               ansible_host: 192.168.10.51
+        k3s_workers:
     k3s_workers:
       hosts:
-        "3145":
-          ansible_host: 100.107.236.63
-          ansible_port: 22456
-          ansible_user: thomas
-          ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096
         k3s-worker-01:
           ansible_host: 192.168.10.52
           ansible_user: ubuntu

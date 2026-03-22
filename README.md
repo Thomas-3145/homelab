@@ -6,7 +6,7 @@
 ![Ansible](https://img.shields.io/badge/Ansible-Managed-EE0000?logo=ansible&logoColor=white)
 ![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?logo=argo&logoColor=white)
 ![Longhorn](https://img.shields.io/badge/Longhorn-v1.11-5F259F?logo=rancher&logoColor=white)
-![Nodes](https://img.shields.io/badge/Nodes-4_(3_CP_+_1_ARM64)-2496ED?logo=proxmox&logoColor=white)
+![Nodes](https://img.shields.io/badge/Nodes-4_(3_CP_+_1_Worker)-2496ED?logo=proxmox&logoColor=white)
 ![IaC Lines](https://img.shields.io/badge/Lines_of_IaC-1.5k+-green?logo=codeclimate&logoColor=white)
 ![K8s Manifests](https://img.shields.io/badge/K8s_Manifests-29-326CE5?logo=kubernetes&logoColor=white)
 ![Security](https://img.shields.io/badge/Trivy-0_Critical-success?logo=aquasecurity&logoColor=white)
@@ -38,16 +38,16 @@ This repository contains the complete infrastructure setup for my homelab - from
                   VLAN 10 (homelab)
                   192.168.10.0/24
                        │
-          ┌────────────┼────────────┐
-          │            │            │
-          ▼            ▼            ▼
-    ┌──────────┐  ┌─────────┐  ┌─────────┐
-    │ Proxmox  │  │ Homelab │  │  Cloud  │
-    │ .10.20   │  │ Pi      │  │ (future)│
-    │ 32GB RAM │  │ .10.11  │  │  AWS    │
-    │ 6-core   │  │ 8GB RAM │  │         │
-    └────┬─────┘  └────┬────┘  └─────────┘
-         │             │
+          ┌────────────┬────────────┐
+          │                         │
+          ▼                         ▼
+    ┌──────────┐              ┌─────────┐
+    │ Proxmox  │              │  Cloud  │
+    │ .10.20   │              │ (future)│
+    │ 32GB RAM │              │  AWS    │
+    │ 6-core   │              │         │
+    └────┬─────┘              └─────────┘
+         │
          │  k3s HA Cluster
          │  ┌──────────────────────┐
          ├──│ k3s-cp-01  .10.21   │
@@ -58,7 +58,6 @@ This repository contains the complete infrastructure setup for my homelab - from
 
 **Infrastructure:**
 - **Proxmox Host** (192.168.10.20): HP EliteDesk 800 G4 - i5-8500T, 32GB RAM, 1.2TB storage
-- **Homelab Pi** (192.168.10.11): Raspberry Pi 5 - 8GB RAM, 512GB NVMe (k3s worker)
 - **Cloud** (planned): AWS integration for hybrid cloud setup
 
 ## Tech Stack
