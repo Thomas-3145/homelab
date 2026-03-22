@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: nut-exporter
-          image: hon0/nut-exporter:latest
+          image: druggeri/nut_exporter:3.2
           args:
             - --nut.server=192.168.10.20
             - --nut.vars_enable=battery.charge,battery.runtime,input.voltage,output.voltage,ups.load,ups.status
