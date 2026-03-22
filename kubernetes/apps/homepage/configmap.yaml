@@ -92,6 +92,14 @@ data:
             icon: cert-manager.svg
             description: Certifikathantering
     - Tjänster:
+        - Seerr:
+            icon: seerr.svg
+            href: http://100.110.160.88:5055/
+            description: taaaack
+            widget:
+              type: seerr
+              url: http://100.110.160.88:5055/
+              key: {{HOMEPAGE_VAR_SEERR_KEY}}
         - Jellyfin:
             icon: jellyfin.svg
             href: https://jellyfin.3145.blog
