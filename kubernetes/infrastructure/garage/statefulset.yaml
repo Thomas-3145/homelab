@@ -14,8 +14,6 @@ spec:
       labels:
         app: garage
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: "temp-worker-node-migration"
       containers:
         - name: garage
           image: dxflrs/garage:v2.2.0
