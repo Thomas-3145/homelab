@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: cloudflared
+data:
+  config.yaml: |
+    tunnel: ce180050-7bb3-47bf-a4dd-a4ec5e56d592
+    credentials-file: /etc/cloudflared/ce180050-7bb3-47bf-a4dd-a4ec5e56d592.json
+    ingress:
+      - hostname: home.3145.blog
+        service: http://homepage.homepage.svc.cluster.local:80
+      - hostname: argocd-webhook.3145.blog
+        service: http://argocd-server.argocd.svc.cluster.local:80
+      - service: http_status:404
