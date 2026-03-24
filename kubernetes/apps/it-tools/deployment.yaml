@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: it-tools
-  namespace: it-toolsz
+  namespace: it-tools
 spec:
   replicas: 1
   selector:
@@ -20,8 +20,6 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
-            runAsNonRoot: true
-            runAsUser: 101
           ports:
             - containerPort: 80
           resources:
