@@ -1,0 +1,215 @@
+---
+# Sets up a single-node Kubernetes cluster on k8s-book for study purposes.
+# Installs kubeadm/kubelet/kubectl, initializes the cluster, and installs Flannel CNI.
+#
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/setup-k8s-bok.yaml
+#
+# After completion, SSH in and use kubectl directly.
+
+- name: Setup k8s-book study VM
+  hosts: k8s-book
+  become: true
+
+  tasks:
+    # -- DNS fix (VLAN 10 can't reach AdGuard on VLAN 8) --
+    - name: Ensure resolved.conf.d directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/resolved.conf.d
+        state: directory
+        mode: "0755"
+
+    - name: Configure DNS (systemd-resolved)
+      ansible.builtin.copy:
+        dest: /etc/systemd/resolved.conf.d/dns.conf
+        content: |
+          [Resolve]
+          DNS=1.1.1.1 8.8.8.8
+          FallbackDNS=9.9.9.9
+        mode: "0644"
+      notify: Restart systemd-resolved
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+
+    # -- System updates --
+    - name: Update apt cache and upgrade packages
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        cache_valid_time: 3600
+
+    # -- Swap --
+    - name: Disable swap (runtime)
+      ansible.builtin.command: swapoff -a
+      changed_when: false
+
+    - name: Remove swap from fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: '\sswap\s'
+        state: absent
+
+    # -- Kernel modules --
+    - name: Load kernel modules for containerd
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k8s.conf
+        content: |
+          overlay
+          br_netfilter
+        mode: "0644"
+
+    - name: Load overlay module
+      ansible.builtin.command: modprobe overlay
+      changed_when: false
+
+    - name: Load br_netfilter module
+      ansible.builtin.command: modprobe br_netfilter
+      changed_when: false
+
+    # -- Sysctl --
+    - name: Write sysctl params for Kubernetes
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/k8s.conf
+        content: |
+          net.bridge.bridge-nf-call-iptables  = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.ipv4.ip_forward                 = 1
+        mode: "0644"
+
+    - name: Apply sysctl params
+      ansible.builtin.command: sysctl --system
+      changed_when: false
+
+    # -- Containerd --
+    - name: Install containerd
+      ansible.builtin.apt:
+        name: containerd
+        state: present
+
+    - name: Create containerd config directory
+      ansible.builtin.file:
+        path: /etc/containerd
+        state: directory
+        mode: "0755"
+
+    - name: Generate default containerd config
+      ansible.builtin.command: containerd config default
+      register: containerd_config
+      changed_when: false
+
+    - name: Write containerd config
+      ansible.builtin.copy:
+        dest: /etc/containerd/config.toml
+        content: "{{ containerd_config.stdout }}"
+        mode: "0644"
+      notify: Restart containerd
+
+    - name: Enable SystemdCgroup in containerd
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: 'SystemdCgroup = false'
+        replace: 'SystemdCgroup = true'
+      notify: Restart containerd
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+
+    # -- kubeadm, kubelet, kubectl --
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gpg
+        state: present
+
+    - name: Add Kubernetes apt key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes apt repository
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/kubernetes.list
+        content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /"
+        mode: "0644"
+
+    - name: Install kubeadm, kubelet, kubectl
+      ansible.builtin.apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+        update_cache: true
+
+    - name: Hold kubeadm, kubelet, kubectl versions
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+    # -- Hostname --
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+
+    # -- kubeadm init --
+    - name: Initialize Kubernetes cluster
+      ansible.builtin.command: >
+        kubeadm init
+        --pod-network-cidr=10.244.0.0/16
+        --node-name={{ inventory_hostname }}
+      args:
+        creates: /etc/kubernetes/admin.conf
+
+    # -- Kubeconfig for ubuntu user --
+    - name: Create .kube directory for ubuntu user
+      ansible.builtin.file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Copy admin.conf to ubuntu user
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        remote_src: true
+        owner: ubuntu
+        group: ubuntu
+        mode: "0600"
+
+    # -- Flannel CNI --
+    - name: Install Flannel CNI
+      ansible.builtin.command: >
+        kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
+
+    # -- Untaint control plane (single-node: allow workloads on CP) --
+    - name: Remove control-plane taint so pods can schedule
+      ansible.builtin.command: >
+        kubectl taint nodes {{ inventory_hostname }} node-role.kubernetes.io/control-plane:NoSchedule-
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      failed_when: false
+      changed_when: false
+
+  handlers:
+    - name: Restart systemd-resolved
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: restarted
+
+    - name: Restart containerd
+      ansible.builtin.systemd:
+        name: containerd
+        state: restarted
+        enabled: true
