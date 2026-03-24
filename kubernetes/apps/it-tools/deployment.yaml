@@ -16,10 +16,6 @@ spec:
       containers:
         - name: it-tools
           image: corentinth/it-tools:2024.10.22-7ca5933
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
           ports:
             - containerPort: 80
           resources:
