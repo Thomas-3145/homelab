@@ -25,19 +25,11 @@
   hosts: k3s_workers
   become: true
 
+  roles:
+    - common
+    - k3s_node
+
   tasks:
-    # Raspberry Pi OS uses dphys-swapfile, not fstab swap
-    - name: Disable dphys-swapfile
-      ansible.builtin.systemd:
-        name: dphys-swapfile
-        state: stopped
-        enabled: false
-      failed_when: false
-
-    - name: Turn off swap (runtime)
-      ansible.builtin.command: swapoff -a
-      changed_when: false
-
     - name: Install k3s agent
       ansible.builtin.shell:
         cmd: curl -sfL https://get.k3s.io | sh -

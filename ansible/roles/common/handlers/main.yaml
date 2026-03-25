@@ -3,3 +3,23 @@
   ansible.builtin.systemd:
     name: systemd-resolved
     state: restarted
+
+- name: Stop ssh.socket
+  ansible.builtin.systemd:
+    name: ssh.socket
+    state: stopped
+    enabled: false
+  listen: Restart sshd
+
+- name: Stop ssh.service
+  ansible.builtin.systemd:
+    name: ssh.service
+    state: stopped
+  listen: Restart sshd
+
+- name: Start ssh.service on configured port
+  ansible.builtin.systemd:
+    name: ssh.service
+    state: started
+    enabled: true
+  listen: Restart sshd

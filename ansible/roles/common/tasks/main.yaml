@@ -4,6 +4,8 @@
 # - System updates
 # - Common packages
 # - SSH authorized key
+# - SSH hardening
+# - Tailscale
 
 # -- DNS fix --
 - name: Ensure resolved.conf.d directory exists
@@ -49,3 +51,58 @@
     user: "{{ ansible_user }}"
     key: "{{ lookup('file', '~/.ssh/id_rsa_4096.pub') }}"
     state: present
+
+# -- SSH hardening --
+
+- name: Configure SSH port and disable password auth
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - {regexp: '^#?Port ', line: 'Port 22456'}
+    - {regexp: '^#?PasswordAuthentication ', line: 'PasswordAuthentication no'}
+  notify: Restart sshd
+
+# -- Tailscale --
+- name: Load Tailscale secrets
+  community.sops.load_vars:
+    file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.sops.yaml"
+  no_log: true
+
+- name: Add Tailscale GPG key
+  ansible.builtin.get_url:
+    url: https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
+    dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+    mode: "0644"
+
+- name: Add Tailscale apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu noble main"
+    filename: tailscale
+    state: present
+
+- name: Install Tailscale
+  ansible.builtin.apt:
+    name: tailscale
+    update_cache: true
+    state: present
+
+- name: Enable and start tailscaled
+  ansible.builtin.systemd:
+    name: tailscaled
+    enabled: true
+    state: started
+
+- name: Check if already connected to Tailscale
+  ansible.builtin.command: tailscale status
+  register: tailscale_status
+  changed_when: false
+  failed_when: false
+
+- name: Connect to Tailscale
+  ansible.builtin.command: tailscale up --authkey {{ vault_tailscale_authkey }}
+  when: tailscale_status.rc != 0
+  changed_when: tailscale_status.rc != 0
+  no_log: true
