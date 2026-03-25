@@ -1,0 +1,29 @@
+---
+# Prepares Ubuntu VMs for k3s installation.
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/k3s/prepare.yaml
+#
+# - Applies common role (DNS, updates, packages, SSH key)
+# - Disables swap (required by Kubernetes)
+# - Sets hostnames to match inventory
+
+- name: Prepare nodes for k3s
+  hosts: k3s_control_plane
+  become: true
+
+  roles:
+    - common
+
+  tasks:
+    - name: Disable swap (runtime)
+      ansible.builtin.command: swapoff -a
+      changed_when: false
+
+    - name: Remove swap from fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: '\sswap\s'
+        state: absent
+
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"

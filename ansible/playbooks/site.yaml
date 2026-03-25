@@ -1,0 +1,8 @@
+---
+# Runs the full k3s cluster setup in order.
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/site.yaml
+
+- import_playbook: k3s/prepare.yaml
+- import_playbook: k3s/install.yaml
+- import_playbook: k3s/join-workers.yaml
+- import_playbook: bare-metal/tailscale.yaml
