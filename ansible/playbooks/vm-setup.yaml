@@ -1,0 +1,16 @@
+---
+# Applies common role to any VM or group of VMs.
+# Use this when provisioning new VMs that are not part of the k3s cluster.
+#
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/vm-setup.yaml -e target=<host-or-group>
+#
+# Examples:
+#   ansible-playbook -i inventory/hosts.yaml playbooks/vm-setup.yaml -e target=media_vm
+#   ansible-playbook -i inventory/hosts.yaml playbooks/vm-setup.yaml -e target=k3s-cp-01
+
+- name: Set up VM
+  hosts: "{{ target }}"
+  become: true
+
+  roles:
+    - common

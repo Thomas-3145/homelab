@@ -1,0 +1,25 @@
+---
+# Tasks applied to all k3s nodes (control plane and workers).
+# - Disable swap (required by Kubernetes)
+# - Set hostname to match inventory
+
+- name: Disable swap (runtime)
+  ansible.builtin.command: swapoff -a
+  changed_when: false
+
+- name: Remove swap from fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '\sswap\s'
+    state: absent
+
+- name: Disable dphys-swapfile (Raspberry Pi OS)
+  ansible.builtin.systemd:
+    name: dphys-swapfile
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
