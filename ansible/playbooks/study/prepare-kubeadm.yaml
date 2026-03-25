@@ -1,6 +1,6 @@
 ---
-# Prepares test-01 VM for kubeadm.
-# Run: ansible-playbook -i inventory/hosts.yaml playbooks/prepare-kubeadm.yaml
+# Prepares test VMs for kubeadm (no cluster init — run kubeadm init manually after).
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/study/prepare-kubeadm.yaml
 #
 # After this playbook completes, SSH in and run:
 #   sudo kubeadm init --pod-network-cidr=10.244.0.0/16
@@ -9,34 +9,10 @@
   hosts: test
   become: true
 
+  roles:
+    - common
+
   tasks:
-    # -- DNS fix (VLAN 10 can't reach AdGuard on VLAN 8) --
-    - name: Ensure resolved.conf.d directory exists
-      ansible.builtin.file:
-        path: /etc/systemd/resolved.conf.d
-        state: directory
-        mode: "0755"
-
-    - name: Configure DNS (systemd-resolved)
-      ansible.builtin.copy:
-        dest: /etc/systemd/resolved.conf.d/dns.conf
-        content: |
-          [Resolve]
-          DNS=1.1.1.1 8.8.8.8
-          FallbackDNS=9.9.9.9
-        mode: "0644"
-      notify: Restart systemd-resolved
-
-    - name: Flush handlers
-      ansible.builtin.meta: flush_handlers
-
-    # -- System updates --
-    - name: Update apt cache and upgrade packages
-      ansible.builtin.apt:
-        update_cache: true
-        upgrade: dist
-        cache_valid_time: 3600
-
     # -- Swap --
     - name: Disable swap (runtime)
       ansible.builtin.command: swapoff -a
@@ -158,11 +134,6 @@
         name: "{{ inventory_hostname }}"
 
   handlers:
-    - name: Restart systemd-resolved
-      ansible.builtin.systemd:
-        name: systemd-resolved
-        state: restarted
-
     - name: Restart containerd
       ansible.builtin.systemd:
         name: containerd
