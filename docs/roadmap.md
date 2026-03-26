@@ -637,6 +637,12 @@ Alerts configured:
 - ⏳ Configure `renovate.json` for Helm chart and image version bumps
 - ⏳ Auto-merge for patch updates, PR for minor/major
 
+#### 6.6 Kubernetes Network Policies (TODO)
+- ⏳ Default-deny ingress/egress per namespace
+- ⏳ Fine-grained allow-rules for known traffic flows (e.g., Prometheus → exporters, ingress-nginx → app pods)
+- ⏳ Namespace isolation between infrastructure and application workloads
+- ⏳ Document policy rationale in ADR
+
 ### Success Criteria
 - ✅ Prometheus collecting metrics from all nodes
 - ✅ Grafana accessible with dashboards
@@ -644,167 +650,146 @@ Alerts configured:
 - ✅ Historical data retained for analysis
 - ✅ Loki + Promtail for log aggregation
 - ⏳ Renovate for automated updates
+- ⏳ Network Policies enforcing namespace isolation
 
-### Status: ✅ COMPLETE (Renovate remaining)
+### Status: ✅ COMPLETE (Renovate + Network Policies remaining)
 ### Blog Post: "Monitoring Kubernetes with Prometheus & Grafana"
 
 ---
 
-## Fase 7: CI/CD Pipeline (Gitea + Woodpecker CI)
+## Fase 7: CI/CD Pipeline (gitlab.com + Self-Hosted Runner in k3s)
 
-**Goal**: Self-hosted CI/CD pipeline with full control, running on the k3s cluster
+**Goal**: Complete CI/CD pipeline demonstrating the full delivery chain: code → build → test → push image → GitOps deploy
 
-### Objectives
-- Deploy Gitea as self-hosted Git server on k3s
-- Mirror GitHub repos to Gitea
-- Deploy Woodpecker CI connected to Gitea
-- Build automated pipelines: lint, build, test, deploy
-- Complement with GitHub Actions for public repo checks
+### Architecture
+- **gitlab.com** (free tier) hosts the demo app repo + container registry — zero maintenance
+- **Self-hosted GitLab Runner** in k3s with Kubernetes executor — the interesting part
+- **GitHub** remains primary for the homelab repo (portfolio) with existing Actions
+- Focus effort on the pipeline and app, not on hosting GitLab itself
+
+```
+gitlab.com                           k3s cluster
+┌─────────────────────┐              ┌──────────────────────────┐
+│ Demo app repo       │              │ GitLab Runner (Helm)     │
+│ .gitlab-ci.yml      │◄────────────►│  └─ Kubernetes executor  │
+│ Container registry  │  picks up    │     └─ temp pod per job  │
+│                     │  jobs        │        └─ Kaniko build   │
+└─────────────────────┘              │                          │
+         │                           │ ArgoCD                   │
+         │  image pushed             │  └─ detects new tag      │
+         └──────────────────────────►│     └─ syncs deployment  │
+                                     └──────────────────────────┘
+```
+
+### Why this approach
+- Self-hosted GitLab CE is heavy (~4GB RAM) and adds a maintenance step before the actual goal
+- The CV value is in the **Runner + pipeline + GitOps flow**, not in hosting GitLab
+- Runner architecture (executor model, shared/group/project runners) is a common interview topic
+- Dual setup (GitHub Actions + GitLab CI) shows breadth
 
 ### Tasks
 
-#### 6.1 Gitea Deployment
-Deploy Gitea on k3s via ArgoCD:
-- Helm chart or plain manifests in `kubernetes/apps/gitea/`
-- Persistent storage via Longhorn
-- Ingress at `git.3145.blog` with TLS
-- ARM64-compatible image
+#### 7.1 GitLab Runner in k3s
+Deploy GitLab Runner on k3s via ArgoCD:
+- Helm chart in `kubernetes/infrastructure/gitlab-runner/`
+- Register runner against gitlab.com project (runner registration token)
+- Kubernetes executor: each CI job spawns a temporary pod (clean, isolated)
+- Use Kaniko for building container images (no Docker-in-Docker, more secure)
+- SOPS-encrypted runner registration token
 
-**Deliverable**: Gitea running and accessible at git.3145.blog
+**Deliverable**: Runner registered and executing jobs from gitlab.com inside k3s
 
-#### 6.2 GitHub Mirror Setup
-- Configure Gitea to mirror homelab repo from GitHub (built-in feature)
-- Set up mirror schedule (e.g. every 15 min or webhook-triggered)
-- Can also push private infra repos directly to Gitea (no GitHub needed)
+#### 7.2 Demo Application
+Build a Python Flask application (e.g., alert webhook receiver from Automated Remediation course) with:
+- Dockerfile (multi-stage build for small image)
+- Unit tests
+- Linting
+- Kubernetes manifests (Deployment, Service, Ingress) managed by ArgoCD
 
-**Deliverable**: GitHub repos automatically mirrored to Gitea
+Host the app repo on gitlab.com (separate from the homelab repo on GitHub).
 
-#### 6.3 Woodpecker CI Deployment
-Deploy Woodpecker CI on k3s via ArgoCD:
-- Woodpecker server + agent(s) in `kubernetes/apps/woodpecker/`
-- Connect to Gitea via OAuth2
-- Persistent storage for build logs
-- Ingress at `ci.3145.blog` with TLS
+**Deliverable**: App repo on gitlab.com with Dockerfile and k8s manifests
 
-**Deliverable**: Woodpecker CI running and connected to Gitea
-
-#### 6.4 Build Pipelines
-Create `.woodpecker.yaml` pipelines:
-
-**Pipeline 1: Validate infrastructure**
+#### 7.3 Full CI/CD Pipeline
+Create `.gitlab-ci.yml` with stages:
 ```yaml
-steps:
-  - name: lint-yaml
-    image: cytopia/yamllint
-    commands:
-      - yamllint kubernetes/
+stages:
+  - lint
+  - test
+  - build
+  - deploy
 
-  - name: validate-manifests
-    image: ghcr.io/yannh/kubeconform:latest
-    commands:
-      - kubeconform kubernetes/
+lint:
+  stage: lint
+  image: python:3.12-slim
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install -r requirements.txt
+    - pytest
+
+build:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - /kaniko/executor
+      --context $CI_PROJECT_DIR
+      --dockerfile Dockerfile
+      --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+      --destination $CI_REGISTRY_IMAGE:latest
+
+deploy:
+  stage: deploy
+  script:
+    - # Update image tag in k8s manifests (kustomize edit set image)
+    - # Git commit + push to trigger ArgoCD sync
 ```
 
-**Pipeline 2: Build & Deploy (GitOps)**
-```yaml
-steps:
-  - name: build-image
-    image: plugins/docker
-    settings:
-      repo: registry.3145.blog/myapp
-      tags: ${CI_COMMIT_SHA}
+All jobs run on the self-hosted runner in k3s — not on gitlab.com shared runners.
 
-  - name: update-manifests
-    image: alpine/git
-    commands:
-      - # Update image tag in k8s manifests
-      - # ArgoCD auto-syncs the change
-```
+**Deliverable**: Push code → pipeline runs on k3s → image built → deployed via ArgoCD
 
-**Deliverable**: Automated CI/CD pipeline triggered on push
+#### 7.4 GitHub Actions (Complement)
+Keep existing GitHub Actions for the homelab repo:
+- Terraform validate, yamllint, ansible-lint, kubeconform, Trivy on PR
+- These run on GitHub's hosted runners (lightweight, free)
 
-#### 6.5 GitHub Actions (Complement)
-Keep lightweight GitHub Actions for public repo checks:
-- Terraform validate on PR
-- YAML linting on PR
-- These run on GitHub's runners (no self-hosted needed)
+GitLab handles app delivery. GitHub handles infra validation.
 
-Heavy lifting (build, deploy, integration tests) runs on Woodpecker.
-
-**Deliverable**: Dual CI setup — GitHub for public checks, Woodpecker for internal pipeline
+**Deliverable**: Dual CI setup — GitHub for infra, GitLab for app delivery
 
 ### Success Criteria
-- ✅ Gitea running on k3s with GitHub mirror
-- ✅ Woodpecker CI triggered on push to Gitea
-- ✅ Pipeline validates, builds, and deploys automatically
-- ✅ ArgoCD picks up changes from pipeline
-- ✅ Full self-hosted CI/CD — no dependency on external services
+- [ ] GitLab Runner executing jobs inside k3s (Kubernetes executor)
+- [ ] Container images built with Kaniko and pushed to gitlab.com registry
+- [ ] Full pipeline: lint → test → build → deploy
+- [ ] ArgoCD auto-syncs new image tags from pipeline
+- [ ] Demo app running in production via the pipeline
 
-### Blog Post: "Self-Hosted CI/CD with Gitea and Woodpecker on k3s"
+### Blog Post: "Self-Hosted GitLab Runner on Kubernetes with a Full CI/CD Pipeline"
 
 ---
 
-## Fase 8: Hybrid Cloud (AWS Integration)
+## Fase 8: Platform Engineering & Security Hardening
 
-**Goal**: Extend homelab to AWS for hybrid setup
+**Goal**: Harden the cluster with policy enforcement and centralized secrets — demonstrates platform thinking beyond just running apps
 
-### Objectives
-- Deploy k3s node on AWS EC2
-- Set up VPN mesh with Tailscale
-- Distribute workloads across cloud/homelab
-- Implement disaster recovery
-
-### Tasks
-
-#### 7.1 Terraform for AWS
-Create `terraform/aws/`:
-- VPC and subnets
-- EC2 instance for k3s node
-- Security groups
-- S3 bucket for backups
-
-**Deliverable**: AWS infrastructure
-
-#### 7.2 Tailscale VPN Mesh
-Connect all nodes:
-- Proxmox VMs
-- Homelab Pi
-- AWS EC2
-
-**Deliverable**: Secure multi-site connectivity
-
-#### 7.3 Cross-Cloud Workload Distribution
-Use Kubernetes node affinity:
-- Latency-sensitive: homelab
-- Burst compute: AWS
-- Disaster recovery: AWS
-
-**Deliverable**: True hybrid cloud setup
-
-### Success Criteria
-- ✅ k3s node running in AWS
-- ✅ All nodes connected via Tailscale
-- ✅ Workloads can run in both locations
-- ✅ Automated failover tested
-
-### Time Estimate: 2-3 weeks
-### Blog Post: "Building a Hybrid Cloud Homelab"
-
----
-
-## Fase 9: Platform Engineering & Security Hardening
-
-**Goal**: Harden the cluster with policy enforcement, centralized secrets, and a developer portal
-
-### 8.1 Kyverno – Policy Engine (~1 week)
+### 8.1 Kyverno – Policy Engine
 
 **What**: Kubernetes-native policy engine. Enforces rules as standard YAML manifests — no new languages.
 
-**Why**: Security hardening + portfolio value. Shows you think about compliance and best practices.
+**Why**: Security hardening + portfolio value. Shows you think about compliance and best practices. Common interview topic for DevOps/SRE roles.
 
 **Deploy via ArgoCD** in `kubernetes/infrastructure/kyverno/`:
 - Install Kyverno via Helm chart
 - Deploy policies as ClusterPolicy resources
+- Kyverno Policy Reporter for visibility in Grafana
 
 **Starter policies:**
 - [ ] Require resource limits on all pods
@@ -812,13 +797,14 @@ Use Kubernetes node affinity:
 - [ ] Require specific labels (app, team)
 - [ ] Block privileged containers
 - [ ] Enforce read-only root filesystem
+- [ ] Require probes (liveness/readiness) on all deployments
 
 **Prerequisites**: ArgoCD (already done)
 **Deliverable**: Cluster-wide policy enforcement via GitOps
 
 ---
 
-### 8.2 HashiCorp Vault – Secrets Management (~2-3 weeks)
+### 8.2 HashiCorp Vault – Secrets Management
 
 **What**: Centralized secrets management with dynamic credentials, rotation, and audit logging.
 
@@ -841,60 +827,76 @@ Use Kubernetes node affinity:
 **Prerequisites**: Running apps (Ghost, Vaultwarden) to integrate with
 **Deliverable**: All application secrets managed via Vault
 
----
-
-### 8.3 Backstage – Developer Portal (~3-4 weeks)
-
-**What**: Spotify's open-source developer portal. Single pane of glass for all services, docs, and infrastructure.
-
-**Why**: Demonstrates platform engineering thinking — highly valued by employers. Ties together everything built so far.
-
-**Deploy via ArgoCD** in `kubernetes/apps/backstage/`:
-- Build custom Backstage image with plugins
-- PostgreSQL database for catalog
-- Ingress at `backstage.3145.blog` with TLS
-
-**Integrations:**
-- [ ] ArgoCD plugin – deployment status in Backstage
-- [ ] Kubernetes plugin – pod status, logs
-- [ ] TechDocs – render existing markdown docs as searchable portal
-- [ ] GitHub plugin – link to repositories
-
-**Software Catalog:**
-- [ ] Write `catalog-info.yaml` for each service (Ghost, Vaultwarden, Homepage, etc.)
-- [ ] Define system/component relationships
-- [ ] Create software templates for new services
-
-**Prerequisites**: Vault (for secrets), multiple running services to catalog
-**Deliverable**: Developer portal at backstage.3145.blog with full service catalog
-
----
-
 ### Success Criteria
 - [ ] Kyverno enforcing policies cluster-wide
 - [ ] Vault managing all application secrets
-- [ ] Backstage cataloging all services with ArgoCD integration
 - [ ] Everything deployed via GitOps
 
-### Blog Post: "From Cluster to Platform: Kyverno, Vault & Backstage"
+### Blog Post: "Security Hardening: Kyverno Policies & Vault Secrets on k3s"
+
+---
+
+## Fase 9: Hybrid Cloud (AWS Integration)
+
+**Goal**: Extend homelab to AWS for hybrid setup — demonstrates cloud experience alongside on-prem
+
+### Objectives
+- Deploy k3s node on AWS EC2 via Terraform
+- Set up VPN mesh with Tailscale
+- Distribute workloads across cloud/homelab
+- Implement disaster recovery
+
+### Tasks
+
+#### 9.1 Terraform for AWS
+Create `terraform/aws/`:
+- VPC and subnets
+- EC2 instance for k3s node
+- Security groups
+- S3 bucket for backups
+
+**Deliverable**: AWS infrastructure provisioned with Terraform
+
+#### 9.2 Tailscale VPN Mesh
+Connect all nodes:
+- Proxmox VMs
+- Homelab Pi
+- AWS EC2
+
+**Deliverable**: Secure multi-site connectivity
+
+#### 9.3 Cross-Cloud Workload Distribution
+Use Kubernetes node affinity:
+- Latency-sensitive: homelab
+- Burst compute: AWS
+- Disaster recovery: AWS
+
+**Deliverable**: True hybrid cloud setup
+
+### Success Criteria
+- [ ] k3s node running in AWS
+- [ ] All nodes connected via Tailscale
+- [ ] Workloads can run in both locations
+- [ ] Automated failover tested
+
+### Blog Post: "Building a Hybrid Cloud Homelab"
 
 ---
 
 ## Future Enhancements
 
 **After core phases:**
+- [ ] **Backstage**: Developer portal — single pane of glass for all services, docs, and infrastructure. High CV value but heavy to run on a homelab.
 - [ ] **Velero GFS-style retention**: Replace single daily schedule with three schedules (daily 14d TTL, weekly 90d TTL, monthly 365d TTL) to mirror PBS grandfather-father-son retention strategy
-- [ ] **Renovate**: Automated dependency updates — opens PRs when Helm charts or container images have new versions
 - [ ] **Descheduler**: Automatically rebalances pods across nodes when resource usage drifts (fixes the CP-01 84% RAM problem without manual pod deletions)
 - [ ] **Trivy Operator**: In-cluster vulnerability scanning of container images and manifests, results visible in Grafana
-- [ ] **NetworkPolicies**: Restrict pod-to-pod traffic (namespace isolation)
 - [ ] **Tailscale on all k3s nodes**: Install via Ansible so pods can reach Tailscale IPs from any node
 - [ ] **Cloudflared GitOps**: Migrate from `--token` to `credentials-file` + local config.yaml
 - [ ] Service mesh (Istio/Linkerd)
 - [ ] Multi-cluster GitOps
 - [ ] Advanced observability (Tempo for tracing)
 - [ ] Chaos engineering tests
-- [ ] Security scanning (Trivy, Falco)
+- [ ] Runtime security (Falco)
 
 ---
 
@@ -914,5 +916,5 @@ Use Kubernetes node affinity:
 
 ---
 
-**Last Updated**: 2026-03-19
+**Last Updated**: 2026-03-26
 **Current Phase**: Fase 5 (Ghost & Vaultwarden migration to k3s)
