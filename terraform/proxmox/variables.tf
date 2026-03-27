@@ -20,10 +20,33 @@ variable "ssh_public_key_path" {
   default     = "~/.ssh/id_rsa_4096.pub"
 }
 
-variable "target_node" {
-  description = "Proxmox node name"
-  type        = string
-  default     = "pve"
+variable "control_planes" {
+  description = "k3s control plane VM definitions (name -> {ip, node_name, template_id})"
+  type = map(object({
+    ip          = string
+    node_name   = string
+    template_id = number
+  }))
+  default = {
+    "k3s-cp-01" = { ip = "192.168.10.21", node_name = "pve1", template_id = 9000 }
+    "k3s-cp-02" = { ip = "192.168.10.22", node_name = "pve2", template_id = 9001 }
+    "k3s-cp-03" = { ip = "192.168.10.23", node_name = "pve2", template_id = 9001 }
+  }
+}
+
+variable "cp_cores" {
+  type    = number
+  default = 2
+}
+
+variable "cp_memory" {
+  type    = number
+  default = 4096
+}
+
+variable "cp_disk" {
+  type    = number
+  default = 32
 }
 
 variable "template_id" {
@@ -32,13 +55,42 @@ variable "template_id" {
   default     = 9000
 }
 
+variable "workers" {
+  description = "k3s worker node VM definitions (name -> {ip, node_name, template_id})"
+  type = map(object({
+    ip          = string
+    node_name   = string
+    template_id = number
+  }))
+  default = {
+    "k3s-worker-01" = { ip = "192.168.10.52", node_name = "pve1", template_id = 9000 }
+    "k3s-worker-02" = { ip = "192.168.10.53", node_name = "pve2", template_id = 9001 }
+  }
+}
+
+variable "worker_cores" {
+  type    = number
+  default = 2
+}
+
+variable "worker_memory" {
+  type    = number
+  default = 4096
+}
+
+variable "worker_disk" {
+  type    = number
+  default = 32
+}
+
 variable "test_vms" {
   description = "Test VMs to provision"
   type = map(object({
-    ip     = string
-    cores  = number
-    memory = number
-    disk   = number
+    ip        = string
+    node_name = string
+    cores     = number
+    memory    = number
+    disk      = number
   }))
   default = {}
 }
