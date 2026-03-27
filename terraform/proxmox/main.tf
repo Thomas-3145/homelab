@@ -22,7 +22,7 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
 
   disk {
     datastore_id = "local-lvm"
-    interface    = "scsi0"
+    interface    = "virtio0"
     size         = var.cp_disk
   }
 
@@ -71,7 +71,7 @@ resource "proxmox_virtual_environment_vm" "k3s_workers" {
 
   disk {
     datastore_id = "local-lvm"
-    interface    = "scsi0"
+    interface    = "virtio0"
     size         = var.worker_disk
   }
 
@@ -120,7 +120,7 @@ resource "proxmox_virtual_environment_vm" "test" {
 
   disk {
     datastore_id = "local-lvm"
-    interface    = "scsi0"
+    interface    = "virtio0"
     size         = each.value.disk
   }
 
