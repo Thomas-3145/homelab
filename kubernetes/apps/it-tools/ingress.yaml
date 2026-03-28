@@ -6,7 +6,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: it-tools.local
+    - host: it-tools.3145.blog
       http:
         paths:
           - path: /

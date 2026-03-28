@@ -12,4 +12,14 @@ data:
         service: http://homepage.homepage.svc.cluster.local:80
       - hostname: argocd-webhook.3145.blog
         service: http://argocd-server.argocd.svc.cluster.local:80
+      - hostname: argocd.3145.blog
+        service: http://argocd-server.argocd.svc.cluster.local:80
+      - hostname: grafana.3145.blog
+        service: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80
+      - hostname: longhorn.3145.blog
+        service: http://longhorn-frontend.longhorn-system.svc.cluster.local:80
+      - hostname: headlamp.3145.blog
+        service: http://headlamp.headlamp.svc.cluster.local:80
+      - hostname: it-tools.3145.blog
+        service: http://it-tools.it-tools.svc.cluster.local:80
       - service: http_status:404
