@@ -17,7 +17,11 @@ variable "proxmox_api_token_secret" {
 variable "ssh_public_key_path" {
   description = "Path to SSH public key for cloud-init"
   type        = string
-  default     = "~/.ssh/id_rsa_4096.pub"
+}
+
+variable "template_id" {
+  description = "Default cloud-init template VM ID"
+  type        = number
 }
 
 variable "control_planes" {
@@ -27,32 +31,21 @@ variable "control_planes" {
     node_name   = string
     template_id = number
   }))
-  default = {
-    "k3s-cp-01" = { ip = "192.168.10.21", node_name = "pve1", template_id = 9000 }
-    "k3s-cp-02" = { ip = "192.168.10.22", node_name = "pve2", template_id = 9001 }
-    "k3s-cp-03" = { ip = "192.168.10.23", node_name = "pve2", template_id = 9001 }
-  }
 }
 
 variable "cp_cores" {
-  type    = number
-  default = 2
+  description = "CPU cores for control plane nodes"
+  type        = number
 }
 
 variable "cp_memory" {
-  type    = number
-  default = 4096
+  description = "RAM in MB for control plane nodes"
+  type        = number
 }
 
 variable "cp_disk" {
-  type    = number
-  default = 32
-}
-
-variable "template_id" {
-  description = "Cloud-init template VM ID"
+  description = "Disk size in GB for control plane nodes"
   type        = number
-  default     = 9000
 }
 
 variable "workers" {
@@ -62,29 +55,37 @@ variable "workers" {
     node_name   = string
     template_id = number
   }))
-  default = {
-    "k3s-worker-01" = { ip = "192.168.10.52", node_name = "pve1", template_id = 9000 }
-    "k3s-worker-02" = { ip = "192.168.10.53", node_name = "pve2", template_id = 9001 }
-  }
 }
 
 variable "worker_cores" {
-  type    = number
-  default = 2
+  description = "CPU cores for worker nodes"
+  type        = number
 }
 
 variable "worker_memory" {
-  type    = number
-  default = 4096
+  description = "RAM in MB for worker nodes"
+  type        = number
 }
 
 variable "worker_disk" {
-  type    = number
-  default = 32
+  description = "Disk size in GB for worker nodes"
+  type        = number
+}
+
+variable "service_vms" {
+  description = "Permanent service VMs running standalone workloads (e.g. arr-stack)"
+  type = map(object({
+    ip        = string
+    node_name = string
+    cores     = number
+    memory    = number
+    disk      = number
+  }))
+  default = {}
 }
 
 variable "test_vms" {
-  description = "Test VMs to provision"
+  description = "Ad-hoc lab VMs (name -> {ip, node_name, cores, memory, disk})"
   type = map(object({
     ip        = string
     node_name = string
