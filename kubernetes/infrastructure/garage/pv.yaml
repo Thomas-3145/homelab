@@ -18,4 +18,4 @@ spec:
             - key: kubernetes.io/hostname
               operator: In
               values:
-                - "temp-worker-node-migration"
+                - "k3s-worker-02"
