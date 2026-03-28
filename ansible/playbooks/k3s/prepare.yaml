@@ -6,7 +6,7 @@
 # - Applies k3s_node role (swap off, hostname)
 
 - name: Prepare nodes for k3s
-  hosts: k3s_control_plane
+  hosts: k3s_control_plane:k3s_workers
   become: true
 
   roles:
