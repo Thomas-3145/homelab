@@ -6,6 +6,7 @@
 #   k3s_servers       - Remaining servers, join via the init node's token
 #   k3s_control_plane - Parent group targeting all CP nodes
 #   k3s_workers       - Worker nodes (k3s agent)
+#   services          - Permanent service VMs (arr-stack, etc.) — only common role
 #   test              - Standalone VMs for learning/testing
 #   physical_hosts    - Physical machines (Proxmox hosts + 3145)
 
@@ -31,12 +32,10 @@ all:
                   ansible_host: 192.168.10.22
                 k3s-cp-03:
                   ansible_host: 192.168.10.23
+        services:
+          hosts: {}
         test:
-          hosts:
-            kubeadm-lab:
-              ansible_host: 192.168.10.50
-            k8s-book:
-              ansible_host: 192.168.10.51
+          hosts: {}
         k3s_workers:
           hosts:
             k3s-worker-01:
