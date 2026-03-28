@@ -16,6 +16,15 @@ spec:
       valuesObject:
         prometheus:
           prometheusSpec:
+            additionalScrapeConfigs:
+              - job_name: node-exporter-physical
+                static_configs:
+                  - targets:
+                      - 192.168.10.20:9100  # pve1
+                      - 192.168.10.30:9100  # pve2
+                      - 192.168.20.10:9100  # 3145
+                    labels:
+                      job: node-exporter
             resources:
               requests:
                 memory: 512Mi
