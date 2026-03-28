@@ -1,0 +1,26 @@
+[Unit]
+Description=Prometheus Node Exporter
+After=network.target
+
+[Service]
+User={{ node_exporter_user }}
+Group={{ node_exporter_user }}
+Type=simple
+ExecStart=/usr/local/bin/node_exporter \
+  --web.listen-address=:{{ node_exporter_port }} \
+  --collector.textfile.directory={{ node_exporter_textfile_dir }} \
+{% for collector in node_exporter_collectors %}
+  --collector.{{ collector }} \
+{% endfor %}
+  --no-collector.arp \
+  --no-collector.bcache \
+  --no-collector.bonding \
+  --no-collector.infiniband \
+  --no-collector.ipvs \
+  --no-collector.nfs \
+  --no-collector.nfsd \
+  --no-collector.xfs
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

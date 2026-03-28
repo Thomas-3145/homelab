@@ -1,0 +1,6 @@
+---
+- name: Install node_exporter on physical hosts
+  hosts: physical_hosts
+  become: true
+  roles:
+    - node_exporter

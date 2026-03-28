@@ -65,6 +65,28 @@
     - {regexp: '^#?PasswordAuthentication ', line: 'PasswordAuthentication no'}
   notify: Restart sshd
 
+# -- Security --
+- name: Install fail2ban and unattended-upgrades
+  ansible.builtin.apt:
+    name:
+      - fail2ban
+      - unattended-upgrades
+    state: present
+
+- name: Enable and start fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started
+
+- name: Enable unattended-upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    mode: "0644"
+
 # -- Tailscale --
 - name: Load Tailscale secrets
   community.sops.load_vars:

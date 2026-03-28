@@ -7,15 +7,15 @@
 #   k3s_control_plane - Parent group targeting all CP nodes
 #   k3s_workers       - Worker nodes (k3s agent)
 #   test              - Standalone VMs for learning/testing
+#   physical_hosts    - Physical machines (Proxmox hosts + 3145)
 
 all:
   children:
     proxmox_vms:
       vars:
         ansible_user: ubuntu
-        ansible_port: 22456
         ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096
-        ansible_python_interpreter: /usr/bin/python3.12
+        ansible_python_interpreter: auto
         # Accept new host keys automatically (VMs get new keys after destroy/apply)
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
       children:
@@ -41,3 +41,20 @@ all:
           hosts:
             k3s-worker-01:
               ansible_host: 192.168.10.52
+            k3s-worker-02:
+              ansible_host: 192.168.10.53
+    physical_hosts:
+      vars:
+        ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096
+        ansible_port: 22456
+        ansible_python_interpreter: auto
+      hosts:
+        pve1:
+          ansible_host: 100.72.221.91
+          ansible_user: root
+        pve2:
+          ansible_host: 100.123.43.87
+          ansible_user: root
+        "3145":
+          ansible_host: 100.110.160.88
+          ansible_user: thomas
