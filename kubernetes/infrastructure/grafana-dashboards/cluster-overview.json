@@ -18,7 +18,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
   "links": [],
   "panels": [
     {
@@ -116,7 +115,6 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.0.0+security-01",
       "targets": [
         {
           "datasource": {
@@ -215,7 +213,6 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.0.0+security-01",
       "targets": [
         {
           "datasource": {
@@ -283,7 +280,6 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.0.0+security-01",
       "targets": [
         {
           "datasource": {
@@ -350,7 +346,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.0+security-01",
       "targets": [
         {
           "datasource": {
@@ -417,7 +412,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.0+security-01",
       "targets": [
         {
           "datasource": {
@@ -490,7 +484,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.0+security-01",
       "targets": [
         {
           "datasource": {
@@ -595,7 +588,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.0+security-01",
       "targets": [
         {
           "datasource": {
@@ -665,7 +657,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.0+security-01",
       "targets": [
         {
           "datasource": {
@@ -775,7 +766,6 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "12.0.0+security-01",
           "targets": [
             {
               "datasource": {
@@ -874,7 +864,6 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "12.0.0+security-01",
           "targets": [
             {
               "datasource": {
@@ -987,7 +976,6 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "12.0.0+security-01",
           "targets": [
             {
               "datasource": {
@@ -1086,7 +1074,6 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "12.0.0+security-01",
           "targets": [
             {
               "datasource": {
@@ -1183,7 +1170,6 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "12.0.0+security-01",
           "targets": [
             {
               "editorMode": "code",
@@ -1276,7 +1262,6 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "12.0.0+security-01",
           "targets": [
             {
               "editorMode": "code",
@@ -1340,7 +1325,6 @@
             "showThresholdMarkers": true,
             "sizing": "auto"
           },
-          "pluginVersion": "12.0.0+security-01",
           "targets": [
             {
               "datasource": {
