@@ -75,11 +75,12 @@ variable "worker_disk" {
 variable "service_vms" {
   description = "Permanent service VMs running standalone workloads (e.g. arr-stack)"
   type = map(object({
-    ip        = string
-    node_name = string
-    cores     = number
-    memory    = number
-    disk      = number
+    ip          = string
+    node_name   = string
+    cores       = number
+    memory      = number
+    disk        = number
+    template_id = number
   }))
   default = {}
 }

@@ -33,7 +33,9 @@ all:
                 k3s-cp-03:
                   ansible_host: 192.168.10.23
         services:
-          hosts: {}
+          hosts:
+            gitlab-runner:
+              ansible_host: 192.168.10.30
         test:
           hosts: {}
         k3s_workers:

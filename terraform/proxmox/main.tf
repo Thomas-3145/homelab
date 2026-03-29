@@ -125,7 +125,7 @@ resource "proxmox_virtual_environment_vm" "services" {
   }
 
   clone {
-    vm_id = var.template_id
+    vm_id = each.value.template_id
   }
 
   cpu {
