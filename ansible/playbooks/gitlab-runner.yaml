@@ -1,0 +1,14 @@
+---
+# Configures a GitLab CI runner with Docker executor (supports Docker-in-Docker).
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/gitlab-runner.yaml
+#
+# After running, register the runner manually:
+#   gitlab-runner register --url <gitlab-url> --token <token>
+
+- name: Configure GitLab Runner
+  hosts: services
+  become: true
+
+  roles:
+    - common
+    - gitlab_runner
