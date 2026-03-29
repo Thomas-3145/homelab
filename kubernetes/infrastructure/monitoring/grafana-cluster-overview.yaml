@@ -251,8 +251,8 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "longhorn_volume_robustness",
-              "instant": true, "legendFormat": "{{volume}}", "range": false, "refId": "A"
+              "expr": "longhorn_node_status",
+              "instant": true, "legendFormat": "{{node}}", "range": false, "refId": "A"
             }
           ],
           "title": "Longhorn Volume Health",
@@ -280,7 +280,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "(time() - velero_backup_last_successful_timestamp) / 3600",
+              "expr": "velero_backup_last_status",
               "instant": true, "legendFormat": "{{schedule}}", "range": false, "refId": "A"
             }
           ],
