@@ -1,7 +1,7 @@
 ---
 - name: Set architecture fact
   ansible.builtin.set_fact:
-    _arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+    node_exporter_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
 
 - name: Stop and disable apt-installed prometheus-node-exporter if present
   ansible.builtin.systemd:
@@ -27,19 +27,19 @@
 
 - name: Download node_exporter archive
   ansible.builtin.get_url:
-    url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-{{ _arch }}.tar.gz"
-    dest: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ _arch }}.tar.gz"
+    url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz" # noqa: yaml[line-length]
+    dest: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
     mode: "0644"
 
 - name: Extract node_exporter binary
   ansible.builtin.unarchive:
-    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ _arch }}.tar.gz"
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
     dest: /tmp
     remote_src: true
 
 - name: Install node_exporter binary
   ansible.builtin.copy:
-    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ _arch }}/node_exporter"
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}/node_exporter"
     dest: /usr/local/bin/node_exporter
     owner: root
     group: root
@@ -52,8 +52,8 @@
     path: "{{ item }}"
     state: absent
   loop:
-    - "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ _arch }}.tar.gz"
-    - "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ _arch }}"
+    - "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
+    - "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}"
 
 - name: Install node_exporter systemd service
   ansible.builtin.template:

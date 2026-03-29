@@ -52,7 +52,7 @@ jobs:
         run: ansible-galaxy collection install -r ansible/requirements.yaml
 
       - name: Run ansible-lint
-        run: ansible-lint -c ansible/.ansible-lint ansible/
+        run: cd ansible && ansible-lint -c .ansible-lint .
 
   kubeconform:
     name: Kubernetes Manifests
