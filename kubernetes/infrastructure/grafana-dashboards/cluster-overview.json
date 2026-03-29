@@ -595,9 +595,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "longhorn_volume_robustness",
+          "expr": "longhorn_node_status",
           "instant": true,
-          "legendFormat": "{{volume}}",
+          "legendFormat": "{{node}}",
           "range": false,
           "refId": "A"
         }
@@ -664,7 +664,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(time() - velero_backup_last_successful_timestamp) / 3600",
+          "expr": "velero_backup_last_status",
           "instant": true,
           "legendFormat": "{{schedule}}",
           "range": false,
