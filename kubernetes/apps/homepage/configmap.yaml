@@ -127,6 +127,10 @@ data:
             icon: ghost.png
             href: https://3145.blog/ghost
             description: Adminpanel
+        - Stirling-PDF
+            icon: stirling-pdf.png
+            href: http://stirling-pdf.local/
+            description: PDF-fix
         - Vaultwarden:
             icon: vaultwarden.svg
             href: https://vault.3145.blog/
