@@ -16,6 +16,9 @@ spec:
       containers:
         - name: stirling-pdf
           image: stirlingtools/stirling-pdf:2.8.0
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxMetaspaceSize=256m"
           ports:
             - containerPort: 8080
           resources:
