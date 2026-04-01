@@ -206,7 +206,7 @@ data:
           memory: true
           showLabel: true
     - longhorn:
-        expanded: true
+        expanded: false
         total: true
-        labels: true
-        nodes: true
+        labels: false
+        nodes: false
