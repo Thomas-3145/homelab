@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: stirling-pdf
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Thomas-3145/homelab.git
+    path: kubernetes/apps/stirling-pdf
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: stirling-pdf
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
