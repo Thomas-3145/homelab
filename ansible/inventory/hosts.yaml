@@ -35,7 +35,7 @@ all:
         services:
           hosts:
             gitlab-runner:
-              ansible_host: 192.168.10.30
+              ansible_host: 192.168.10.31
         test:
           hosts: {}
         k3s_workers:
