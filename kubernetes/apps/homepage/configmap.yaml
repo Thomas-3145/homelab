@@ -23,6 +23,9 @@ data:
         initiallyCollapsed: false
       Nedladdningar:
         initiallyCollapsed: false
+    providers:
+      longhorn:
+        url: http://longhorn-frontend.longhorn-system.svc.cluster.local
   kubernetes.yaml: |
     mode: cluster
   bookmarks.yaml: ""
@@ -85,9 +88,6 @@ data:
             icon: longhorn.svg
             href: http://longhorn.3145.blog
             description: Persistent Storage
-            widget:
-              type: longhorn
-              url: http://longhorn-frontend.longhorn-system.svc.cluster.local
         - Headlamp:
             icon: headlamp.svg
             href: http://headlamp.local
@@ -201,3 +201,8 @@ data:
           cpu: true
           memory: true
           showLabel: true
+    - longhorn:
+        expanded: true
+        total: true
+        labels: true
+        nodes: true
