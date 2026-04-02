@@ -127,7 +127,7 @@ data:
             icon: ghost.png
             href: https://3145.blog/ghost
             description: Adminpanel
-        - Stirling-PDF
+        - Stirling-PDF:
             icon: stirling-pdf.png
             href: http://stirling-pdf.local/
             description: PDF-fix
