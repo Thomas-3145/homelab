@@ -8,3 +8,4 @@ metadata:
         path: ksops
 files:
   - nut-secrets.sops.yaml
+  - grafana-admin-secret.sops.yaml
