@@ -26,13 +26,10 @@ A key discovery during planning: Velero without the Longhorn CSI plugin (`velero
 Implement a 3-2-1 backup strategy with two independent backup paths:
 
 **Application backup (k3s workloads):**
-Velero with CSI snapshots → Garage (S3) on 3145 Pi → Cloudflare R2 (off-site)
+Velero with CSI snapshots → Garage (S3) on Homelab Pi → Media Pi (consolidated) → Cloudflare R2 (off-site)
 
 **System backup (Proxmox VMs):**
-Proxmox VM backup → PBS on 3145 Pi → Cloudflare R2 (off-site)
-
-> **Note**: Originally designed for two Raspberry Pi 5:s (homelab-pi + media-pi).
-> Homelab Pi was sold 2026-03-22. All backup functions consolidated on a single Pi (3145, 192.168.20.10).
+Proxmox VM backup → PBS on Media Pi (consolidated) → Cloudflare R2 (off-site)
 
 ### Architecture
 
@@ -88,10 +85,10 @@ Media Pi acts as the single consolidation point. All backups — both app data a
 
 ### Copy distribution
 
-| Data type | Copy 1 (live) | Copy 2 (local backup) | Off-site |
-|-----------|---------------|----------------------|----------|
-| App data (Velero) | k3s cluster (Longhorn) | 3145 Pi (Garage S3) | Cloudflare R2 |
-| VM images | Proxmox (pve1/pve2) | 3145 Pi (PBS) | Cloudflare R2 |
+| Data type | Copy 1 (live) | Copy 2 (local backup) | Copy 3 (consolidated) | Off-site |
+|-----------|---------------|----------------------|----------------------|----------|
+| App data (Velero) | The Beast (k3s) | Homelab Pi (Garage) | Media Pi | Cloudflare R2 |
+| VM images | The Beast (Proxmox) | — | Media Pi (PBS) | Cloudflare R2 |
 
 ### Implementation order
 
