@@ -141,7 +141,10 @@ spec:
                       summary: "Certificate {{ $labels.name }} expires in less than 7 days"
                       description: "Certificate {{ $labels.name }} in namespace {{ $labels.namespace }} expires in {{ $value | humanizeDuration }}."
         grafana:
-          adminPassword: admin123
+          admin:
+            existingSecret: grafana-admin-secret
+            userKey: admin-user
+            passwordKey: admin-password
           resources:
             requests:
               memory: 256Mi
