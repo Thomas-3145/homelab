@@ -548,6 +548,82 @@ data:
               ],
               "title": "Disk Usage per Node",
               "type": "gauge"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": {
+                "defaults": {
+                  "color": { "mode": "palette-classic" },
+                  "custom": {
+                    "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
+                    "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barWidthFactor": 0.6,
+                    "drawStyle": "line", "fillOpacity": 0, "gradientMode": "none",
+                    "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                    "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+                    "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false,
+                    "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" }
+                  },
+                  "unit": "Bps"
+                },
+                "overrides": []
+              },
+              "gridPos": { "h": 8, "w": 12, "x": 0, "y": 89 },
+              "id": 17,
+              "options": {
+                "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "tooltip": { "mode": "single", "sort": "none" }
+              },
+              "targets": [
+                {
+                  "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "editorMode": "code",
+                  "expr": "rate(node_disk_read_bytes_total{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\",device=~\"nvme.+\"}[5m])",
+                  "legendFormat": "{{instance}} {{device}} read", "range": true, "refId": "A"
+                },
+                {
+                  "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "editorMode": "code",
+                  "expr": "-rate(node_disk_written_bytes_total{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\",device=~\"nvme.+\"}[5m])",
+                  "legendFormat": "{{instance}} {{device}} write", "range": true, "refId": "B"
+                }
+              ],
+              "title": "Disk Read/Write",
+              "type": "timeseries"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": {
+                "defaults": {
+                  "color": { "mode": "palette-classic" },
+                  "custom": {
+                    "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
+                    "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barWidthFactor": 0.6,
+                    "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none",
+                    "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                    "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+                    "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false,
+                    "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" }
+                  },
+                  "max": 100, "min": 0, "unit": "percent"
+                },
+                "overrides": []
+              },
+              "gridPos": { "h": 8, "w": 12, "x": 12, "y": 89 },
+              "id": 18,
+              "options": {
+                "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "tooltip": { "mode": "single", "sort": "none" }
+              },
+              "targets": [
+                {
+                  "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "editorMode": "code",
+                  "expr": "rate(node_disk_io_time_seconds_total{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\",device=~\"nvme.+\"}[5m]) * 100",
+                  "legendFormat": "{{instance}} {{device}}", "range": true, "refId": "A"
+                }
+              ],
+              "title": "Disk I/O Utilization %",
+              "type": "timeseries"
             }
           ],
           "title": "Fysiska maskiner",
