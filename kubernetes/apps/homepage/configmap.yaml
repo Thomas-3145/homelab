@@ -210,3 +210,4 @@ data:
         total: true
         labels: false
         nodes: false
+        label: "Lagring"
