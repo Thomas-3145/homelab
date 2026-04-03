@@ -405,7 +405,7 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\"}[5m])) * 100)",
+                  "expr": "100 - (avg by(nodename) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\"}[5m])) * 100)",
                   "legendFormat": "{{nodename}}", "range": true, "refId": "A"
                 }
               ],
@@ -442,7 +442,7 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": " 100 - ((avg_over_time(node_memory_MemAvailable_bytes{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\"}[5m]) / avg_over_time(node_memory_MemTotal_bytes{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\"}[5m])) * 100)",
+                  "expr": "100 - (avg by(nodename) (node_memory_MemAvailable_bytes{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\"}) / avg by(nodename) (node_memory_MemTotal_bytes{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\"}) * 100)",
                   "legendFormat": "{{nodename}}", "range": true, "refId": "A"
                 }
               ],
@@ -653,13 +653,13 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "rate(node_network_receive_bytes_total{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\",device!~\"lo|vmbr.*|tap.*|tailscale.*\"}[5m])",
+                  "expr": "rate(node_network_receive_bytes_total{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\",device=~\"nic[0-9]|eth[0-9]|enp.*\"}[5m])",
                   "legendFormat": "{{nodename}} {{device}} in", "range": true, "refId": "A"
                 },
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "-rate(node_network_transmit_bytes_total{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\",device!~\"lo|vmbr.*|tap.*|tailscale.*\"}[5m])",
+                  "expr": "-rate(node_network_transmit_bytes_total{instance=~\"192\\\\.168\\\\.10\\\\.(20|30):9100|192\\\\.168\\\\.20\\\\.10:9100\",device=~\"nic[0-9]|eth[0-9]|enp.*\"}[5m])",
                   "legendFormat": "{{nodename}} {{device}} out", "range": true, "refId": "B"
                 }
               ],
