@@ -48,15 +48,17 @@ all:
     physical_hosts:
       vars:
         ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096
-        ansible_port: 22456
         ansible_python_interpreter: auto
       hosts:
         pve1:
           ansible_host: pve1.taild78f1d.ts.net
           ansible_user: root
+          ansible_port: 22
         pve3:
           ansible_host: pve3.taild78f1d.ts.net
           ansible_user: root
+          ansible_port: 22
         "3145":
           ansible_host: 3145.taild78f1d.ts.net
           ansible_user: thomas
+          ansible_port: 22456
