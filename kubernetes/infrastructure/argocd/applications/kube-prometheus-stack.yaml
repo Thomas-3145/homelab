@@ -19,14 +19,14 @@ spec:
             additionalScrapeConfigs:
               - job_name: node-exporter-physical
                 static_configs:
-                  - targets: ["192.168.10.20:9100"]
+                  - targets: ["192.168.10.10:9100"]
                     labels:
                       job: node-exporter
                       nodename: pve1
                   - targets: ["192.168.10.30:9100"]
                     labels:
                       job: node-exporter
-                      nodename: pve2
+                      nodename: pve3
                   - targets: ["192.168.20.10:9100"]
                     labels:
                       job: node-exporter
