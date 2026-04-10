@@ -26,7 +26,7 @@ spec:
               config:
                 region: garage
                 s3ForcePathStyle: "true"
-                s3Url: http://garage.garage.svc.cluster.local:3900
+                s3Url: http://192.168.20.10:3900
           volumeSnapshotLocation:
             - name: default
               provider: csi
