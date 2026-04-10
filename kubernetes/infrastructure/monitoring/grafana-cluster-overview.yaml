@@ -322,7 +322,7 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "100 - (avg by(nodename) (rate(node_cpu_seconds_total{mode=\"idle\",nodename=~\"k3s-.*\"}[5m])) * 100)",
+                  "expr": "100 - (avg by(nodename) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]) * on(instance) group_left(nodename) node_uname_info{nodename=~\"k3s-.*\"}) * 100)",
                   "legendFormat": "{{nodename}}", "range": true, "refId": "A"
                 }
               ],
@@ -359,7 +359,7 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "100 - ((avg_over_time(node_memory_MemAvailable_bytes{nodename=~\"k3s-.*\"}[5m]) / avg_over_time(node_memory_MemTotal_bytes{nodename=~\"k3s-.*\"}[5m])) * 100)",
+                  "expr": "100 - (sum by(nodename) (node_memory_MemAvailable_bytes * on(instance) group_left(nodename) node_uname_info{nodename=~\"k3s-.*\"}) / sum by(nodename) (node_memory_MemTotal_bytes * on(instance) group_left(nodename) node_uname_info{nodename=~\"k3s-.*\"}) * 100)",
                   "legendFormat": "{{nodename}}", "range": true, "refId": "A"
                 }
               ],
