@@ -322,8 +322,8 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"192\\\\.168\\\\.10\\\\.(2[1-3]|5[2-3]):9100\"}[5m])) * 100)",
-                  "legendFormat": "{{instance}}", "range": true, "refId": "A"
+                  "expr": "100 - (avg by(nodename) (rate(node_cpu_seconds_total{mode=\"idle\",nodename=~\"k3s-.*\"}[5m])) * 100)",
+                  "legendFormat": "{{nodename}}", "range": true, "refId": "A"
                 }
               ],
               "title": "CPU Usage per Node",
@@ -359,8 +359,8 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "100 - ((avg_over_time(node_memory_MemAvailable_bytes{instance=~\"192\\\\.168\\\\.10\\\\.(2[1-3]|5[2-3]):9100\"}[5m]) / avg_over_time(node_memory_MemTotal_bytes{instance=~\"192\\\\.168\\\\.10\\\\.(2[1-3]|5[2-3]):9100\"}[5m])) * 100)",
-                  "legendFormat": "{{instance}}", "range": true, "refId": "A"
+                  "expr": "100 - ((avg_over_time(node_memory_MemAvailable_bytes{nodename=~\"k3s-.*\"}[5m]) / avg_over_time(node_memory_MemTotal_bytes{nodename=~\"k3s-.*\"}[5m])) * 100)",
+                  "legendFormat": "{{nodename}}", "range": true, "refId": "A"
                 }
               ],
               "title": "RAM Usage per Node",
