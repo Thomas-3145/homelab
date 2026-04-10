@@ -885,6 +885,10 @@ Use Kubernetes node affinity:
 
 ## Future Enhancements
 
+**Proxmox host hardening (pve1, pve2, pve3):**
+- [ ] **Ansible role for Proxmox hosts**: Create `roles/proxmox_host` targeting `physical_hosts` group — SSH port 22456, password auth disabled, fail2ban, unattended-upgrades, Tailscale. Currently done manually per host.
+- [ ] **node-exporter on pve1**: Run `ansible-playbook -i inventory/hosts.yaml playbooks/node-exporter.yaml --limit pve1` after SSH hardening is applied and inventory updated to port 22456.
+
 **After core phases:**
 - [ ] **Backstage**: Developer portal — single pane of glass for all services, docs, and infrastructure. High CV value but heavy to run on a homelab.
 - [ ] **Velero GFS-style retention**: Replace single daily schedule with three schedules (daily 14d TTL, weekly 90d TTL, monthly 365d TTL) to mirror PBS grandfather-father-son retention strategy
