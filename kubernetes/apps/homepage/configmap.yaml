@@ -84,6 +84,14 @@ data:
               url: https://192.168.20.10:8007
               username: {{HOMEPAGE_VAR_PBS_USER}}
               password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
+        - Garage:
+            icon: mdi-garage-variant
+            href: http://192.168.20.10:3903
+            description: S3 Object Storage
+            widget:
+              type: garage
+              url: http://192.168.20.10:3903
+              key: {{HOMEPAGE_VAR_GARAGE_KEY}}
         - Longhorn:
             icon: longhorn.svg
             href: http://longhorn.3145.blog
