@@ -1,7 +1,7 @@
 # GitLab Runner — Runbook
 
-VM: `gitlab-runner` (192.168.10.30, pve2, VM ID 101)
-SSH: `ssh -p 22456 ubuntu@192.168.10.30`
+VM: `gitlab-runner` (192.168.10.31, pve3)
+SSH: `ssh -p 22456 ubuntu@192.168.10.31`
 
 ## 1. Provision VM
 
@@ -24,7 +24,7 @@ In GitLab: **Settings → CI/CD → Runners → New project runner**
 Select "Run untagged jobs", copy the token, then SSH in and run:
 
 ```bash
-ssh -p 22456 ubuntu@192.168.10.30
+ssh -p 22456 ubuntu@192.168.10.31
 
 sudo gitlab-runner register \
   --url https://git.chas-lab.dev \

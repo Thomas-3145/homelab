@@ -1,8 +1,13 @@
 # Migration Guide: pve3 + Disk Restructure
 
-> Planning and migration guide for adding HP EliteDesk 800 G8 (pve3) and
-> restructuring disk layout on pve1 to separate Proxmox OS from VM data.
-> Written 2026-04-07. Follow steps in order.
+> **Status: ARCHIVED (2026-04).** This plan was written when the cluster was
+> expected to run pve1 + pve2 (Lenovo M75q) + pve3. The Lenovo was sold before
+> being put into production, so the final cluster ended up as **pve1 + pve3
+> only** (no pve2). The pve1 disk restructure (Phase 1) and pve3 install
+> (Phase 2) were carried out — the pve2-related steps (RAM swap, Phase 3,
+> worker-03 on pve3) were not. Preserved for historical context.
+>
+> Original planning date: 2026-04-07.
 
 ## Target State
 
