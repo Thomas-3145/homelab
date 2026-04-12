@@ -1,0 +1,38 @@
+---
+# APT repos — switch from enterprise (paid) to no-subscription
+proxmox_pve_suite: trixie  # Debian 13 / Proxmox VE 9
+
+# Kernel pin — 6.17.13 triggers e1000e Hardware Unit Hang on HP EliteDesk G4.
+# 6.17.9-1-pve is the last known-good version.
+proxmox_pinned_kernel: 6.17.9-1-pve
+
+# UI — remove the "No valid subscription" popup on every login
+proxmox_disable_subscription_popup: true
+
+# e1000e workaround — disable EEE/TSO/GRO on the affected NIC
+proxmox_e1000e_workaround_enabled: true
+proxmox_e1000e_nic_name: nic0
+
+# SSH hardening — opt-in. See tasks/ssh.yaml for the bootstrap procedure
+# (the inventory port must be updated to 22456 after the first successful run).
+proxmox_ssh_hardening_enabled: false
+proxmox_ssh_port: 22456
+proxmox_ssh_authorized_key_file: ~/.ssh/id_rsa_4096.pub
+
+# Tailscale — opt-in. Reads the auth key from the proxmox_vms group vault
+# (same key works for physical hosts).
+proxmox_tailscale_enabled: false
+proxmox_tailscale_vault_file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.sops.yaml"
+
+# NUT (Network UPS Tools) — opt-in. pve1 is the netserver (USB UPS attached),
+# pve3 is a netclient that connects over the LAN. Reads vault_nut_password
+# from the proxmox_vms group vault.
+proxmox_nut_enabled: false
+proxmox_nut_vault_file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.sops.yaml"
+proxmox_nut_server_host: pve1
+proxmox_nut_server_address: 192.168.10.10
+proxmox_nut_ups_name: apc
+proxmox_nut_ups_desc: APC BE650G2-GR
+# Lazy-evaluated per host: anything matching proxmox_nut_server_host is the
+# server, everything else is a client.
+proxmox_nut_role: "{{ 'server' if inventory_hostname == proxmox_nut_server_host else 'client' }}"

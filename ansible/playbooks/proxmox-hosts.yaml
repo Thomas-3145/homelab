@@ -1,0 +1,30 @@
+---
+# Proxmox host hardening (idempotent base layer + opt-in extras).
+# Targets pve1 and pve3 directly — `physical_hosts` also includes 3145
+# (Raspberry Pi 5, not a Proxmox host) so we cannot use the group as-is.
+#
+# Run with:
+#   ansible-playbook -i inventory/hosts.yaml playbooks/proxmox-hosts.yaml
+#
+# Recommended: --check --diff first, then apply on pve3 before pve1
+# (pve1 hosts k3s-cp-01 and k3s-worker-01 — higher blast radius).
+#
+# Opt-in extras (toggle below or via --extra-vars):
+#   - SSH hardening: changes sshd port to 22456. After the FIRST successful
+#     run, manually update inventory/hosts.yaml so pve1 and pve3 have
+#     ansible_port: 22456. See roles/proxmox/tasks/ssh.yaml for details.
+#   - Tailscale: installs and connects via the proxmox_vms group vault
+#     (community.sops required, age key present).
+#   - NUT: pve1 = netserver (USB UPS), pve3 = netclient over the LAN.
+#     Reads vault_nut_password from the proxmox_vms group vault.
+
+- name: Configure Proxmox hosts (apt repos, kernel pin, EEE workaround)
+  hosts: pve1,pve3
+  become: true
+  gather_facts: true
+  roles:
+    - role: proxmox
+      vars:
+        proxmox_ssh_hardening_enabled: false
+        proxmox_tailscale_enabled: false
+        proxmox_nut_enabled: false

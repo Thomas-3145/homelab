@@ -1,0 +1,4 @@
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="{{ proxmox_e1000e_nic_name }}", RUN+="/usr/sbin/ethtool --set-eee {{ proxmox_e1000e_nic_name }} eee off"
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="{{ proxmox_e1000e_nic_name }}", RUN+="/usr/sbin/ethtool -K {{ proxmox_e1000e_nic_name }} tso off gro off"
+ACTION=="change", SUBSYSTEM=="net", KERNEL=="{{ proxmox_e1000e_nic_name }}", RUN+="/usr/sbin/ethtool --set-eee {{ proxmox_e1000e_nic_name }} eee off"
+ACTION=="change", SUBSYSTEM=="net", KERNEL=="{{ proxmox_e1000e_nic_name }}", RUN+="/usr/sbin/ethtool -K {{ proxmox_e1000e_nic_name }} tso off gro off"

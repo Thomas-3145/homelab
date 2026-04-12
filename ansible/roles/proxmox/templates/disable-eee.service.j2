@@ -1,0 +1,13 @@
+[Unit]
+Description=Disable EEE, TSO and GRO on {{ proxmox_e1000e_nic_name }} (e1000e bug workaround)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/ethtool --set-eee {{ proxmox_e1000e_nic_name }} eee off
+ExecStart=/usr/sbin/ethtool -K {{ proxmox_e1000e_nic_name }} tso off gro off
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

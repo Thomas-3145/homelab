@@ -1,0 +1,59 @@
+---
+# Three-layer workaround for Intel I219-LM "e1000e Hardware Unit Hang":
+#   1. systemd oneshot at boot (network-online.target — `network.target` is
+#      too early, the link may not be up yet)
+#   2. udev rule for runtime link flaps
+#   3. ifupdown post-up hook for ifup/ifdown cycles
+#
+# All three together survive reboots, NetworkManager restarts and link drops.
+# Source: homelab-hardware/configuration/proxmox/fix-e1000e-eee.sh
+
+- name: Install ethtool
+  ansible.builtin.apt:
+    name: ethtool
+    state: present
+
+- name: Deploy disable-eee systemd service
+  ansible.builtin.template:
+    src: disable-eee.service.j2
+    dest: /etc/systemd/system/disable-eee.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart disable-eee
+
+- name: Enable disable-eee.service
+  ansible.builtin.systemd:
+    name: disable-eee.service
+    enabled: true
+
+- name: Deploy udev rule for e1000e link flaps
+  ansible.builtin.template:
+    src: 99-e1000e-eee.rules.j2
+    dest: /etc/udev/rules.d/99-e1000e-eee.rules
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload udev rules
+
+- name: Ensure post-up EEE-disable hook in /etc/network/interfaces
+  # Regexp matches the existing hook regardless of which iface block it lives
+  # under (pve3 has it under `nic0`, pve1 historically under `vmbr0`) and
+  # regardless of whether ethtool is fully qualified. If found, the line is
+  # rewritten in place; if missing, it is added after `iface nic0 inet manual`.
+  ansible.builtin.lineinfile:
+    path: /etc/network/interfaces
+    regexp: 'post-up\s+(?:/usr/sbin/)?ethtool\s+--set-eee\s+{{ proxmox_e1000e_nic_name }}\s+eee\s+off'
+    line: "\tpost-up /usr/sbin/ethtool --set-eee {{ proxmox_e1000e_nic_name }} eee off"
+    insertafter: "^iface {{ proxmox_e1000e_nic_name }} inet manual"
+    state: present
+
+- name: Ensure post-up TSO/GRO-disable hook in /etc/network/interfaces
+  ansible.builtin.lineinfile:
+    path: /etc/network/interfaces
+    regexp: 'post-up\s+(?:/usr/sbin/)?ethtool\s+-K\s+{{ proxmox_e1000e_nic_name }}\s+tso\s+off'
+    line: "\tpost-up /usr/sbin/ethtool -K {{ proxmox_e1000e_nic_name }} tso off gro off"
+    insertafter: "^iface {{ proxmox_e1000e_nic_name }} inet manual"
+    state: present
