@@ -1,7 +1,12 @@
 # Infrastructure Plan: Adding Lenovo ThinkCentre
 
-> Planning document for integrating the Lenovo ThinkCentre M75q into the homelab.
-> Written 2026-03-22. Review before implementation.
+> **Status: ARCHIVED (2026-04).** The Lenovo M75q (planned as `pve2`) was sold
+> in April 2026 and never went into production. The cluster ended up running
+> on `pve1` (HP EliteDesk G4) and `pve3` (HP EliteDesk G8) instead. This
+> document is preserved for historical context only — the layout, hostnames
+> and storage decisions described below are obsolete.
+>
+> Original planning date: 2026-03-22.
 
 ## Hardware Overview
 

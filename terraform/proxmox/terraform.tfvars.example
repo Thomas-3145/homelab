@@ -7,27 +7,27 @@ template_id         = 9000
 
 control_planes = {
   "k3s-cp-01" = { ip = "192.168.10.21", node_name = "pve1", template_id = 9000 }
-  "k3s-cp-02" = { ip = "192.168.10.22", node_name = "pve2", template_id = 9001 }
-  "k3s-cp-03" = { ip = "192.168.10.23", node_name = "pve2", template_id = 9001 }
+  "k3s-cp-02" = { ip = "192.168.10.22", node_name = "pve3", template_id = 9000 }
+  "k3s-cp-03" = { ip = "192.168.10.23", node_name = "pve3", template_id = 9000 }
 }
 
 cp_cores  = 2
 cp_memory = 6144
-cp_disk   = 32
+cp_disk   = 50
 
 workers = {
   "k3s-worker-01" = { ip = "192.168.10.52", node_name = "pve1", template_id = 9000 }
-  "k3s-worker-02" = { ip = "192.168.10.53", node_name = "pve2", template_id = 9001 }
+  "k3s-worker-02" = { ip = "192.168.10.53", node_name = "pve3", template_id = 9000 }
 }
 
 worker_cores  = 2
 worker_memory = 6144
-worker_disk   = 32
+worker_disk   = 50
 
-# Permanenta service-VMs (arr-stack, etc.)
+# Permanenta service-VMs (gitlab-runner, arr-stack, etc.)
 service_vms = {}
 # service_vms = {
-#   "arr-stack" = { ip = "192.168.10.70", node_name = "pve2", cores = 2, memory = 4096, disk = 50 }
+#   "gitlab-runner" = { ip = "192.168.10.31", node_name = "pve3", template_id = 9000, cores = 4, memory = 5120, disk = 50 }
 # }
 
 # Ad-hoc lab VMs — lägg till vid behov, ta bort när de inte används
