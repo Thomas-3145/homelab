@@ -1,0 +1,58 @@
+---
+# SSH hardening for Proxmox hosts.
+#
+# Bootstrap procedure (first run on a fresh host):
+#   1. inventory/hosts.yaml has ansible_port: 22 for the host
+#   2. Run with proxmox_ssh_hardening_enabled=true — this task changes
+#      sshd_config to Port {{ proxmox_ssh_port }} and notifies "Restart sshd"
+#   3. The handler restarts sshd at the END of the play. The current Ansible
+#      session keeps its existing TCP connection alive — sshd only stops
+#      accepting NEW connections on port 22, it does not kill ours.
+#   4. After the play finishes successfully, manually update
+#      inventory/hosts.yaml so the host has ansible_port: {{ proxmox_ssh_port }}
+#   5. Subsequent runs connect on the new port from the start.
+#
+# If the inventory port is updated BEFORE the first run, Ansible will fail to
+# connect on {{ proxmox_ssh_port }} (sshd is still on 22). Order matters.
+
+- name: Add SSH authorized key for root
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ lookup('file', proxmox_ssh_authorized_key_file) }}"
+    state: present
+
+- name: Configure SSH port and disable password auth
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - {regexp: '^#?Port ', line: "Port {{ proxmox_ssh_port }}"}
+    - {regexp: '^#?PasswordAuthentication ', line: 'PasswordAuthentication no'}
+  notify: Restart sshd
+
+- name: Install fail2ban and unattended-upgrades
+  ansible.builtin.apt:
+    name:
+      - fail2ban
+      - unattended-upgrades
+    state: present
+
+- name: Enable and start fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started
+  # In --check mode the previous apt task does not actually install the
+  # package, so systemd cannot find the unit. Tolerate that — a real run
+  # installs fail2ban first and the service is available.
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Enable unattended-upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    mode: "0644"

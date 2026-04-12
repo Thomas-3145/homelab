@@ -1,4 +1,5 @@
 vault_tailscale_authkey: ENC[AES256_GCM,data:KQIfsJNmauIKQiL8jrEO50d4JNyPwoylzbJeal2YBa6t2wMvZhpv8HTk+fXHVK44aIJpFrXkHIo7NoK3eQ==,iv:fHgxdDAkhzEM1+B+lq6izYwOA6WzZdA+w0x3FRYdfRM=,tag:jPmFQU0dDOMZUq2uxhEHZA==,type:str]
+vault_nut_password: ENC[AES256_GCM,data:N+DtX4usmah099Ix9BiiOXwngKHV/A==,iv:+hwwgbtR09g1YDqUofkwyJhsUj6lOMdtvCxydLxljoA=,tag:lj7F8q7yfSFqOtZHBj5N4w==,type:str]
 sops:
     kms: []
     gcp_kms: []
@@ -14,8 +15,8 @@ sops:
             eGR1WXRoR2NXUlJPMFlhZFJFMkJLamsKS7oFBIICVIOOi67YyEARo1bA+bqWURUY
             TVDNDVBDoXXqzV/vL7jiAiNgdzMQPPjqz46CZdNFzBvRRIu1U3LvmA==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-03-17T10:55:36Z"
-    mac: ENC[AES256_GCM,data:KkYi+6ORdqTh3UlB1CBYaAo4Jh3L3/bmRJhc1FxaZ7WDkXdUKdnKhdVSQYGBbBeeaK7twULl72Wkam11qmAMDNlUyVc3IMF3sq3+rWAn0n9LrrmuMFo6dEpdpZr+i4T0oz2ei7UOZtSJfs/HqUBb3RCOmBQhHvmDVjUOIKGJ2B0=,iv:oJHvVTo789+FQSjds2N+bruYSguvbdgg8V1HHTeLOJw=,tag:cB9He/VhwrwnVCcU2sy+Kw==,type:str]
+    lastmodified: "2026-04-12T13:38:55Z"
+    mac: ENC[AES256_GCM,data:Xt0C7BNgTxZFN3B9czo9ggaK4hg71u3B9DEvy+oqwQCxTkZi0xrqwgg9SBi8XhWY3dmOMjT56A3OuVRlUt0/oa6WUCx7fpvIFLZ4aHirgJ8p64JO+pR3q7CWSD4Oi6Xo0i12w91hc0bVuxPKqMEAtgHxShU9hPsPMSVLx7uu1Jw=,iv:XDAyrbbcXe9BP064uBNQw6nfXxBX6/fEO6YypLI2jGM=,tag:aI2ksKmw+AZrLDMgpOs8bA==,type:str]
     pgp: []
     unencrypted_suffix: _unencrypted
     version: 3.9.4

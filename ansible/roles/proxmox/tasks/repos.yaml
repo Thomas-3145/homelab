@@ -1,0 +1,26 @@
+---
+# A fresh Proxmox install ships with the enterprise repo (requires a paid
+# subscription key) and the ceph enterprise repo. Without a key these return
+# 401 and apt update fails. Replace them with the no-subscription repo.
+
+- name: Remove obsolete APT sources
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/pve-enterprise.list
+    - /etc/apt/sources.list.d/pve-enterprise.sources
+    - /etc/apt/sources.list.d/ceph.list
+    - /etc/apt/sources.list.d/ceph.sources
+    # Old one-line format — replaced by pve-no-subscription.sources (deb822) below
+    - /etc/apt/sources.list.d/pve-no-subscription.list
+  notify: Update apt cache
+
+- name: Deploy pve-no-subscription repository
+  ansible.builtin.template:
+    src: pve-no-subscription.sources.j2
+    dest: /etc/apt/sources.list.d/pve-no-subscription.sources
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Update apt cache

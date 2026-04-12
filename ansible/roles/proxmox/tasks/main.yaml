@@ -1,0 +1,39 @@
+---
+# Proxmox host hardening (idempotent — safe to run repeatedly).
+# Targets physical Proxmox VE hosts (pve1, pve3).
+#
+# Base layer (always on):
+# - APT repos: switch enterprise -> no-subscription
+# - Kernel: install and pin 6.17.9-1-pve (e1000e workaround)
+# - UI: remove "No valid subscription" popup
+# - e1000e: disable EEE/TSO/GRO via systemd, udev, ifupdown hooks
+#
+# Opt-in layer (false by default — see defaults/main.yaml):
+# - SSH hardening (port, password auth, fail2ban, unattended-upgrades)
+# - Tailscale install + connect
+
+- name: Configure APT repositories
+  ansible.builtin.import_tasks: repos.yaml
+
+- name: Pin Proxmox kernel
+  ansible.builtin.import_tasks: kernel.yaml
+
+- name: Disable "No valid subscription" popup
+  ansible.builtin.import_tasks: ui.yaml
+  when: proxmox_disable_subscription_popup | bool
+
+- name: Apply e1000e NIC workaround
+  ansible.builtin.import_tasks: eee.yaml
+  when: proxmox_e1000e_workaround_enabled | bool
+
+- name: Harden SSH
+  ansible.builtin.import_tasks: ssh.yaml
+  when: proxmox_ssh_hardening_enabled | bool
+
+- name: Install and configure Tailscale
+  ansible.builtin.import_tasks: tailscale.yaml
+  when: proxmox_tailscale_enabled | bool
+
+- name: Install and configure NUT
+  ansible.builtin.import_tasks: nut.yaml
+  when: proxmox_nut_enabled | bool

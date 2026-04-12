@@ -1,0 +1,33 @@
+---
+# Pin to 6.17.9-1-pve. Newer 6.17.13 versions cause "e1000e Hardware Unit Hang"
+# on the Intel I219-LM NIC in HP EliteDesk G4 — confirmed root cause of
+# multiple unplanned outages on pve1.
+#
+# We deliberately do NOT reboot here — that's a manual decision for an HA
+# cluster. After running, check `proxmox-boot-tool kernel list` and reboot
+# during a maintenance window.
+
+- name: Flush handlers so apt cache is fresh before installing kernel
+  ansible.builtin.meta: flush_handlers
+
+- name: Install pinned Proxmox kernel
+  ansible.builtin.apt:
+    name: "proxmox-kernel-{{ proxmox_pinned_kernel }}-signed"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Get currently pinned kernel
+  ansible.builtin.shell: >-
+    proxmox-boot-tool kernel list 2>/dev/null
+    | awk '/^Pinned kernel:/ {if (NF > 2) {print $NF; exit} else {found=1; next}} found && NF {print $1; exit}'
+    || true
+  register: proxmox_current_pin
+  changed_when: false
+  check_mode: false
+
+- name: Pin Proxmox kernel
+  ansible.builtin.command: "proxmox-boot-tool kernel pin {{ proxmox_pinned_kernel }}"
+  register: proxmox_pin_result
+  changed_when: true
+  when: (proxmox_current_pin.stdout | trim) != proxmox_pinned_kernel

@@ -1,0 +1,12 @@
+---
+# The "No valid subscription" popup is triggered by a check in proxmoxlib.js.
+# Patch the conditional to always evaluate false. The Ansible `replace` module
+# is idempotent — it only writes if the pattern still matches, so package
+# updates that overwrite the file will be re-patched on the next run.
+
+- name: Disable "No valid subscription" popup in proxmoxlib.js
+  ansible.builtin.replace:
+    path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+    regexp: 'if \(res === null \|\| res === undefined \|\| !res \|\| res\.data\.status\.toLowerCase\(\) !== ''active''\)'
+    replace: 'if (false)'
+  notify: Restart pveproxy

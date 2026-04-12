@@ -1,0 +1,125 @@
+---
+# NUT (Network UPS Tools) — APC BE650G2-GR connected to pve1 over USB.
+#
+# Topology:
+#   pve1 (netserver)  driver = usbhid-ups, listens on 0.0.0.0:3493
+#   pve3 (netclient)  monitors apc@192.168.10.10, shuts down on power loss
+#
+# The role-on-host is decided by `proxmox_nut_server_host`. Anything else
+# in the play becomes a netclient. Source for the original setup:
+# homelab-hardware/configuration/proxmox/setup-nut-server.sh.
+
+- name: Load NUT secrets
+  community.sops.load_vars:
+    file: "{{ proxmox_nut_vault_file }}"
+  no_log: true
+
+- name: Install NUT (server)
+  ansible.builtin.apt:
+    name: nut
+    state: present
+  when: proxmox_nut_role == 'server'
+
+- name: Install NUT client
+  ansible.builtin.apt:
+    name: nut-client
+    state: present
+  when: proxmox_nut_role == 'client'
+
+- name: Configure /etc/nut/nut.conf
+  ansible.builtin.copy:
+    dest: /etc/nut/nut.conf
+    content: |
+      MODE={{ 'netserver' if proxmox_nut_role == 'server' else 'netclient' }}
+    owner: root
+    group: nut
+    mode: "0640"
+  notify: Restart NUT
+
+- name: Configure /etc/nut/ups.conf (server)
+  ansible.builtin.copy:
+    dest: /etc/nut/ups.conf
+    content: |
+      [{{ proxmox_nut_ups_name }}]
+          driver = usbhid-ups
+          port = auto
+          desc = "{{ proxmox_nut_ups_desc }}"
+    owner: root
+    group: nut
+    mode: "0640"
+  when: proxmox_nut_role == 'server'
+  notify: Restart NUT
+
+- name: Configure /etc/nut/upsd.conf (server)
+  ansible.builtin.copy:
+    dest: /etc/nut/upsd.conf
+    content: |
+      LISTEN 0.0.0.0 3493
+    owner: root
+    group: nut
+    mode: "0640"
+  when: proxmox_nut_role == 'server'
+  notify: Restart NUT
+
+- name: Configure /etc/nut/upsd.users (server)
+  ansible.builtin.copy:
+    dest: /etc/nut/upsd.users
+    content: |
+      [upsmon-local]
+          password = {{ vault_nut_password }}
+          upsmon master
+
+      [upsmon-remote]
+          password = {{ vault_nut_password }}
+          upsmon slave
+    owner: root
+    group: nut
+    mode: "0640"
+  when: proxmox_nut_role == 'server'
+  no_log: true
+  notify: Restart NUT
+
+- name: Configure /etc/nut/upsmon.conf (server)
+  ansible.builtin.copy:
+    dest: /etc/nut/upsmon.conf
+    content: |
+      MONITOR {{ proxmox_nut_ups_name }}@localhost 1 upsmon-local {{ vault_nut_password }} master
+      SHUTDOWNCMD "/sbin/shutdown -h +0"
+    owner: root
+    group: nut
+    mode: "0640"
+  when: proxmox_nut_role == 'server'
+  no_log: true
+  notify: Restart NUT
+
+- name: Configure /etc/nut/upsmon.conf (client)
+  ansible.builtin.copy:
+    dest: /etc/nut/upsmon.conf
+    content: |
+      MONITOR {{ proxmox_nut_ups_name }}@{{ proxmox_nut_server_address }} 1 upsmon-remote {{ vault_nut_password }} slave
+      SHUTDOWNCMD "/sbin/shutdown -h +0"
+    owner: root
+    group: nut
+    mode: "0640"
+  when: proxmox_nut_role == 'client'
+  no_log: true
+  notify: Restart NUT
+
+- name: Enable and start NUT services (server)
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - nut-server
+    - nut-monitor
+  when: proxmox_nut_role == 'server'
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Enable and start NUT monitor (client)
+  ansible.builtin.systemd:
+    name: nut-monitor
+    enabled: true
+    state: started
+  when: proxmox_nut_role == 'client'
+  ignore_errors: "{{ ansible_check_mode }}"

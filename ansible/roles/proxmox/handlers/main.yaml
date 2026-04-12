@@ -1,0 +1,63 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Restart pveproxy
+  ansible.builtin.systemd:
+    name: pveproxy
+    state: restarted
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart disable-eee
+  ansible.builtin.systemd:
+    name: disable-eee.service
+    state: restarted
+
+- name: Reload udev rules
+  ansible.builtin.command: udevadm control --reload-rules
+  changed_when: true
+
+# Restart sshd in two stages to handle systemd socket activation cleanly.
+# Same pattern as roles/common — see ansible/roles/common/handlers/main.yaml.
+- name: Stop ssh.socket
+  ansible.builtin.systemd:
+    name: ssh.socket
+    state: stopped
+    enabled: false
+  listen: Restart sshd
+
+- name: Stop ssh.service
+  ansible.builtin.systemd:
+    name: ssh.service
+    state: stopped
+  listen: Restart sshd
+
+- name: Start ssh.service on configured port
+  ansible.builtin.systemd:
+    name: ssh.service
+    state: started
+    enabled: true
+  listen: Restart sshd
+
+# Restart both NUT services on server, just nut-monitor on client.
+# nut-server has no effect on netclient hosts so the restart is harmless,
+# but tolerate failures during check mode where the package is not yet
+# installed.
+- name: Restart nut-server
+  ansible.builtin.systemd:
+    name: nut-server
+    state: restarted
+  listen: Restart NUT
+  when: proxmox_nut_role == 'server'
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Restart nut-monitor
+  ansible.builtin.systemd:
+    name: nut-monitor
+    state: restarted
+  listen: Restart NUT
+  ignore_errors: "{{ ansible_check_mode }}"
