@@ -28,6 +28,7 @@
   ansible.builtin.systemd:
     name: disable-eee.service
     enabled: true
+    daemon_reload: true
 
 - name: Deploy udev rule for e1000e link flaps
   ansible.builtin.template:
