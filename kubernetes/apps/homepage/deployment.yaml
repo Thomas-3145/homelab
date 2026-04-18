@@ -33,7 +33,7 @@ spec:
               mountPath: /app/config
       containers:
         - name: homepage
-          image: ghcr.io/thomas-3145/homepage:garage-widget
+          image: ghcr.io/thomas-3145/homepage:feature-garage-widget
           ports:
             - containerPort: 3000
           envFrom:
