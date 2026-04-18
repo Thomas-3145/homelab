@@ -31,6 +31,13 @@ data:
   bookmarks.yaml: ""
   services.yaml: |
     - System:
+        - Gatus:
+            icon: gatus.svg
+            href: http://192.168.8.1:8888
+            description: Nätverksövervakning
+            widget:
+              type: gatus
+              url: http://192.168.8.1:8888
         - Uptime Kuma:
             icon: uptime-kuma.svg
             href: https://kuma.3145.blog
