@@ -22,4 +22,6 @@ data:
         service: http://headlamp.headlamp.svc.cluster.local:80
       - hostname: it-tools.3145.blog
         service: http://it-tools.it-tools.svc.cluster.local:80
+      - hostname: ibindex.3145.blog
+        service: http://ibindex.ibindex.svc.cluster.local:80
       - service: http_status:404
