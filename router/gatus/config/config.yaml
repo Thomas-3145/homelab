@@ -1,0 +1,21 @@
+endpoints:
+  - name: pve1
+    group: homelab
+    url: icmp://192.168.10.10
+    interval: 10s
+    conditions:
+      - "[CONNECTED] == true"
+
+  - name: pve3
+    group: homelab
+    url: icmp://192.168.10.30
+    interval: 10s
+    conditions:
+      - "[CONNECTED] == true"
+
+  - name: 3145
+    group: homelab
+    url: icmp://192.168.20.10
+    interval: 10s
+    conditions:
+      - "[CONNECTED] == true"

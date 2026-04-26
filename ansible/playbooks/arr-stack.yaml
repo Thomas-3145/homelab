@@ -1,0 +1,30 @@
+---
+- name: Configure GPU passthrough on pve3
+  hosts: pve3
+  become: true
+  vars:
+    arr_stack_vmid: 200
+  tasks:
+    - name: Add GPU and TUN passthrough to LXC config
+      ansible.builtin.blockinfile:
+        path: "/etc/pve/lxc/{{ arr_stack_vmid }}.conf"
+        block: |
+          lxc.cgroup2.devices.allow: c 226:* rwm
+          lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir 0 0
+          lxc.cgroup2.devices.allow: c 10:200 rwm
+          lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file 0 0
+        marker: "# {mark} GPU PASSTHROUGH (ansible managed)"
+      register: lxc_config
+
+    - name: Restart LXC to apply GPU config
+      ansible.builtin.command: pct reboot {{ arr_stack_vmid }}
+      when: lxc_config.changed
+      changed_when: true
+
+- name: Configure arr-stack
+  hosts: arr-stack
+  become: true
+
+  roles:
+    - common
+    - arr_stack

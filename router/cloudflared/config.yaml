@@ -1,0 +1,22 @@
+tunnel: ce180050-7bb3-47bf-a4dd-a4ec5e56d592
+credentials-file: /etc/cloudflared/ce180050-7bb3-47bf-a4dd-a4ec5e56d592.json
+originRequest:
+  noTLSVerify: true
+ingress:
+  - hostname: home.3145.blog
+    service: https://192.168.10.200
+  - hostname: argocd-webhook.3145.blog
+    service: https://192.168.10.200
+  - hostname: argocd.3145.blog
+    service: https://192.168.10.200
+  - hostname: grafana.3145.blog
+    service: https://192.168.10.200
+  - hostname: longhorn.3145.blog
+    service: https://192.168.10.200
+  - hostname: headlamp.3145.blog
+    service: https://192.168.10.200
+  - hostname: it-tools.3145.blog
+    service: https://192.168.10.200
+  - hostname: ibindex.3145.blog
+    service: https://192.168.10.200
+  - service: http_status:404

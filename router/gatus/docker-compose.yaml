@@ -1,0 +1,11 @@
+services:
+  gatus:
+    image: twinproduction/gatus:latest
+    container_name: gatus
+    restart: unless-stopped
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./config:/config
+    cap_add:
+      - NET_RAW

@@ -1,0 +1,9 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2026.3.0
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yaml run
+    volumes:
+      - ./config.yaml:/etc/cloudflared/config.yaml:ro
+      - ./ce180050-7bb3-47bf-a4dd-a4ec5e56d592.json:/etc/cloudflared/ce180050-7bb3-47bf-a4dd-a4ec5e56d592.json:ro

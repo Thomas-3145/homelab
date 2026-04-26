@@ -1,0 +1,115 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/arr-stack/jellyfin:/config
+      - /mnt/media/tv:/data/tv
+      - /mnt/media/movies:/data/movies
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - 8096:8096
+    networks:
+      - arr
+
+  sonarr:
+    image: linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/arr-stack/sonarr:/config
+      - /mnt/media:/mnt/media
+    ports:
+      - 8989:8989
+    networks:
+      - arr
+
+  radarr:
+    image: linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/arr-stack/radarr:/config
+      - /mnt/media:/mnt/media
+    ports:
+      - 7878:7878
+    networks:
+      - arr
+
+  prowlarr:
+    image: linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/arr-stack/prowlarr:/config
+    ports:
+      - 9696:9696
+    networks:
+      - arr
+
+  qbittorrent:
+    image: linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Stockholm
+      - WEBUI_PORT=8085
+    volumes:
+      - /opt/arr-stack/qbittorrent:/config
+      - /mnt/media/downloads:/downloads
+    ports:
+      - 8085:8085
+      - 6881:6881
+      - 6881:6881/udp
+    networks:
+      - arr
+
+  bazarr:
+    image: linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/arr-stack/bazarr:/config
+      - /mnt/media:/mnt/media
+    ports:
+      - 6767:6767
+    networks:
+      - arr
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Europe/Stockholm
+    ports:
+      - 8191:8191
+    networks:
+      - arr
+
+networks:
+  arr:
+    driver: bridge
