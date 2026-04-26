@@ -37,6 +37,10 @@ all:
           hosts:
             gitlab-runner:
               ansible_host: 192.168.10.31
+            arr-stack:
+              ansible_host: 192.168.10.40
+              ansible_user: root
+              ansible_port: 22456
         test:
           hosts: {}
         k3s_workers:

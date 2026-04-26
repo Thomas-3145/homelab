@@ -108,15 +108,15 @@ data:
     - Tjänster:
         - Jellyfin:
             icon: jellyfin.svg
-            href: https://jellyfin.3145.blog
+            href: http://192.168.10.40:8096
             description: Mediaserver
             widget:
               type: jellyfin
-              url: https://jellyfin.3145.blog
+              url: http://192.168.10.40:8096
               key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
         - Seerr:
             icon: seerr.svg
-            href: http://3145.taild78f1d.ts.net:5055/
+            href: http://192.168.20.10:5055/
             description: taaaack
             widget:
               type: seerr
@@ -145,44 +145,44 @@ data:
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
-            href: https://sonarr.3145.blog
+            href: http://192.168.10.40:8989
             description: TV-serier
             widget:
               type: sonarr
-              url: https://sonarr.3145.blog
+              url: http://192.168.10.40:8989
               key: {{HOMEPAGE_VAR_SONARR_KEY}}
         - Radarr:
             icon: radarr.svg
-            href: https://radarr.3145.blog
+            href: http://192.168.10.40:7878
             description: Filmer
             widget:
               type: radarr
-              url: https://radarr.3145.blog
+              url: http://192.168.10.40:7878
               key: {{HOMEPAGE_VAR_RADARR_KEY}}
         - Bazarr:
             icon: bazarr.svg
-            href: https://bazarr.3145.blog
+            href: http://192.168.10.40:6767
             description: Undertexter
             widget:
               type: bazarr
-              url: http://192.168.20.10:6767/
+              url: http://192.168.10.40:6767
               key: {{HOMEPAGE_VAR_BAZARR_KEY}}
         - qBittorrent:
             icon: qbittorrent.svg
-            href: https://qbittorrent.3145.blog
+            href: http://192.168.10.40:8085
             description: Torrent-klient
             widget:
               type: qbittorrent
-              url: https://qbittorrent.3145.blog
+              url: http://192.168.10.40:8085
               username: {{HOMEPAGE_VAR_QBIT_USER}}
               password: {{HOMEPAGE_VAR_QBIT_PASSWORD}}
         - Prowlarr:
             icon: prowlarr.svg
-            href: https://prowlarr.3145.blog
+            href: http://192.168.10.40:9696
             description: Indexer-hantering
             widget:
               type: prowlarr
-              url: https://prowlarr.3145.blog
+              url: http://192.168.10.40:9696
               key: {{HOMEPAGE_VAR_PROWLARR_KEY}}
   widgets.yaml: |
     - search:

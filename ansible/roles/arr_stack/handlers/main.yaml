@@ -1,0 +1,6 @@
+---
+- name: Restart arr-stack
+  community.docker.docker_compose_v2:
+    project_src: /opt/arr-stack
+    state: present
+    recreate: always
