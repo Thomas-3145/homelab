@@ -1,45 +1,79 @@
 ---
-# NUT exporter — exposes UPS metrics for Prometheus.
-# Runs as a systemd service on the NUT server host (pve3).
-# Connects to the local NUT daemon (localhost:3493) — no credentials needed for reads.
+# NUT textfile collector — writes UPS metrics via upsc to node_exporter's
+# textfile directory every 30s. Avoids NUT protocol library compatibility
+# issues; upsc is the canonical way to query NUT.
 
-- name: Download nut_exporter binary
-  ansible.builtin.get_url:
-    url: "https://github.com/DRuggeri/nut_exporter/releases/download/v{{ proxmox_nut_exporter_version }}/nut_exporter-v{{ proxmox_nut_exporter_version }}-linux-amd64"
-    dest: /usr/local/bin/nut_exporter
-    mode: "0755"
+- name: Stop and disable nut_exporter binary service (replaced by textfile)
+  ansible.builtin.systemd:
+    name: nut_exporter
+    enabled: false
+    state: stopped
+    daemon_reload: false
+  failed_when: false
+
+- name: Install NUT textfile collector script
+  ansible.builtin.copy:
+    dest: /usr/local/bin/nut_textfile.sh
     owner: root
     group: root
-  notify: Restart nut_exporter
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      TMP=$(mktemp)
+      trap "rm -f $TMP" EXIT
 
-- name: Create nut_exporter systemd service
+      upsc {{ proxmox_nut_ups_name }}@{{ proxmox_nut_server_address }} 2>/dev/null | while IFS= read -r line; do
+        key="${line%%: *}"
+        val="${line#*: }"
+        case "$key" in
+          battery.charge)  echo "network_ups_tools_battery_charge{ups=\"{{ proxmox_nut_ups_name }}\"} $val" ;;
+          battery.runtime) echo "network_ups_tools_battery_runtime{ups=\"{{ proxmox_nut_ups_name }}\"} $val" ;;
+          input.voltage)   echo "network_ups_tools_input_voltage{ups=\"{{ proxmox_nut_ups_name }}\"} $val" ;;
+          output.voltage)  echo "network_ups_tools_output_voltage{ups=\"{{ proxmox_nut_ups_name }}\"} $val" ;;
+          ups.load)        echo "network_ups_tools_ups_load{ups=\"{{ proxmox_nut_ups_name }}\"} $val" ;;
+        esac
+      done > "$TMP"
+
+      [ -s "$TMP" ] && mv "$TMP" /var/lib/node_exporter/textfile_collector/nut.prom
+  notify: Restart nut-textfile timer
+
+- name: Install nut-textfile systemd service unit
   ansible.builtin.copy:
-    dest: /etc/systemd/system/nut_exporter.service
+    dest: /etc/systemd/system/nut-textfile.service
     owner: root
     group: root
     mode: "0644"
     content: |
       [Unit]
-      Description=NUT Prometheus Exporter
-      After=network.target nut-server.service
-      Wants=nut-server.service
+      Description=NUT textfile collector for node_exporter
+      After=nut-server.service
 
       [Service]
-      ExecStart=/usr/local/bin/nut_exporter \
-        --nut.server=localhost \
-        --nut.vars_enable={{ proxmox_nut_exporter_vars }}
-      Restart=on-failure
-      RestartSec=5s
-      NoNewPrivileges=true
-      ProtectSystem=strict
+      Type=oneshot
+      ExecStart=/usr/local/bin/nut_textfile.sh
+  notify: Restart nut-textfile timer
+
+- name: Install nut-textfile systemd timer
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/nut-textfile.timer
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Run NUT textfile collector every 30s
+
+      [Timer]
+      OnBootSec=10s
+      OnUnitActiveSec=30s
 
       [Install]
-      WantedBy=multi-user.target
-  notify: Restart nut_exporter
+      WantedBy=timers.target
+  notify: Restart nut-textfile timer
 
-- name: Enable and start nut_exporter
+- name: Enable and start nut-textfile timer
   ansible.builtin.systemd:
-    name: nut_exporter
+    name: nut-textfile.timer
     enabled: true
     state: started
     daemon_reload: true
