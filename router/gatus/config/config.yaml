@@ -19,3 +19,10 @@ endpoints:
     interval: 10s
     conditions:
       - "[CONNECTED] == true"
+
+  - name: ups-nut
+    group: homelab
+    url: tcp://192.168.10.30:3493
+    interval: 30s
+    conditions:
+      - "[CONNECTED] == true"
