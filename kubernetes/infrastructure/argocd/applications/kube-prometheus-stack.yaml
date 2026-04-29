@@ -31,13 +31,6 @@ spec:
                     labels:
                       job: node-exporter
                       nodename: 3145
-              - job_name: nut-exporter
-                metrics_path: /ups_metrics
-                params:
-                  target: ["apc"]
-                  vars: ["battery.charge,battery.runtime,input.voltage,output.voltage,ups.load,ups.status"]
-                static_configs:
-                  - targets: ["192.168.10.30:9199"]
             resources:
               requests:
                 memory: 512Mi
