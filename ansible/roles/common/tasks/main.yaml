@@ -72,6 +72,7 @@
       - fail2ban
       - unattended-upgrades
     state: present
+    update_cache: true
 
 - name: Enable and start fail2ban
   ansible.builtin.systemd:

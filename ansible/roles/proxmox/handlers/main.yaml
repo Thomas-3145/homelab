@@ -61,3 +61,10 @@
     state: restarted
   listen: Restart NUT
   ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Restart nut_exporter
+  ansible.builtin.systemd:
+    name: nut_exporter
+    state: restarted
+    daemon_reload: true
+  ignore_errors: "{{ ansible_check_mode }}"

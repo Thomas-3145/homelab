@@ -29,10 +29,16 @@ proxmox_tailscale_vault_file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.
 # from the proxmox_vms group vault.
 proxmox_nut_enabled: false
 proxmox_nut_vault_file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.sops.yaml"
-proxmox_nut_server_host: pve1
-proxmox_nut_server_address: 192.168.10.10
+proxmox_nut_server_host: pve3
+proxmox_nut_server_address: 192.168.10.30
 proxmox_nut_ups_name: apc
 proxmox_nut_ups_desc: APC BE650G2-GR
 # Lazy-evaluated per host: anything matching proxmox_nut_server_host is the
 # server, everything else is a client.
 proxmox_nut_role: "{{ 'server' if inventory_hostname == proxmox_nut_server_host else 'client' }}"
+
+# NUT exporter — Prometheus exporter for UPS metrics, runs only on the NUT server host.
+proxmox_nut_exporter_enabled: false
+proxmox_nut_exporter_version: "3.2.5"
+proxmox_nut_exporter_port: 9199
+proxmox_nut_exporter_vars: "battery.charge,battery.runtime,input.voltage,output.voltage,ups.load,ups.status"

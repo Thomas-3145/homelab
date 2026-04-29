@@ -5,7 +5,6 @@ resources:
   - grafana-cluster-overview.yaml
   - servicemonitor-cert-manager.yaml
   - servicemonitor-longhorn.yaml
-  - nut-exporter.yaml
 
 generators:
   - ksops-generator.yaml
