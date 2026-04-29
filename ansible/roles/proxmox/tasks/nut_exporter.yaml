@@ -1,0 +1,46 @@
+---
+# NUT exporter — exposes UPS metrics for Prometheus.
+# Runs as a systemd service on the NUT server host (pve3).
+# Connects to the local NUT daemon (localhost:3493) — no credentials needed for reads.
+
+- name: Download nut_exporter binary
+  ansible.builtin.get_url:
+    url: "https://github.com/DRuggeri/nut_exporter/releases/download/v{{ proxmox_nut_exporter_version }}/nut_exporter-v{{ proxmox_nut_exporter_version }}-linux-amd64"
+    dest: /usr/local/bin/nut_exporter
+    mode: "0755"
+    owner: root
+    group: root
+  notify: Restart nut_exporter
+
+- name: Create nut_exporter systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/nut_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=NUT Prometheus Exporter
+      After=network.target nut-server.service
+      Wants=nut-server.service
+
+      [Service]
+      ExecStart=/usr/local/bin/nut_exporter \
+        --nut.server=localhost \
+        --nut.vars_enable={{ proxmox_nut_exporter_vars }}
+      Restart=on-failure
+      RestartSec=5s
+      NoNewPrivileges=true
+      ProtectSystem=strict
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: Restart nut_exporter
+
+- name: Enable and start nut_exporter
+  ansible.builtin.systemd:
+    name: nut_exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+  ignore_errors: "{{ ansible_check_mode }}"
