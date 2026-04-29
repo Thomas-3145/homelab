@@ -62,9 +62,9 @@
   listen: Restart NUT
   ignore_errors: "{{ ansible_check_mode }}"
 
-- name: Restart nut_exporter
+- name: Restart nut-textfile timer
   ansible.builtin.systemd:
-    name: nut_exporter
+    name: nut-textfile.timer
     state: restarted
     daemon_reload: true
   ignore_errors: "{{ ansible_check_mode }}"
