@@ -38,18 +38,14 @@ spec:
               cpu: 500m
               memory: 512Mi
           readinessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 2368
-              scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 6
           livenessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 2368
-              scheme: HTTP
             initialDelaySeconds: 60
             periodSeconds: 30
             failureThreshold: 3
