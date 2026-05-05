@@ -41,6 +41,7 @@ spec:
             httpGet:
               path: /
               port: 2368
+              scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 6
@@ -48,6 +49,7 @@ spec:
             httpGet:
               path: /
               port: 2368
+              scheme: HTTP
             initialDelaySeconds: 60
             periodSeconds: 30
             failureThreshold: 3
