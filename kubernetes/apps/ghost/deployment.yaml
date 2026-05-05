@@ -4,7 +4,7 @@ metadata:
   name: ghost
   namespace: ghost
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: ghost
