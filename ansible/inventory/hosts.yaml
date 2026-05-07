@@ -8,7 +8,7 @@
 #   k3s_workers       - Worker nodes (k3s agent)
 #   services          - Permanent service VMs (arr-stack, etc.) — only common role
 #   test              - Standalone VMs for learning/testing
-#   physical_hosts    - Physical machines (Proxmox hosts + 3145)
+#   physical_hosts    - Physical machines (Proxmox hosts)
 
 all:
   children:
@@ -62,7 +62,3 @@ all:
           ansible_host: pve3.taild78f1d.ts.net
           ansible_user: root
           ansible_port: 22
-        "3145":
-          ansible_host: 3145.taild78f1d.ts.net
-          ansible_user: thomas
-          ansible_port: 22456

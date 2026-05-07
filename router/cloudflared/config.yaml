@@ -19,4 +19,6 @@ ingress:
     service: https://192.168.10.200
   - hostname: ibindex.3145.blog
     service: https://192.168.10.200
+  - hostname: ntfy.3145.blog
+    service: https://192.168.10.200
   - service: http_status:404

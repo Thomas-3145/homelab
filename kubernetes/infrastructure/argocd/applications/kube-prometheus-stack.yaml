@@ -27,10 +27,6 @@ spec:
                     labels:
                       job: node-exporter
                       nodename: pve3
-                  - targets: ["192.168.20.10:9100"]
-                    labels:
-                      job: node-exporter
-                      nodename: 3145
             resources:
               requests:
                 memory: 512Mi
@@ -61,7 +57,7 @@ spec:
             receivers:
               - name: ntfy
                 webhook_configs:
-                  - url: http://192.168.20.10:8090/homelab
+                  - url: http://ntfy.ntfy.svc.cluster.local/homelab
                     send_resolved: true
         additionalPrometheusRulesMap:
           custom-alerts:

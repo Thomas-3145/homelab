@@ -74,15 +74,6 @@ data:
               url: http://192.168.8.1:3000
               username: admin
               password: {{HOMEPAGE_VAR_ADGUARD_PASSWORD}}
-        - PBS:
-            icon: proxmox.svg
-            href: https://3145.taild78f1d.ts.net:8007
-            description: Backup Server (3145)
-            widget:
-              type: proxmoxbackupserver
-              url: https://192.168.20.10:8007
-              username: {{HOMEPAGE_VAR_PBS_USER}}
-              password: {{HOMEPAGE_VAR_PBS_PASSWORD}}
         - Longhorn:
             icon: longhorn.svg
             href: http://longhorn.3145.blog
@@ -106,14 +97,6 @@ data:
               type: jellyfin
               url: http://192.168.10.40:8096
               key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
-        - Seerr:
-            icon: seerr.svg
-            href: http://192.168.20.10:5055/
-            description: taaaack
-            widget:
-              type: seerr
-              url: http://192.168.20.10:5055/
-              key: {{HOMEPAGE_VAR_SEERR_KEY}}
         - IT-Tools:
             icon: it-tools.svg
             href: http://it-tools.local
