@@ -476,7 +476,7 @@ data:
               "targets": [{
                 "datasource": { "type": "prometheus", "uid": "prometheus" },
                 "editorMode": "code",
-                "expr": "100 - (avg by(nodename) (rate(node_cpu_seconds_total{mode=\"idle\",nodename=~\"pve1|pve3|3145\"}[5m])) * 100)",
+                "expr": "100 - (avg by(nodename) (rate(node_cpu_seconds_total{mode=\"idle\",nodename=~\"pve1|pve3\"}[5m])) * 100)",
                 "legendFormat": "{{nodename}}", "range": true, "refId": "A"
               }],
               "title": "CPU Usage per Node", "type": "timeseries"
@@ -509,7 +509,7 @@ data:
               "targets": [{
                 "datasource": { "type": "prometheus", "uid": "prometheus" },
                 "editorMode": "code",
-                "expr": "100 - (avg by(nodename) (node_memory_MemAvailable_bytes{nodename=~\"pve1|pve3|3145\"}) / avg by(nodename) (node_memory_MemTotal_bytes{nodename=~\"pve1|pve3|3145\"}) * 100)",
+                "expr": "100 - (avg by(nodename) (node_memory_MemAvailable_bytes{nodename=~\"pve1|pve3\"}) / avg by(nodename) (node_memory_MemTotal_bytes{nodename=~\"pve1|pve3\"}) * 100)",
                 "legendFormat": "{{nodename}}", "range": true, "refId": "A"
               }],
               "title": "RAM Usage per Node", "type": "timeseries"
@@ -541,7 +541,7 @@ data:
               },
               "targets": [{
                 "editorMode": "code",
-                "expr": "node_hwmon_temp_celsius{nodename=~\"pve1|pve3|3145\",chip=~\"platform_coretemp.*|0000:00:08.*|1000120000.*\",sensor=\"temp1\"}",
+                "expr": "node_hwmon_temp_celsius{nodename=~\"pve1|pve3\",chip=~\"platform_coretemp.*|0000:00:08.*|1000120000.*\",sensor=\"temp1\"}",
                 "legendFormat": "{{nodename}}", "range": true, "refId": "A"
               }],
               "title": "CPU temp", "type": "timeseries"
@@ -573,7 +573,7 @@ data:
               },
               "targets": [{
                 "editorMode": "code",
-                "expr": "node_hwmon_temp_celsius{nodename=~\"pve1|pve3|3145\",chip=~\".*nvme.*\",sensor=\"temp1\"}",
+                "expr": "node_hwmon_temp_celsius{nodename=~\"pve1|pve3\",chip=~\".*nvme.*\",sensor=\"temp1\"}",
                 "legendFormat": "{{nodename}} {{chip}}", "range": true, "refId": "A"
               }],
               "title": "SSD temp", "type": "timeseries"
@@ -598,7 +598,7 @@ data:
               "targets": [{
                 "datasource": { "type": "prometheus", "uid": "prometheus" },
                 "editorMode": "code",
-                "expr": "100 - ((node_filesystem_avail_bytes{nodename=~\"pve1|pve3|3145\",mountpoint=\"/\",fstype!=\"tmpfs\"} / node_filesystem_size_bytes{nodename=~\"pve1|pve3|3145\",mountpoint=\"/\",fstype!=\"tmpfs\"}) * 100)",
+                "expr": "100 - ((node_filesystem_avail_bytes{nodename=~\"pve1|pve3\",mountpoint=\"/\",fstype!=\"tmpfs\"} / node_filesystem_size_bytes{nodename=~\"pve1|pve3\",mountpoint=\"/\",fstype!=\"tmpfs\"}) * 100)",
                 "legendFormat": "{{nodename}}", "range": true, "refId": "A"
               }],
               "title": "Disk Usage per Node", "type": "gauge"
@@ -631,7 +631,7 @@ data:
               "targets": [{
                 "datasource": { "type": "prometheus", "uid": "prometheus" },
                 "editorMode": "code",
-                "expr": "rate(node_disk_io_time_seconds_total{nodename=~\"pve1|pve3|3145\",device=~\"nvme.+\"}[5m]) * 100",
+                "expr": "rate(node_disk_io_time_seconds_total{nodename=~\"pve1|pve3\",device=~\"nvme.+\"}[5m]) * 100",
                 "legendFormat": "{{nodename}} {{device}}", "range": true, "refId": "A"
               }],
               "title": "Disk I/O Utilization %", "type": "timeseries"
@@ -665,13 +665,13 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "rate(node_disk_read_bytes_total{nodename=~\"pve1|pve3|3145\",device=~\"nvme.+\"}[5m])",
+                  "expr": "rate(node_disk_read_bytes_total{nodename=~\"pve1|pve3\",device=~\"nvme.+\"}[5m])",
                   "legendFormat": "{{nodename}} {{device}} read", "range": true, "refId": "A"
                 },
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "-rate(node_disk_written_bytes_total{nodename=~\"pve1|pve3|3145\",device=~\"nvme.+\"}[5m])",
+                  "expr": "-rate(node_disk_written_bytes_total{nodename=~\"pve1|pve3\",device=~\"nvme.+\"}[5m])",
                   "legendFormat": "{{nodename}} {{device}} write", "range": true, "refId": "B"
                 }
               ],
@@ -706,13 +706,13 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "rate(node_network_receive_bytes_total{nodename=~\"pve1|pve3|3145\",device=~\"nic[0-9]|eth[0-9]|enp.*\"}[5m])",
+                  "expr": "rate(node_network_receive_bytes_total{nodename=~\"pve1|pve3\",device=~\"nic[0-9]|eth[0-9]|enp.*\"}[5m])",
                   "legendFormat": "{{nodename}} {{device}} in", "range": true, "refId": "A"
                 },
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "-rate(node_network_transmit_bytes_total{nodename=~\"pve1|pve3|3145\",device=~\"nic[0-9]|eth[0-9]|enp.*\"}[5m])",
+                  "expr": "-rate(node_network_transmit_bytes_total{nodename=~\"pve1|pve3\",device=~\"nic[0-9]|eth[0-9]|enp.*\"}[5m])",
                   "legendFormat": "{{nodename}} {{device}} out", "range": true, "refId": "B"
                 }
               ],

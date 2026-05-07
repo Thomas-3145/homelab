@@ -21,12 +21,12 @@ spec:
           backupStorageLocation:
             - name: default
               provider: aws
-              bucket: velero
+              bucket: homelab-backups
               default: true
               config:
-                region: garage
+                region: auto
                 s3ForcePathStyle: "true"
-                s3Url: http://192.168.20.10:3900
+                s3Url: https://46f834d31a5157b819ff9c879ee07851.r2.cloudflarestorage.com
           volumeSnapshotLocation:
             - name: default
               provider: csi
