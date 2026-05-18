@@ -1,0 +1,10 @@
+apiVersion: viaduct.ai/v1
+kind: ksops
+metadata:
+  name: authentik-secrets-generator
+  annotations:
+    config.kubernetes.io/function: |
+      exec:
+        path: ksops
+files:
+  - authentik-secrets.sops.yaml
