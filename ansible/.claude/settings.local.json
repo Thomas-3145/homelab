@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ps:*)",
+      "Bash(sudo du:*)",
+      "Bash(btrfs filesystem du:*)",
+      "Bash(btrfs subvolume list:*)",
+      "Bash(timeshift --list:*)",
+      "Bash(sudo btrfs:*)"
+    ]
+  }
+}
