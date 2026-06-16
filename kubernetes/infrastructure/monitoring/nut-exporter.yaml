@@ -17,7 +17,7 @@ spec:
         - name: nut-exporter
           image: druggeri/nut_exporter:3.2
           args:
-            - --nut.server=192.168.10.30
+            - --nut.server=192.168.10.13
             - --nut.vars_enable=battery.charge,battery.runtime,input.voltage,output.voltage,ups.load,ups.status
           env:
             - name: NUT_EXPORTER_USERNAME

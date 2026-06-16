@@ -40,11 +40,11 @@ data:
               url: http://192.168.8.1:8888
         - Proxmox:
             icon: proxmox.svg
-            href: https://192.168.10.10:8006
+            href: https://192.168.10.11:8006
             description: Hypervisor
             widget:
               type: proxmox
-              url: https://192.168.10.10:8006
+              url: https://192.168.10.11:8006
               username: {{HOMEPAGE_VAR_PROXMOX_USER}}
               password: {{HOMEPAGE_VAR_PROXMOX_PASSWORD}}
         - ArgoCD:

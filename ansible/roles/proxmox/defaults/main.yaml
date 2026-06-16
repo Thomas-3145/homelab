@@ -30,7 +30,7 @@ proxmox_tailscale_vault_file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.
 proxmox_nut_enabled: false
 proxmox_nut_vault_file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.sops.yaml"
 proxmox_nut_server_host: pve3
-proxmox_nut_server_address: 192.168.10.30
+proxmox_nut_server_address: 192.168.10.13
 proxmox_nut_ups_name: apc
 proxmox_nut_ups_desc: APC BE650G2-GR
 # Lazy-evaluated per host: anything matching proxmox_nut_server_host is the

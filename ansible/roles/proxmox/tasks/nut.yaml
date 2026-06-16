@@ -1,9 +1,9 @@
 ---
-# NUT (Network UPS Tools) — APC BE650G2-GR connected to pve1 over USB.
+# NUT (Network UPS Tools) — APC BE650G2-GR connected to pve3 over USB.
 #
 # Topology:
-#   pve1 (netserver)  driver = usbhid-ups, listens on 0.0.0.0:3493
-#   pve3 (netclient)  monitors apc@192.168.10.10, shuts down on power loss
+#   pve3 (netserver)  driver = usbhid-ups, listens on 0.0.0.0:3493
+#   clients           monitor apc@192.168.10.13, shut down on power loss
 #
 # The role-on-host is decided by `proxmox_nut_server_host`. Anything else
 # in the play becomes a netclient. Source for the original setup:

@@ -1,21 +1,21 @@
 endpoints:
   - name: pve1
     group: homelab
-    url: icmp://192.168.10.10
+    url: icmp://192.168.10.11
     interval: 10s
     conditions:
       - "[CONNECTED] == true"
 
   - name: pve3
     group: homelab
-    url: icmp://192.168.10.30
+    url: icmp://192.168.10.13
     interval: 10s
     conditions:
       - "[CONNECTED] == true"
 
   - name: ups-nut
     group: homelab
-    url: tcp://192.168.10.30:3493
+    url: tcp://192.168.10.13:3493
     interval: 30s
     conditions:
       - "[CONNECTED] == true"
