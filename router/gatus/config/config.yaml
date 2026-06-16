@@ -6,6 +6,13 @@ endpoints:
     conditions:
       - "[CONNECTED] == true"
 
+  - name: pve2
+    group: homelab
+    url: icmp://192.168.10.12
+    interval: 10s
+    conditions:
+      - "[CONNECTED] == true"
+
   - name: pve3
     group: homelab
     url: icmp://192.168.10.13
