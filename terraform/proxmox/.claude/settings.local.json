@@ -1,7 +1,29 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(terraform state *)",
+      "Bash(ssh *)",
+      "Read(//home/thomas/dev/3145/homelab/ansible/**)",
+      "Bash(grep -rl -i tailscale roles/ playbooks/)",
+      "Bash(ansible-playbook -i inventory/hosts.yaml playbooks/proxmox-hosts.yaml --syntax-check)",
+      "Bash(ansible-playbook -i inventory/hosts.yaml playbooks/proxmox-hosts.yaml --limit pve2 --tags tailscale -e proxmox_tailscale_enabled=true --list-tasks)",
+      "Bash(ansible-lint -c ../.ansible-lint playbooks/proxmox-hosts.yaml roles/proxmox/)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(command -v ansible-lint)",
+      "Bash(pipx list *)",
+      "Bash(pip show *)",
+      "Bash(ansible-playbook -i inventory/hosts.yaml playbooks/proxmox-hosts.yaml --limit pve2 --tags tailscale -e proxmox_tailscale_enabled=true)",
+      "Bash(ssh-keygen -R pve2.taild78f1d.ts.net)",
+      "Bash(ssh-keygen -R 192.168.10.12)",
+      "Bash(ssh-keygen -R 100.77.191.87)",
+      "Bash(ssh-keyscan -H pve2.taild78f1d.ts.net)",
+      "Bash(ansible -i inventory/hosts.yaml pve2 -m ping)",
+      "Bash(terraform fmt *)",
+      "Bash(terraform plan *)",
+      "Bash(terraform apply *)",
+      "Bash(grep -vE '^@|MITM|eavesdrop|fingerprint|known_hosts|Password auth|Keyboard|UpdateHost|nasty|possible|contact|Offending|REMOTE|^$')",
+      "Bash(grep -vE '^@|MITM|eavesdrop|fingerprint|known_hosts|Password auth|Keyboard|UpdateHost|nasty|possible|contact|Offending|REMOTE|WARNING|^$')"
     ]
   }
 }

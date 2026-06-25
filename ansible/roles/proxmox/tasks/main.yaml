@@ -33,6 +33,7 @@
 - name: Install and configure Tailscale
   ansible.builtin.import_tasks: tailscale.yaml
   when: proxmox_tailscale_enabled | bool
+  tags: tailscale
 
 - name: Install and configure NUT
   ansible.builtin.import_tasks: nut.yaml

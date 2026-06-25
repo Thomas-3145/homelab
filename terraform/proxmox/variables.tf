@@ -24,6 +24,18 @@ variable "template_id" {
   type        = number
 }
 
+variable "template_node" {
+  description = "Proxmox node where the cloud-init template lives (source for cross-node clones)"
+  type        = string
+  default     = "pve1"
+}
+
+variable "vm_datastore" {
+  description = "Proxmox storage for VM disks (unified lvmthin pool on the data NVMe of each node)"
+  type        = string
+  default     = "vmdata"
+}
+
 variable "control_planes" {
   description = "k3s control plane VM definitions (name -> {ip, node_name, template_id})"
   type = map(object({

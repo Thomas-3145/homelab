@@ -49,6 +49,8 @@ all:
               ansible_host: 192.168.10.52
             k3s-worker-02:
               ansible_host: 192.168.10.53
+            k3s-worker-03:
+              ansible_host: 192.168.10.54
     physical_hosts:
       vars:
         ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096
@@ -56,6 +58,10 @@ all:
       hosts:
         pve1:
           ansible_host: pve1.taild78f1d.ts.net
+          ansible_user: root
+          ansible_port: 22
+        pve2:
+          ansible_host: pve2.taild78f1d.ts.net
           ansible_user: root
           ansible_port: 22
         pve3:
