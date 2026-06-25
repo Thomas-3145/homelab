@@ -9,7 +9,9 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
   }
 
   clone {
-    vm_id = each.value.template_id
+    vm_id     = each.value.template_id
+    node_name = var.template_node
+    full      = true
   }
 
   cpu {
@@ -21,7 +23,7 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
   }
 
   disk {
-    datastore_id = "local-lvm"
+    datastore_id = var.vm_datastore
     interface    = "virtio0"
     size         = var.cp_disk
   }
@@ -45,7 +47,7 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
   }
 
   lifecycle {
-    ignore_changes = [initialization]
+    ignore_changes = [initialization, clone]
   }
 
   provisioner "local-exec" {
@@ -67,7 +69,9 @@ resource "proxmox_virtual_environment_vm" "k3s_workers" {
   }
 
   clone {
-    vm_id = each.value.template_id
+    vm_id     = each.value.template_id
+    node_name = var.template_node
+    full      = true
   }
 
   cpu {
@@ -79,7 +83,7 @@ resource "proxmox_virtual_environment_vm" "k3s_workers" {
   }
 
   disk {
-    datastore_id = "local-lvm"
+    datastore_id = var.vm_datastore
     interface    = "virtio0"
     size         = var.worker_disk
   }
@@ -103,7 +107,7 @@ resource "proxmox_virtual_environment_vm" "k3s_workers" {
   }
 
   lifecycle {
-    ignore_changes = [initialization]
+    ignore_changes = [initialization, clone]
   }
 
   provisioner "local-exec" {
@@ -137,7 +141,7 @@ resource "proxmox_virtual_environment_vm" "services" {
   }
 
   disk {
-    datastore_id = "local-lvm"
+    datastore_id = var.vm_datastore
     interface    = "virtio0"
     size         = each.value.disk
   }
@@ -191,7 +195,7 @@ resource "proxmox_virtual_environment_vm" "test" {
   }
 
   disk {
-    datastore_id = "local-lvm"
+    datastore_id = var.vm_datastore
     interface    = "virtio0"
     size         = each.value.disk
   }

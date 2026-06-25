@@ -38,13 +38,13 @@ resource "proxmox_virtual_environment_container" "arr_stack" {
   }
 
   disk {
-    datastore_id = "local-lvm"
+    datastore_id = var.vm_datastore
     size         = 32
   }
 
   mount_point {
     path   = "/mnt/media"
-    volume = "local-lvm"
+    volume = var.vm_datastore
     size   = "500G"
   }
 

@@ -19,7 +19,7 @@
 #     Reads vault_nut_password from the proxmox_vms group vault.
 
 - name: Configure Proxmox hosts (apt repos, kernel pin, EEE workaround)
-  hosts: pve1,pve3
+  hosts: pve1,pve2,pve3
   become: true
   gather_facts: true
   roles:
