@@ -23,6 +23,10 @@ spec:
                     labels:
                       job: node-exporter
                       nodename: pve1
+                  - targets: ["192.168.10.12:9100"]
+                    labels:
+                      job: node-exporter
+                      nodename: pve2
                   - targets: ["192.168.10.13:9100"]
                     labels:
                       job: node-exporter
