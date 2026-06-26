@@ -1,0 +1,16 @@
+proxmox_api_url          = "https://192.168.10.11:8006/api2/json"
+proxmox_api_token_id     = "terraform@pve!terraform-token-xxxxxxxxxx"
+proxmox_api_token_secret = "00000000-0000-0000-0000-000000000000"
+
+ssh_public_key_path = "~/.ssh/id_rsa_4096.pub"
+
+# AlmaLinux 9 template — create once via
+# homelab-hardware/configuration/proxmox/create-almalinux-template.sh (run on pve1)
+template_id   = 9001
+template_node = "pve1"
+
+vms = {
+  "central-01" = { ip = "192.168.10.100", node_name = "pve2", cores = 6, memory = 6144, disk = 100 }
+  "source-01"  = { ip = "192.168.10.101", node_name = "pve1", cores = 4, memory = 4096, disk = 40 }
+  "source-02"  = { ip = "192.168.10.102", node_name = "pve3", cores = 4, memory = 4096, disk = 40 }
+}
