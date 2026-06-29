@@ -24,10 +24,10 @@ worker_cores  = 2
 worker_memory = 6144
 worker_disk   = 50
 
-# Permanenta service-VMs (gitlab-runner, arr-stack, etc.)
+# Permanenta service-VMs (arr-stack, etc.)
 service_vms = {}
 # service_vms = {
-#   "gitlab-runner" = { ip = "192.168.10.31", node_name = "pve3", template_id = 9000, cores = 4, memory = 5120, disk = 50 }
+#   "arr-stack" = { ip = "192.168.10.40", node_name = "pve3", template_id = 9000, cores = 4, memory = 5120, disk = 50 }
 # }
 
 # Ad-hoc lab VMs — lägg till vid behov, ta bort när de inte används
