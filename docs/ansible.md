@@ -23,7 +23,7 @@ proxmox_vms/
 │   ├── k3s_init        # Bootstraps cluster with --cluster-init
 │   └── k3s_servers     # Join via token from init node
 ├── k3s_workers
-└── services            # Non-k3s VMs (gitlab-runner etc.)
+└── services            # Non-k3s VMs (arr-stack etc.)
 physical_hosts/         # pve1, pve3, 3145 — managed separately
 ```
 
