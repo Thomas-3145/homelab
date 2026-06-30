@@ -64,7 +64,7 @@ and it's the work I want to do.
 - **Git as source of truth**: no manual changes to the cluster, ever
 - **High availability where it matters**: 3-node control plane with embedded etcd
 - **Observability first**: monitoring and alerting were not an afterthought
-- **Backup and restore tested**, not just configured
+- **Backups automated** (Velero → R2); full restore/DR drill is on the roadmap, not yet run
 
 ---
 
