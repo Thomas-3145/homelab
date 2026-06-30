@@ -71,6 +71,10 @@ data:
             description: DNS-filtrering
             # No widget: AdGuard runs with GL.iNet's --glinet auth (Admin-Token
             # cookie), which the Homepage adguard widget (basic auth) can't use.
+        - Switch:
+            icon: mikrotik.svg
+            href: http://192.168.10.2
+            description: MikroTik CRS310
         - Longhorn:
             icon: longhorn.svg
             href: http://longhorn.3145.blog

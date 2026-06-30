@@ -21,6 +21,9 @@ spec:
               value: "-XX:MaxMetaspaceSize=256m"
           ports:
             - containerPort: 8080
+          volumeMounts:
+            - name: configs
+              mountPath: /configs
           resources:
             requests:
               cpu: 100m
@@ -38,3 +41,7 @@ spec:
               port: 8080
             initialDelaySeconds: 60
             periodSeconds: 30
+      volumes:
+        - name: configs
+          persistentVolumeClaim:
+            claimName: stirling-pdf-configs
