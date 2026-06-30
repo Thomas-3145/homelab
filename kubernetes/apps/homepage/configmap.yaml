@@ -97,6 +97,14 @@ data:
               type: jellyfin
               url: http://192.168.10.40:8096
               key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
+        - Seerr:
+            icon: jellyseerr.svg
+            href: http://192.168.10.40:5055
+            description: Mediaförfrågningar
+            widget:
+              type: overseerr
+              url: http://192.168.10.40:5055
+              key: {{HOMEPAGE_VAR_SEERR_KEY}}
         - IT-Tools:
             icon: it-tools.svg
             href: http://it-tools.local
