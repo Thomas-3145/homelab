@@ -46,7 +46,7 @@
         creates: /usr/local/bin/k3s
       environment:
         INSTALL_K3S_EXEC: "server --disable=traefik --disable=servicelb"
-        K3S_URL: "https://192.168.10.21:6443"
+        K3S_URL: "https://192.168.10.100:6443"
         K3S_TOKEN: "{{ hostvars['k3s-cp-01'].k3s_token }}"
 
     - name: Wait for k3s API
@@ -72,11 +72,12 @@
       delegate_to: localhost
       become: false
 
-    # k3s writes 127.0.0.1 in kubeconfig, replace with actual node IP
-    - name: Replace localhost with control plane IP
+    # k3s writes 127.0.0.1 in kubeconfig, replace with the kube-vip control-plane VIP
+    # so kubectl survives any single control-plane node going down
+    - name: Replace localhost with control plane VIP
       ansible.builtin.replace:
         path: ~/.kube/config
         regexp: '127\.0\.0\.1'
-        replace: '192.168.10.21'
+        replace: '192.168.10.100'
       delegate_to: localhost
       become: false

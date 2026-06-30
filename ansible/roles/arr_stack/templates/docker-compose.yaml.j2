@@ -7,8 +7,8 @@ services:
       - TZ=Europe/Stockholm
     volumes:
       - /opt/arr-stack/jellyfin:/config
-      - /mnt/media/tv:/data/tv
-      - /mnt/media/movies:/data/movies
+      # Read-only access to the library; subfolders /data/tv and /data/movies
+      - /mnt/media/media:/data:ro
     devices:
       - /dev/dri:/dev/dri
     ports:
@@ -26,7 +26,9 @@ services:
       - TZ=Europe/Stockholm
     volumes:
       - /opt/arr-stack/sonarr:/config
-      - /mnt/media:/mnt/media
+      # Single mount so downloads (/data/torrents) and library (/data/media/tv)
+      # share one filesystem -> hardlinks and atomic moves work.
+      - /mnt/media:/data
     ports:
       - 8989:8989
     networks:
@@ -42,7 +44,7 @@ services:
       - TZ=Europe/Stockholm
     volumes:
       - /opt/arr-stack/radarr:/config
-      - /mnt/media:/mnt/media
+      - /mnt/media:/data
     ports:
       - 7878:7878
     networks:
@@ -74,7 +76,8 @@ services:
       - WEBUI_PORT=8085
     volumes:
       - /opt/arr-stack/qbittorrent:/config
-      - /mnt/media/downloads:/downloads
+      # Same /data mount as the *arr apps; set the save path to /data/torrents.
+      - /mnt/media:/data
     ports:
       - 8085:8085
       - 6881:6881
@@ -92,7 +95,7 @@ services:
       - TZ=Europe/Stockholm
     volumes:
       - /opt/arr-stack/bazarr:/config
-      - /mnt/media:/mnt/media
+      - /mnt/media:/data
     ports:
       - 6767:6767
     networks:

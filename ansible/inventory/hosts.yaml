@@ -38,7 +38,9 @@ all:
             arr-stack:
               ansible_host: 192.168.10.40
               ansible_user: root
-              ansible_port: 22
+              # Hardened to 22456 by the common role. The arr-stack playbook
+              # auto-detects port 22 on a freshly provisioned LXC during bootstrap.
+              ansible_port: 22456
         test:
           hosts: {}
         k3s_workers:
