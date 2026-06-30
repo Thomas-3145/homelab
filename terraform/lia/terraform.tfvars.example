@@ -9,8 +9,9 @@ ssh_public_key_path = "~/.ssh/id_rsa_4096.pub"
 template_id   = 9001
 template_node = "pve1"
 
+# NOTE: 192.168.10.100 is reserved for the kube-vip control-plane VIP — do not assign it to a VM.
 vms = {
-  "central-01" = { ip = "192.168.10.100", node_name = "pve2", cores = 6, memory = 6144, disk = 100 }
+  "central-01" = { ip = "192.168.10.103", node_name = "pve2", cores = 6, memory = 6144, disk = 100 }
   "source-01"  = { ip = "192.168.10.101", node_name = "pve1", cores = 4, memory = 4096, disk = 40 }
   "source-02"  = { ip = "192.168.10.102", node_name = "pve3", cores = 4, memory = 4096, disk = 40 }
 }

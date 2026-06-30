@@ -36,7 +36,7 @@
         creates: /usr/local/bin/k3s
       environment:
         INSTALL_K3S_EXEC: "agent"
-        K3S_URL: "https://192.168.10.21:6443"
+        K3S_URL: "https://192.168.10.100:6443"
         K3S_TOKEN: "{{ hostvars['k3s-cp-01'].k3s_token }}"
 
     - name: Wait for k3s-agent service

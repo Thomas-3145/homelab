@@ -24,6 +24,37 @@
 - name: Configure arr-stack
   hosts: arr-stack
   become: true
+  gather_facts: false
+
+  # The common role hardens SSH to port 22456. A freshly provisioned LXC,
+  # however, still listens on the default port 22. Probe both from the control
+  # node and pick the reachable one, so this playbook works on first bootstrap
+  # (port 22) and on every later run (port 22456) without manual overrides.
+  pre_tasks:
+    - name: Probe candidate SSH ports (prefer hardened 22456)
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: "{{ item }}"
+        timeout: 3
+      delegate_to: localhost
+      become: false
+      register: arr_ssh_probe
+      ignore_errors: true
+      loop:
+        - 22456
+        - 22
+
+    - name: Fail if neither SSH port is reachable
+      ansible.builtin.fail:
+        msg: "arr-stack ({{ ansible_host }}) is not reachable on port 22 or 22456."
+      when: arr_ssh_probe.results | selectattr('failed', 'equalto', false) | list | length == 0
+
+    - name: Select the first reachable SSH port
+      ansible.builtin.set_fact:
+        ansible_port: "{{ arr_ssh_probe.results | selectattr('failed', 'equalto', false) | map(attribute='item') | first }}"
+
+    - name: Gather facts now that the SSH port is known
+      ansible.builtin.setup:
 
   roles:
     - common
