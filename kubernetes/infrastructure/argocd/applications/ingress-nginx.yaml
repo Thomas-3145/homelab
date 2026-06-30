@@ -18,6 +18,15 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: ingress-nginx
+  # The admission webhook's caBundle is injected at runtime by the chart's
+  # post-install Job. Without this, selfHeal reverts it to "" and breaks all
+  # ingress create/update with x509 "signed by unknown authority".
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: ingress-nginx-admission
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
   syncPolicy:
     automated:
       selfHeal: true
