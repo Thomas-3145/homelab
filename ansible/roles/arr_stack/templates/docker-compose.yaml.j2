@@ -134,6 +134,21 @@ services:
     networks:
       - arr
 
+  recyclarr:
+    image: ghcr.io/recyclarr/recyclarr:latest
+    container_name: recyclarr
+    user: "1000:1000"
+    restart: unless-stopped
+    # Syncs TRaSH Guides custom formats + quality profiles into Sonarr/Radarr
+    # on a schedule. Config lives in /opt/arr-stack/recyclarr/configs/.
+    environment:
+      - TZ=Europe/Stockholm
+      - CRON_SCHEDULE=@daily
+    volumes:
+      - /opt/arr-stack/recyclarr:/config
+    networks:
+      - arr
+
 networks:
   arr:
     driver: bridge
