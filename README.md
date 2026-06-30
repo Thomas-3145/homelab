@@ -1,6 +1,6 @@
 # Homelab
 
-![k3s](https://img.shields.io/badge/k3s-v1.31-326CE5?logo=kubernetes&logoColor=white)
+![k3s](https://img.shields.io/badge/k3s-v1.35-326CE5?logo=kubernetes&logoColor=white)
 ![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?logo=argo&logoColor=white)
 ![SOPS](https://img.shields.io/badge/Secrets-SOPS_Encrypted-black?logo=mozilla&logoColor=white)
 ![CI](https://github.com/Thomas-3145/homelab/actions/workflows/lint.yaml/badge.svg)
@@ -39,7 +39,7 @@ and it's the work I want to do.
 4. All applications are deployed via GitOps from this repo — no manual `kubectl apply`
 5. **SOPS + KSOPS** encrypts secrets in Git, decrypted in-cluster at apply time
 6. **Prometheus + Loki** collect metrics and logs, **Alertmanager** sends alerts to my phone
-7. **Velero** backs up workloads nightly to **Garage** (self-hosted S3), forwarded off-site to Cloudflare R2
+7. **Velero** backs up workloads to **Cloudflare R2** (S3-compatible, off-site)
 
 ---
 
@@ -53,8 +53,8 @@ and it's the work I want to do.
 | **Networking** | VLANs, MetalLB, ingress-nginx, Cloudflare Tunnel, Tailscale |
 | **Storage** | Longhorn (distributed block storage) |
 | **Observability** | Prometheus, Grafana, Loki, Promtail, Alertmanager |
-| **Security** | SOPS + KSOPS, cert-manager (Let's Encrypt) |
-| **Backups** | Velero, Garage (S3-compatible), Cloudflare R2 |
+| **Security** | SOPS + KSOPS, cert-manager (Let's Encrypt), Authentik (SSO) |
+| **Backups** | Velero → Cloudflare R2 (S3-compatible) |
 
 ---
 
@@ -88,29 +88,23 @@ and it's the work I want to do.
               ┌───────────────────────────────┐
               │      GL.iNet Flint 2          │
               │  OpenWrt · AdGuard · Tailscale│
+              │  cloudflared · ntfy · Gatus   │
               └───────────┬───────────────────┘
-                          │
-              ┌───────────┴───────────┐
-              │                       │
-         VLAN 10                  VLAN 20
-      192.168.10.0/24          192.168.20.0/24
-              │                       │
-    ┌─────────────────┐      ┌─────────────────┐
-    │  Proxmox Host   │      │      3145        │
-    │  HP EliteDesk   │      │  Raspberry Pi 5  │
-    │  i5-8500T 32GB  │      │  8GB · 512GB SSD │
-    └────────┬────────┘      │  PBS · arr-stack │
-             │               │  Garage · ntfy   │
-     k3s HA Cluster          └─────────────────┘
-     ┌────────────────────┐
-     │  k3s-cp-01  .10.21 │  Control Plane (x3)
-     │  k3s-cp-02  .10.22 │  embedded etcd
-     │  k3s-cp-03  .10.23 │
-     └────────────────────┘
-     ┌────────────────────┐
-     │  k3s-worker-01     │  Worker VM (temporary)
-     │  (VM on Proxmox)   │
-     └────────────────────┘
+                          │  VLAN 10 (192.168.10.0/24)
+                  ┌───────┴────────┐
+                  │ MikroTik CRS310 │  (2.5G switch)
+                  └─┬──────┬──────┬─┘
+                    │      │      │
+        ┌───────────┴┐ ┌───┴─────┐ ┌┴───────────┐
+        │   pve1     │ │  pve2   │ │   pve3     │   3× HP EliteDesk
+        │ i5-11500T  │ │ Ultra5  │ │ i5-11500T  │   Proxmox VE 9.2
+        │ 32GB       │ │ 64GB    │ │ 64GB       │
+        ├────────────┤ ├─────────┤ ├────────────┤
+        │ cp-01  .21 │ │ cp-02.22│ │ cp-03  .23 │   k3s HA control plane
+        │ worker-01  │ │ worker  │ │ worker-03  │   embedded etcd
+        │       .52  │ │ -02 .53 │ │       .54  │   + 1 worker per host
+        └────────────┘ └─────────┘ └─┬──────────┘
+                                     │ arr-stack LXC .40
 ```
 
 ---
@@ -124,7 +118,7 @@ This repo isn't meant to be copy-pasted — it's built around specific hardware.
 cd terraform/proxmox && terraform apply
 
 # 2. Configure nodes and install k3s
-ansible-playbook -i ansible/inventory/hosts.yaml ansible/playbooks/install-k3s.yaml
+ansible-playbook -i ansible/inventory/hosts.yaml ansible/playbooks/k3s/install.yaml
 
 # 3. Bootstrap ArgoCD — it takes it from there
 kubectl apply -k kubernetes/bootstrap/
@@ -157,6 +151,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the full plan.
 - [x] Longhorn distributed storage
 - [x] Monitoring (Prometheus + Grafana + Loki)
 - [x] Alerting (Alertmanager → ntfy)
-- [x] Velero + Garage backups (3-2-1)
-- [ ] Ghost + Vaultwarden migration to k3s
+- [x] Velero backups → Cloudflare R2 (off-site)
+- [x] Ghost + Vaultwarden migration to k3s
+- [x] Authentik SSO
 - [ ] AWS integration (separate project)
