@@ -12,6 +12,17 @@
     - qbittorrent
     - bazarr
     - flaresolverr
+    - seerr
+
+# The Seerr image runs as the unprivileged node user (uid 1000) and, unlike the
+# linuxserver images, does not chown its own config dir — it must be writable.
+- name: Ensure seerr config directory is owned by the node user
+  ansible.builtin.file:
+    path: /opt/arr-stack/seerr
+    state: directory
+    owner: "1000"
+    group: "1000"
+    mode: "0755"
 
 - name: Create media directories
   ansible.builtin.file:
