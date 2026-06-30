@@ -22,7 +22,7 @@ data:
       Tjänster:
         initiallyCollapsed: false
       Nedladdningar:
-        initiallyCollapsed: true
+        initiallyCollapsed: false
     providers:
       longhorn:
         url: http://longhorn-frontend.longhorn-system.svc.cluster.local
@@ -69,11 +69,8 @@ data:
             icon: si-adguard
             href: http://192.168.8.1:3000/
             description: DNS-filtrering
-            widget:
-              type: adguard
-              url: http://192.168.8.1:3000
-              username: admin
-              password: {{HOMEPAGE_VAR_ADGUARD_PASSWORD}}
+            # No widget: AdGuard runs with GL.iNet's --glinet auth (Admin-Token
+            # cookie), which the Homepage adguard widget (basic auth) can't use.
         - Longhorn:
             icon: longhorn.svg
             href: http://longhorn.3145.blog
