@@ -3,6 +3,12 @@ services:
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
+    # GPU render node is group-owned by render (gid 993) / video (gid 44),
+    # mapped into the unprivileged LXC via lxc.idmap on pve3. Jellyfin runs as
+    # root but must join these groups to access /dev/dri for HW transcoding.
+    group_add:
+      - "993"
+      - "44"
     environment:
       - TZ=Europe/Stockholm
     volumes:
