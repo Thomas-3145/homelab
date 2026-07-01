@@ -1,0 +1,59 @@
+services:
+  # Whisper large-v3 for study transcription (lectures, YouTube). Separate from the
+  # arr-stack 'whisper' (medium, for Bazarr) so the two don't compete. Exposed on the
+  # LAN at http://192.168.10.41:9000/asr. CPU-based; slower than medium but fine for
+  # background use.
+  whisper-large:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: whisper-large
+    restart: unless-stopped
+    environment:
+      - ASR_ENGINE=faster_whisper
+      - ASR_MODEL=large-v3
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/ai-lab/whisper:/root/.cache
+    # Arc iGPU shared via bind mount (group render 993 / video 44) for future
+    # OpenVINO acceleration; works in parallel with the media LXC.
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "993"
+      - "44"
+    ports:
+      - 9000:9000
+    networks:
+      - ai
+
+  # --- PHASE 2 (add when ready — not deployed yet) --------------------------------
+  # Local LLM for summaries/RAG, run as overnight batch (speed not important, quality
+  # is). CPU inference on pve2: 32B comfortably, 70B q4 realistic overnight when media
+  # transcoding + the LIA VM are idle. Bump the LXC RAM before enabling 70B.
+  #
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   restart: unless-stopped
+  #   volumes:
+  #     - /opt/ai-lab/ollama:/root/.ollama
+  #   ports:
+  #     - 11434:11434
+  #   networks:
+  #     - ai
+  #
+  # open-webui:
+  #   image: ghcr.io/open-webui/open-webui:main
+  #   container_name: open-webui
+  #   restart: unless-stopped
+  #   environment:
+  #     - OLLAMA_BASE_URL=http://ollama:11434
+  #   volumes:
+  #     - /opt/ai-lab/openwebui:/app/backend/data
+  #   ports:
+  #     - 3000:8080
+  #   networks:
+  #     - ai
+
+networks:
+  ai:
+    driver: bridge

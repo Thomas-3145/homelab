@@ -1,0 +1,6 @@
+---
+- name: Restart ai-lab
+  community.docker.docker_compose_v2:
+    project_src: /opt/ai-lab
+    state: present
+    recreate: always

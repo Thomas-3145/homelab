@@ -62,3 +62,63 @@ resource "proxmox_virtual_environment_container" "arr_stack" {
     ignore_changes = [initialization, operating_system]
   }
 }
+
+# AI lab: local Whisper large-v3 (lecture/YouTube transcription) and, later,
+# Ollama + Open WebUI for LLM summaries. Kept separate from the arr-stack LXC so
+# AI experiments don't touch the media services; shares the Arc iGPU via /dev/dri.
+resource "proxmox_virtual_environment_container" "ai_lab" {
+  node_name = "pve2"
+  vm_id     = 201
+
+  unprivileged = true
+
+  features {
+    nesting = true
+  }
+
+  initialization {
+    hostname = "ai-lab"
+
+    dns {
+      servers = ["1.1.1.1", "8.8.8.8"]
+    }
+
+    ip_config {
+      ipv4 {
+        address = "192.168.10.41/24"
+        gateway = "192.168.10.1"
+      }
+    }
+
+    user_account {
+      keys = [file(pathexpand(var.ssh_public_key_path))]
+    }
+  }
+
+  network_interface {
+    name   = "eth0"
+    bridge = "vmbr0"
+  }
+
+  operating_system {
+    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    type             = "ubuntu"
+  }
+
+  disk {
+    datastore_id = var.vm_datastore
+    size         = 60
+  }
+
+  cpu {
+    cores = 6
+  }
+
+  memory {
+    dedicated = 16384
+  }
+
+  lifecycle {
+    ignore_changes = [initialization, operating_system]
+  }
+}
