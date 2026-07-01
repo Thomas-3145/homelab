@@ -4,7 +4,7 @@ services:
     container_name: jellyfin
     restart: unless-stopped
     # GPU render node is group-owned by render (gid 993) / video (gid 44),
-    # mapped into the unprivileged LXC via lxc.idmap on pve3. Jellyfin runs as
+    # mapped into the unprivileged LXC via lxc.idmap on pve2. Jellyfin runs as
     # root but must join these groups to access /dev/dri for HW transcoding.
     group_add:
       - "993"
@@ -104,6 +104,22 @@ services:
       - /mnt/media:/data
     ports:
       - 6767:6767
+    networks:
+      - arr
+
+  # AI speech-to-text used by Bazarr as a last-resort subtitle provider: when no
+  # subtitle is found, Whisper transcribes the audio track into a perfectly synced
+  # SRT. CPU-based (faster_whisper) — fast enough on pve2's 14-core Ultra 5.
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: whisper
+    restart: unless-stopped
+    environment:
+      - ASR_ENGINE=faster_whisper
+      - ASR_MODEL=medium
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/arr-stack/whisper:/root/.cache
     networks:
       - arr
 

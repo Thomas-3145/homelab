@@ -1,6 +1,6 @@
 ---
-- name: Configure GPU passthrough on pve3
-  hosts: pve3
+- name: Configure GPU passthrough on pve2
+  hosts: pve2
   become: true
   vars:
     arr_stack_vmid: 200
