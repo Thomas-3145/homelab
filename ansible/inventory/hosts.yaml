@@ -55,6 +55,12 @@ all:
               ansible_host: 192.168.10.52
             k3s-worker-02:
               ansible_host: 192.168.10.53
+              # pve2 also hosts the RAM-heavy media (LXC 200) + ai-lab (LXC 201)
+              # guests, so keep the k3s footprint here minimal. This soft taint
+              # makes the scheduler prefer worker-01 (pve1) + worker-03 (pve3) and
+              # only spill onto worker-02 when the others are full.
+              k3s_node_taints:
+                - "workload=offload:PreferNoSchedule"
             k3s-worker-03:
               ansible_host: 192.168.10.54
     physical_hosts:
