@@ -126,6 +126,22 @@
 
 - name: Connect to Tailscale
   ansible.builtin.command: tailscale up --authkey {{ vault_tailscale_authkey }}
+  register: common_tailscale_up
   when: common_tailscale_status.rc != 0
   changed_when: common_tailscale_status.rc != 0
+  # Fail-soft: an expired/used auth key must not abort the whole play. If it did,
+  # end-of-play handlers (incl. the sshd restart onto port 22456) would never run,
+  # leaving the node with a half-applied SSH config and locked out.
+  failed_when: false
   no_log: true
+
+- name: Warn if Tailscale connect failed (likely expired/used auth key)
+  ansible.builtin.debug:
+    msg: >-
+      Tailscale connect failed — the auth key is probably expired or used. Generate
+      a new key in the Tailscale admin console, update
+      inventory/group_vars/proxmox_vms/vault.sops.yaml, and re-run. All other
+      config (SSH hardening, packages, etc.) was still applied.
+  when:
+    - common_tailscale_status.rc != 0
+    - common_tailscale_up.rc | default(0) != 0
