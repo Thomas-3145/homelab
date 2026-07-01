@@ -26,6 +26,9 @@
         # Device passthrough (GPU render node for Whisper/OpenVINO)
         - "lxc.cgroup2.devices.allow: c 226:* rwm"
         - "lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir 0 0"
+        # TUN for Tailscale (tailscaled needs /dev/net/tun to bring up its interface)
+        - "lxc.cgroup2.devices.allow: c 10:200 rwm"
+        - "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file 0 0"
         # Unprivileged LXC: map host video(44)/render(993) GIDs 1:1 so the
         # /dev/dri nodes are group-accessible (containers join them via group_add).
         - "lxc.idmap: u 0 100000 65536"
