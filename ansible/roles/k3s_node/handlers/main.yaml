@@ -1,0 +1,8 @@
+---
+# Restart the k3s agent so it re-reads /etc/rancher/k3s/config.yaml.
+# Running containers survive a kubelet restart, so this is non-disruptive;
+# a PreferNoSchedule taint never evicts existing pods either.
+- name: Restart k3s-agent
+  ansible.builtin.systemd:
+    name: k3s-agent
+    state: restarted
