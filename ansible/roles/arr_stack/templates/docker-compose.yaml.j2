@@ -120,6 +120,10 @@ services:
       - TZ=Europe/Stockholm
     volumes:
       - /opt/arr-stack/whisper:/root/.cache
+    # Exposed on the LAN so other projects (lecture/YouTube transcription) can
+    # POST audio to the ASR API at http://192.168.10.40:9000/asr. LAN-only, no auth.
+    ports:
+      - 9000:9000
     networks:
       - arr
 

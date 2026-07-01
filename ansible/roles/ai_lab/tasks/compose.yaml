@@ -1,0 +1,27 @@
+---
+- name: Create config directories
+  ansible.builtin.file:
+    path: "/opt/ai-lab/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - whisper
+
+- name: Create compose directory
+  ansible.builtin.file:
+    path: /opt/ai-lab
+    state: directory
+    mode: "0755"
+
+- name: Deploy docker-compose.yaml
+  ansible.builtin.template:
+    src: docker-compose.yaml.j2
+    dest: /opt/ai-lab/docker-compose.yaml
+    mode: "0644"
+  notify: Restart ai-lab
+
+- name: Start ai-lab
+  community.docker.docker_compose_v2:
+    project_src: /opt/ai-lab
+    state: present
+    pull: missing
