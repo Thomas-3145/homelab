@@ -8,6 +8,7 @@
       - jq
       - curl
       - rsync
+      - poppler-utils   # pdftotext — extract lecture-slide text as summary reference
     state: present
     update_cache: true
 
@@ -20,11 +21,14 @@
     mode: "0755"
     force: true
 
-- name: Deploy studieplugg pipeline script
+- name: Deploy pipeline scripts
   ansible.builtin.template:
-    src: studieplugg.j2
-    dest: /usr/local/bin/studieplugg
+    src: "{{ item }}.j2"
+    dest: "/usr/local/bin/{{ item }}"
     mode: "0755"
+  loop:
+    - studieplugg          # single file / YouTube URL
+    - studieplugg-lecture  # a whole lecture: many parts + optional slide PDF
 
 - name: Wait for Ollama API to be ready
   ansible.builtin.command: docker exec ollama ollama list

@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# studieplugg-lecture — combine ALL parts of one lecture (+ optional slide PDF) into a
+# single set of study material. Parts live in /opt/ai-lab/inbox/<name>/ : audio/video
+# files (transcribed in sorted order) plus an optional *.pdf whose text is used as a
+# reference to ground the summary and fix terms/names Whisper may mishear.
+#
+#   studieplugg-lecture <name> [lang=sv] [model]
+#
+# Output: /opt/ai-lab/out/<name>/{transkript.txt,sammanfattning.md}
+set -euo pipefail
+export PATH="/usr/local/bin:${PATH}"
+
+NAME="${1:?Usage: studieplugg-lecture <name> [lang] [model]}"
+LANG_CODE="${2:-sv}"
+MODEL="${3:-{{ ai_lab_llm_model }}}"
+WHISPER="http://localhost:9000"
+OLLAMA="http://localhost:11434"
+NTFY_URL="${NTFY_URL:-{{ ai_lab_ntfy_url }}}"
+NTFY_RESOLVE="{{ ai_lab_ntfy_resolve }}"
+NUM_CTX="${NUM_CTX:-8192}"
+CHUNK_WORDS="${CHUNK_WORDS:-3000}"
+KEEP_ALIVE="${KEEP_ALIVE:-15m}"
+PDF_REF_CHARS="${PDF_REF_CHARS:-8000}"   # cap slide text so it fits the context window
+
+src="/opt/ai-lab/inbox/${NAME}"
+[[ -d "${src}" ]] || { echo "Hittar ingen inbox-mapp: ${src}"; exit 1; }
+out="/opt/ai-lab/out/${NAME}"; mkdir -p "${out}"
+work="/opt/ai-lab/work/${NAME}-$(date +%s)"; mkdir -p "${work}"
+
+ollama_gen() {
+  jq -n --arg m "${MODEL}" --arg p "$1" --arg ka "${KEEP_ALIVE}" --argjson ctx "${NUM_CTX}" \
+    '{model:$m, prompt:$p, stream:false, keep_alive:$ka, options:{num_ctx:$ctx}}' \
+  | curl -s --max-time 0 "${OLLAMA}/api/generate" -d @- | jq -r '.response'
+}
+
+# 1. Transcribe each part in sorted order, concatenate into one transcript.
+# Reuse an existing transcript (transcription is the slow part) so re-running — e.g.
+# after adding the slide PDF — only redoes the summary. FORCE_TRANSCRIBE=1 to redo.
+transcript="${out}/transkript.txt"
+if [[ -s "${transcript}" && "${FORCE_TRANSCRIBE:-0}" != "1" ]]; then
+  echo "[lecture] återanvänder befintligt transkript (FORCE_TRANSCRIBE=1 gör om)"
+else
+  : > "${transcript}"
+  mapfile -t parts < <(find "${src}" -maxdepth 1 -type f \
+    \( -iname '*.mp4' -o -iname '*.mkv' -o -iname '*.webm' -o -iname '*.mp3' \
+       -o -iname '*.m4a' -o -iname '*.wav' -o -iname '*.opus' \) | sort)
+  [[ -n "${parts[*]:-}" ]] || { echo "Inga ljud/videofiler i ${src}"; exit 1; }
+  for f in "${parts[@]}"; do
+    echo "[lecture] transkriberar $(basename "${f}") …"
+    { printf '### %s\n' "$(basename "${f}")"
+      curl -s --max-time 0 -F "audio_file=@${f}" \
+        "${WHISPER}/asr?task=transcribe&output=txt&language=${LANG_CODE}"
+      printf '\n' ; } >> "${transcript}"
+  done
+fi
+
+# 2. Optional slide PDF → reference text (grounds the summary)
+pdf="$(find "${src}" -maxdepth 1 -iname '*.pdf' | head -1 || true)"
+ref_block=""
+if [[ -n "${pdf}" ]]; then
+  echo "[lecture] läser slides $(basename "${pdf}") …"
+  ref="$(pdftotext -layout "${pdf}" - 2>/dev/null | head -c "${PDF_REF_CHARS}" || true)"
+  [[ -n "${ref}" ]] && ref_block="
+
+Föreläsningens slides (referens — använd för korrekta termer, namn och definitioner, och rätta uppenbara hörfel i transkriptet):
+${ref}"
+fi
+
+final_tail="Ge studiematerialet på svenska i tre delar:
+1) En kort helhetssammanfattning (5–8 meningar).
+2) Huvudpunkter i punktform, grupperade per tema.
+3) Åtta instuderingsfrågor med korta svar."
+
+# 3. Summarize — single-pass if short, else map-reduce; grounded in the slides
+words="$(wc -w < "${transcript}")"
+if (( words <= CHUNK_WORDS )); then
+  echo "[lecture] sammanfattar (${words} ord, single-pass) …"
+  ollama_gen "Du är en studiecoach. Skapa studiematerial från denna föreläsning.
+${final_tail}${ref_block}
+
+Transkript:
+$(cat "${transcript}")" > "${out}/sammanfattning.md"
+else
+  echo "[lecture] lång föreläsning (${words} ord) → map-reduce …"
+  mkdir -p "${work}/chunks"
+  awk -v max="${CHUNK_WORDS}" -v dir="${work}/chunks" '
+    { w += NF; buf = buf $0 "\n";
+      if (w >= max) { n++; printf "%s", buf > (dir "/c" sprintf("%03d", n)); buf = ""; w = 0 } }
+    END { if (buf != "") { n++; printf "%s", buf > (dir "/c" sprintf("%03d", n)) } }' "${transcript}"
+  partials="${work}/partials.md"; : > "${partials}"
+  i=0
+  for c in "${work}"/chunks/c*; do
+    i=$((i + 1))
+    echo "[lecture]   map: del ${i} …"
+    { printf '## Del %s\n' "${i}"
+      ollama_gen "Sammanfatta denna DEL av en föreläsning i koncisa punkter på svenska.
+Behåll viktiga fakta, namn, siffror och definitioner. Hitta inte på något.
+
+Del:
+$(cat "${c}")"
+      printf '\n' ; } >> "${partials}"
+  done
+  echo "[lecture]   reduce → slutmaterial …"
+  ollama_gen "Nedan är delsammanfattningar av en föreläsning, i ordning. Skapa studiematerial utifrån dem.
+${final_tail}${ref_block}
+
+Delsammanfattningar:
+$(cat "${partials}")" > "${out}/sammanfattning.md"
+fi
+
+# Unload the model so it doesn't hold ~45 GB of RAM after the run.
+curl -s "${OLLAMA}/api/generate" -d "{\"model\":\"${MODEL}\",\"keep_alive\":0}" >/dev/null 2>&1 || true
+
+rm -rf "${work}"
+echo "[lecture] Klar → ${out}"
+
+if [[ -n "${NTFY_URL}" ]]; then
+  curl -s --resolve "${NTFY_RESOLVE}" -H "Title: Studieplugg klar" \
+    -d "Föreläsning klar: ${NAME} → /opt/ai-lab/out/${NAME}" "${NTFY_URL}" >/dev/null 2>&1 || true
+fi
