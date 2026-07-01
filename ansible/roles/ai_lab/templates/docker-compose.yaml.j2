@@ -25,22 +25,27 @@ services:
     networks:
       - ai
 
-  # --- PHASE 2 (add when ready — not deployed yet) --------------------------------
-  # Local LLM for summaries/RAG, run as overnight batch (speed not important, quality
-  # is). CPU inference on pve2: 32B comfortably, 70B q4 realistic overnight when media
-  # transcoding + the LIA VM are idle. Bump the LXC RAM before enabling 70B.
-  #
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   container_name: ollama
-  #   restart: unless-stopped
-  #   volumes:
-  #     - /opt/ai-lab/ollama:/root/.ollama
-  #   ports:
-  #     - 11434:11434
-  #   networks:
-  #     - ai
-  #
+  # Local LLM (CPU) for the study pipeline: turns Whisper transcripts into summaries +
+  # study questions. Runs as overnight batch — quality over speed. Model llama3.3:70b
+  # (~45 GB) is pulled by Ansible. KEEP_ALIVE=0 unloads the model after each run so it
+  # doesn't hold ~45 GB of RAM idle.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_KEEP_ALIVE=0
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/ai-lab/ollama:/root/.ollama
+    ports:
+      - 11434:11434
+    networks:
+      - ai
+
+  # Open WebUI (interactive "chat with your lecture" / RAG frontend) — add later if
+  # wanted; the study pipeline itself is script-driven and doesn't need it.
   # open-webui:
   #   image: ghcr.io/open-webui/open-webui:main
   #   container_name: open-webui

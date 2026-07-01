@@ -107,15 +107,20 @@ resource "proxmox_virtual_environment_container" "ai_lab" {
 
   disk {
     datastore_id = var.vm_datastore
-    size         = 60
+    # 120 GB: the 70B model (~42 GB) + Whisper cache (~6 GB) + images + room for a
+    # second model. vmdata has ~1.7 TB free.
+    size = 120
   }
 
   cpu {
     cores = 6
   }
 
+  # 52 GB cap so an overnight Llama 3.3 70B (q4, ~45 GB) fits. It's a cap, not a
+  # reservation — daytime usage (Whisper only) stays low. 70B runs require the LIA
+  # VM (105) to be off so pve2's 62 GB total isn't exceeded alongside k3s.
   memory {
-    dedicated = 16384
+    dedicated = 53248
   }
 
   lifecycle {

@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# studieplugg — transcribe (Whisper large-v3) then summarize (Ollama) a lecture or
+# YouTube video into study material. Runs ON the ai-lab LXC (managed by Ansible).
+#
+#   studieplugg <youtube-url | /opt/ai-lab/inbox/file> [lang=sv] [model]
+#
+# Output: /opt/ai-lab/out/<name>/{transkript.txt,sammanfattning.md}
+set -euo pipefail
+
+# The self-updating yt-dlp binary lives in /usr/local/bin; make sure it wins.
+export PATH="/usr/local/bin:${PATH}"
+
+INPUT="${1:?Usage: studieplugg <url|file> [lang] [model]}"
+LANG_CODE="${2:-sv}"
+MODEL="${3:-{{ ai_lab_llm_model }}}"
+WHISPER="http://localhost:9000"
+OLLAMA="http://localhost:11434"
+NTFY_URL="${NTFY_URL:-{{ ai_lab_ntfy_url }}}"
+NTFY_RESOLVE="{{ ai_lab_ntfy_resolve }}"
+
+ts="$(date +%Y%m%d-%H%M%S)"
+work="/opt/ai-lab/work/${ts}"; mkdir -p "${work}"
+
+# 1. Resolve input to a media file
+if [[ "${INPUT}" =~ ^https?:// ]]; then
+  echo "[studieplugg] Downloading ${INPUT}"
+  yt-dlp -x --audio-format mp3 -o "${work}/audio.%(ext)s" "${INPUT}"
+  media="$(find "${work}" -name 'audio.*' | head -1)"
+  name="$(yt-dlp --get-title "${INPUT}" 2>/dev/null | tr -cd '[:alnum:] ._-' | head -c 80 || true)"
+else
+  media="${INPUT}"
+  name="$(basename "${INPUT}")"
+fi
+name="${name:-${ts}}"
+out="/opt/ai-lab/out/${name}"; mkdir -p "${out}"
+
+# 2. Transcribe (Whisper large-v3, on this LXC)
+echo "[studieplugg] Transcribing ${media} …"
+curl -s --max-time 0 -F "audio_file=@${media}" \
+  "${WHISPER}/asr?task=transcribe&output=txt&language=${LANG_CODE}" -o "${out}/transkript.txt"
+
+# 3. Summarize (Ollama)
+echo "[studieplugg] Summarizing with ${MODEL} …"
+prompt="Du är en studiecoach. Sammanfatta följande föreläsningstranskript på svenska.
+Ge tre delar:
+1) En kort sammanfattning (3–5 meningar).
+2) Huvudpunkter i punktform.
+3) Fem instuderingsfrågor med korta svar.
+
+Transkript:
+$(cat "${out}/transkript.txt")"
+
+# num_ctx 8192 keeps the 70B KV-cache within the 52 GB LXC (32768 OOM-kills the
+# llama-server). Covers a ~30–40 min lecture; longer transcripts get truncated —
+# map-reduce chunking is the next refinement for full-length lectures.
+jq -n --arg m "${MODEL}" --arg p "${prompt}" \
+  '{model:$m, prompt:$p, stream:false, options:{num_ctx:8192}}' \
+| curl -s --max-time 0 "${OLLAMA}/api/generate" -d @- \
+| jq -r '.response' > "${out}/sammanfattning.md"
+
+rm -rf "${work}"
+echo "[studieplugg] Done → ${out}"
+
+# 4. Notify (best-effort)
+if [[ -n "${NTFY_URL}" ]]; then
+  curl -s --resolve "${NTFY_RESOLVE}" -H "Title: Studieplugg klar" \
+    -d "Klar: ${name} → /opt/ai-lab/out/${name}" "${NTFY_URL}" >/dev/null 2>&1 || true
+fi

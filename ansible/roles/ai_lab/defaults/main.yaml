@@ -1,0 +1,10 @@
+---
+# LLM model pulled into Ollama and used by the studieplugg pipeline. llama3.3:70b
+# (q4, ~45 GB) is the best that fits pve2's RAM for overnight summarization.
+ai_lab_llm_model: "llama3.3:70b"
+
+# ntfy topic pinged when a pipeline run finishes (empty = no notification).
+# The public hostname doesn't hairpin from inside the LAN, so reach ntfy via the
+# ingress-nginx LB IP using --resolve (keeps the valid ntfy.3145.blog TLS cert).
+ai_lab_ntfy_url: "https://ntfy.3145.blog/studieplugg"
+ai_lab_ntfy_resolve: "ntfy.3145.blog:443:192.168.10.200"
