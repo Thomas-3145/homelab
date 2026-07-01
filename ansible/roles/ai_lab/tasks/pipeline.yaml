@@ -1,0 +1,40 @@
+---
+# Study pipeline: tools + LLM model + the studieplugg script.
+
+- name: Install pipeline tools
+  ansible.builtin.apt:
+    name:
+      - ffmpeg
+      - jq
+      - curl
+      - rsync
+    state: present
+    update_cache: true
+
+# apt's yt-dlp is too old for YouTube's current anti-bot checks (HTTP 403). Use the
+# upstream self-contained binary, which can self-update with `yt-dlp -U`.
+- name: Install latest yt-dlp binary
+  ansible.builtin.get_url:
+    url: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp
+    dest: /usr/local/bin/yt-dlp
+    mode: "0755"
+    force: true
+
+- name: Deploy studieplugg pipeline script
+  ansible.builtin.template:
+    src: studieplugg.j2
+    dest: /usr/local/bin/studieplugg
+    mode: "0755"
+
+- name: Wait for Ollama API to be ready
+  ansible.builtin.command: docker exec ollama ollama list
+  register: ai_lab_ollama_models
+  changed_when: false
+  retries: 10
+  delay: 6
+  until: ai_lab_ollama_models.rc == 0
+
+- name: Pull the LLM model (large — one-time, ~45 GB)
+  ansible.builtin.command: docker exec ollama ollama pull {{ ai_lab_llm_model }}
+  when: ai_lab_llm_model not in ai_lab_ollama_models.stdout
+  changed_when: true

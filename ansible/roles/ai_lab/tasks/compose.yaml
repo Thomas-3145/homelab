@@ -1,11 +1,15 @@
 ---
-- name: Create config directories
+- name: Create config and pipeline directories
   ansible.builtin.file:
     path: "/opt/ai-lab/{{ item }}"
     state: directory
     mode: "0755"
   loop:
     - whisper
+    - ollama
+    - inbox
+    - out
+    - work
 
 - name: Create compose directory
   ansible.builtin.file:
