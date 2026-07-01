@@ -1,5 +1,5 @@
 resource "proxmox_virtual_environment_container" "arr_stack" {
-  node_name = "pve3"
+  node_name = "pve2"
   vm_id     = 200
 
   unprivileged = true
@@ -57,6 +57,8 @@ resource "proxmox_virtual_environment_container" "arr_stack" {
   }
 
   lifecycle {
-    ignore_changes = [initialization]
+    # template_file_id is only used at creation and can't be read back after an
+    # import, so it would otherwise force replacement of the live container.
+    ignore_changes = [initialization, operating_system]
   }
 }
