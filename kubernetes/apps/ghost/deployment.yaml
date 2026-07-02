@@ -5,6 +5,10 @@ metadata:
   namespace: ghost
 spec:
   replicas: 1
+  # RWO volume (Longhorn) — the surge pod can never attach while the old pod
+  # holds the volume, so rolling updates deadlock. Recreate stops the old pod first.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: ghost
