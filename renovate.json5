@@ -1,0 +1,40 @@
+// Renovate config — automated dependency PRs for this repo.
+// Requires the Mend Renovate GitHub App to be installed on the repo:
+// https://github.com/apps/renovate
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+    ':timezone(Europe/Stockholm)',
+    // Conventional commit messages (chore(deps): ...) — matches pre-commit hook
+    ':semanticCommits',
+  ],
+  // Container images in plain manifests (Deployments etc.)
+  kubernetes: {
+    fileMatch: ['^kubernetes/.+\\.yaml$'],
+  },
+  // Helm chart versions in ArgoCD Applications (targetRevision)
+  argocd: {
+    fileMatch: ['^kubernetes/infrastructure/argocd/applications/.+\\.yaml$'],
+  },
+  // Hook versions in .pre-commit-config.yaml (manager is opt-in)
+  'pre-commit': {
+    enabled: true,
+  },
+  packageRules: [
+    {
+      description: 'Majors can contain migrations (authentik DB, Longhorn engine, kube-prometheus CRDs) — flag clearly, never automerge',
+      matchUpdateTypes: ['major'],
+      labels: ['major-upgrade'],
+      automerge: false,
+    },
+    {
+      description: 'Ghost image tracks major tag only (ghost:5) — let Renovate propose the pinned minor when ready',
+      matchPackageNames: ['ghost'],
+      enabled: false,
+    },
+  ],
+  // Keep PR noise low on a single-maintainer repo
+  prConcurrentLimit: 5,
+  prHourlyLimit: 2,
+}

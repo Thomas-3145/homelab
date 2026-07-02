@@ -5,6 +5,10 @@ metadata:
   namespace: vaultwarden
 spec:
   replicas: 1
+  # RWO volume (Longhorn) — the surge pod can never attach while the old pod
+  # holds the volume, so rolling updates deadlock. Recreate stops the old pod first.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: vaultwarden
@@ -15,7 +19,7 @@ spec:
     spec:
       containers:
         - name: vaultwarden
-          image: vaultwarden/server:latest
+          image: vaultwarden/server:1.36.0
           env:
             - name: DOMAIN
               value: https://vault.3145.blog
