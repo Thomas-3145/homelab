@@ -16,6 +16,9 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
 
   cpu {
     cores = var.cp_cores
+    # Provider default is qemu64, which hides SSE4.2/x86-64-v2 — numpy 2.x
+    # and pyarrow wheels refuse to start on such vCPUs.
+    type = "host"
   }
 
   memory {
@@ -76,6 +79,7 @@ resource "proxmox_virtual_environment_vm" "k3s_workers" {
 
   cpu {
     cores = var.worker_cores
+    type  = "host"
   }
 
   memory {
