@@ -9,7 +9,7 @@ resource "proxmox_virtual_environment_vm" "lia" {
   }
 
   clone {
-    vm_id     = var.template_id
+    vm_id     = coalesce(each.value.template_id, var.template_id)
     node_name = var.template_node
     full      = true
   }
@@ -49,7 +49,7 @@ resource "proxmox_virtual_environment_vm" "lia" {
     }
 
     user_account {
-      username = "almalinux"
+      username = coalesce(each.value.username, "almalinux")
       keys     = [file(pathexpand(var.ssh_public_key_path))]
     }
   }

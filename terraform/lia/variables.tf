@@ -38,12 +38,14 @@ variable "vm_datastore" {
 }
 
 variable "vms" {
-  description = "LIA lab VM definitions (name -> {ip, node_name, cores, memory (MB), disk (GB)})"
+  description = "LIA lab VM definitions (name -> {ip, node_name, cores, memory (MB), disk (GB), template_id?, username?})"
   type = map(object({
-    ip        = string
-    node_name = string
-    cores     = number
-    memory    = number
-    disk      = number
+    ip          = string
+    node_name   = string
+    cores       = number
+    memory      = number
+    disk        = number
+    template_id = optional(number)
+    username    = optional(string)
   }))
 }
