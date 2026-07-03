@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(terraform apply:*)",
+      "Bash(terraform destroy:*)",
+      "Bash(kubectl delete:*)",
+      "Bash(kubectl apply:*)",
+      "Bash(kubectl drain:*)",
+      "Bash(qm destroy:*)",
+      "Bash(qm stop:*)",
+      "Bash(pct destroy:*)",
+      "Bash(pvesh delete:*)",
+      "Bash(reboot:*)",
+      "Bash(shutdown:*)",
+      "Bash(poweroff:*)",
+      "Bash(systemctl reboot:*)",
+      "Bash(systemctl poweroff:*)"
+    ]
+  }
+}
