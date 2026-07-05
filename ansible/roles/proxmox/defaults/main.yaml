@@ -13,9 +13,18 @@ proxmox_disable_subscription_popup: true
 proxmox_e1000e_workaround_enabled: true
 proxmox_e1000e_nic_name: nic0
 
-# SSH hardening — opt-in. See tasks/ssh.yaml for the bootstrap procedure
-# (the inventory port must be updated to 22456 after the first successful run).
+# SSH hardening — key-only root, password auth off, fail2ban, unattended-upgrades.
+# All of this is safe on a clustered Proxmox node (inter-node SSH uses root keys,
+# which are left working).
 proxmox_ssh_hardening_enabled: false
+
+# Changing sshd's listening port is a SEPARATE, opt-in step and is UNSAFE on a
+# clustered node: Proxmox connects to peer nodes over SSH on port 22 for
+# migration, `pvecm`, and the cross-node shell. Leave this false on the 3-node
+# cluster — the port stays 22 while the rest of the hardening still applies.
+# See tasks/ssh.yaml for the bootstrap procedure if you ever enable it on a
+# standalone host (the inventory port must then be updated to match).
+proxmox_ssh_change_port: false
 proxmox_ssh_port: 22456
 proxmox_ssh_authorized_key_file: ~/.ssh/id_rsa_4096.pub
 
