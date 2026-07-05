@@ -1,19 +1,21 @@
 ---
 # SSH hardening for Proxmox hosts.
 #
-# Bootstrap procedure (first run on a fresh host):
-#   1. inventory/hosts.yaml has ansible_port: 22 for the host
-#   2. Run with proxmox_ssh_hardening_enabled=true — this task changes
-#      sshd_config to Port {{ proxmox_ssh_port }} and notifies "Restart sshd"
-#   3. The handler restarts sshd at the END of the play. The current Ansible
-#      session keeps its existing TCP connection alive — sshd only stops
-#      accepting NEW connections on port 22, it does not kill ours.
-#   4. After the play finishes successfully, manually update
-#      inventory/hosts.yaml so the host has ansible_port: {{ proxmox_ssh_port }}
-#   5. Subsequent runs connect on the new port from the start.
+# The base hardening (root key, password auth off, fail2ban, unattended-upgrades)
+# is cluster-safe: PermitRootLogin is left untouched so Proxmox's inter-node SSH
+# (which authenticates with root keys) keeps working. The sshd restart at the end
+# of the play keeps the current Ansible connection alive; only NEW connections are
+# briefly affected.
 #
-# If the inventory port is updated BEFORE the first run, Ansible will fail to
-# connect on {{ proxmox_ssh_port }} (sshd is still on 22). Order matters.
+# Port change (opt-in via proxmox_ssh_change_port, default false):
+#   UNSAFE on a clustered node — Proxmox connects to peers on port 22 for
+#   migration / `pvecm` / cross-node shell. Only enable on a standalone host.
+#   Bootstrap when you do:
+#     1. inventory has ansible_port: 22 for the host
+#     2. run with proxmox_ssh_change_port=true — sets Port {{ proxmox_ssh_port }}
+#        and notifies "Restart sshd" (fires at end of play, current session survives)
+#     3. after a successful run, set ansible_port: {{ proxmox_ssh_port }} in inventory
+#   Updating the inventory port BEFORE the first run will fail (sshd still on 22).
 
 - name: Add SSH authorized key for root
   ansible.posix.authorized_key:
@@ -21,15 +23,21 @@
     key: "{{ lookup('file', proxmox_ssh_authorized_key_file) }}"
     state: present
 
-- name: Configure SSH port and disable password auth
+- name: Disable SSH password authentication
   ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
+    regexp: '^#?PasswordAuthentication '
+    line: 'PasswordAuthentication no'
     state: present
-  loop:
-    - {regexp: '^#?Port ', line: "Port {{ proxmox_ssh_port }}"}
-    - {regexp: '^#?PasswordAuthentication ', line: 'PasswordAuthentication no'}
+  notify: Restart sshd
+
+- name: Change SSH port (opt-in — unsafe on clustered Proxmox nodes)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?Port '
+    line: "Port {{ proxmox_ssh_port }}"
+    state: present
+  when: proxmox_ssh_change_port | bool
   notify: Restart sshd
 
 - name: Install fail2ban and unattended-upgrades
