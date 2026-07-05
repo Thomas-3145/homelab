@@ -3,15 +3,14 @@ credentials-file: /etc/cloudflared/ce180050-7bb3-47bf-a4dd-a4ec5e56d592.json
 originRequest:
   noTLSVerify: true
 ingress:
-  - hostname: home.3145.blog
-    service: https://192.168.10.200
+  # home.3145.blog (Homepage) and longhorn.3145.blog intentionally NOT exposed —
+  # reachable via LAN/Tailscale only. Homepage leaks internal topology; the Longhorn
+  # UI has no built-in auth. Do not re-add without an auth layer in front.
   - hostname: argocd-webhook.3145.blog
     service: https://192.168.10.200
   - hostname: argocd.3145.blog
     service: https://192.168.10.200
   - hostname: grafana.3145.blog
-    service: https://192.168.10.200
-  - hostname: longhorn.3145.blog
     service: https://192.168.10.200
   - hostname: headlamp.3145.blog
     service: https://192.168.10.200
