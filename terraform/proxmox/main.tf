@@ -150,6 +150,17 @@ resource "proxmox_virtual_environment_vm" "services" {
     size         = each.value.disk
   }
 
+  # Optional second disk for service VMs that need dedicated data storage
+  # (e.g. the PBS datastore). Only created when datastore_disk is set.
+  dynamic "disk" {
+    for_each = each.value.datastore_disk != null ? [each.value.datastore_disk] : []
+    content {
+      datastore_id = var.vm_datastore
+      interface    = "virtio1"
+      size         = disk.value
+    }
+  }
+
   network_device {
     bridge = "vmbr0"
   }

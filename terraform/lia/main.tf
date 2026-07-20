@@ -28,7 +28,7 @@ resource "proxmox_virtual_environment_vm" "lia" {
 
   disk {
     datastore_id = var.vm_datastore
-    interface    = "virtio0"
+    interface    = coalesce(each.value.disk_interface, "virtio0")
     size         = each.value.disk
   }
 

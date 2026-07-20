@@ -1,0 +1,19 @@
+---
+# Proxmox Backup Server role defaults.
+
+# APT — Debian 13 (trixie) PBS no-subscription repo
+pbs_release: trixie
+pbs_repo_key_url: https://enterprise.proxmox.com/debian/proxmox-release-trixie.gpg
+pbs_repo_keyring: /etc/apt/keyrings/proxmox-release-trixie.gpg
+
+# Datastore — the local backup target. This is the "local" copy of 3-2-1;
+# the S3 endpoint to Cloudflare R2 is the offsite copy (configured separately,
+# see docs/runbooks/pbs-setup.md — needs R2 credentials + token rotation).
+pbs_datastore_name: vm-backup
+pbs_datastore_disk: /dev/vdb # the virtio1 disk from Terraform (datastore_disk)
+pbs_datastore_path: "/mnt/datastore/{{ pbs_datastore_name }}"
+
+# Retention + maintenance schedules (systemd calendar syntax)
+pbs_prune_options: "--keep-daily 7 --keep-weekly 4 --keep-monthly 6"
+pbs_gc_schedule: "daily"
+pbs_verify_schedule: "weekly"

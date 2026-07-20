@@ -1,0 +1,51 @@
+---
+# Proxmox Backup Server VM setup.
+#
+# Prerequisites (see docs/runbooks/pbs-setup.md):
+#   1. Debian 13 template on pve2 (scripts/create-debian-template.sh)
+#   2. Terraform applied — service_vms.pbs VM exists (192.168.10.30)
+#
+# Run:
+#   ansible-playbook -i inventory/hosts.yaml playbooks/pbs.yaml
+#
+# Applies the common role (SSH hardening → 22456, fail2ban, Tailscale) then the
+# pbs role (repo, install, local datastore, prune/GC/verify). The S3-to-R2
+# offsite endpoint is configured afterwards — see the runbook.
+
+- name: Configure Proxmox Backup Server
+  hosts: pbs
+  become: true
+  gather_facts: false
+
+  # The common role hardens SSH to 22456; a freshly cloned VM still listens on
+  # 22. Probe both and pick the reachable one so first bootstrap and later runs
+  # both work without manual overrides (same pattern as arr-stack).
+  pre_tasks:
+    - name: Probe candidate SSH ports (prefer hardened 22456)
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: "{{ item }}"
+        timeout: 3
+      delegate_to: localhost
+      become: false
+      register: pbs_ssh_probe
+      ignore_errors: true
+      loop:
+        - 22456
+        - 22
+
+    - name: Fail if neither SSH port is reachable
+      ansible.builtin.fail:
+        msg: "pbs ({{ ansible_host }}) is not reachable on port 22 or 22456."
+      when: pbs_ssh_probe.results | selectattr('failed', 'equalto', false) | list | length == 0
+
+    - name: Select the first reachable SSH port
+      ansible.builtin.set_fact:
+        ansible_port: "{{ pbs_ssh_probe.results | selectattr('failed', 'equalto', false) | map(attribute='item') | first }}"
+
+    - name: Gather facts now that the SSH port is known
+      ansible.builtin.setup:
+
+  roles:
+    - common
+    - pbs
