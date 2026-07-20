@@ -73,6 +73,13 @@ data:
               showTime: true
               timezone: Europe/Stockholm
               integrations:
+                # Google Calendar's secret iCal address — anyone holding the URL
+                # can read the whole calendar, so it lives in the sops secret and
+                # never in this configmap.
+                - type: ical
+                  url: {{HOMEPAGE_VAR_CALENDAR_ICAL}}
+                  name: Privat
+                  color: blue
                 - type: sonarr
                   service_group: Nedladdningar
                   service_name: Sonarr
