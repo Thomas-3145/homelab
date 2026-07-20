@@ -56,7 +56,11 @@ spec:
                 memory: 128Mi
                 cpu: 100m
 
+        # Scaled to zero 2026-07-20 — Authentik is deployed but unused, and the
+        # worker was firing a permanent CPUThrottlingHigh alert. Postgres and its
+        # PVC are left intact so the instance can be brought back with replicas: 1.
         server:
+          replicas: 0
           ingress:
             enabled: false
           resources:
@@ -68,6 +72,7 @@ spec:
               cpu: 500m
 
         worker:
+          replicas: 0
           resources:
             requests:
               memory: 256Mi
