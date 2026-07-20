@@ -30,10 +30,11 @@ spec:
               value: https://vikunja.3145.blog/
             - name: VIKUNJA_SERVICE_TIMEZONE
               value: Europe/Stockholm
-            # Vikunja blocks ALL signups when this is false, including the very
-            # first one. Register your account, then flip to "false" and commit.
+            # Closed 2026-07-20 once the "thomas" account existed. Vikunja blocks
+            # ALL signups when this is false, including the first one — flip back
+            # to "true" temporarily if another account is ever needed.
             - name: VIKUNJA_SERVICE_ENABLEREGISTRATION
-              value: "true"
+              value: "false"
             - name: VIKUNJA_SERVICE_SECRET
               valueFrom:
                 secretKeyRef:
