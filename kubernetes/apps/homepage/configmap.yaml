@@ -31,7 +31,37 @@ data:
         url: http://longhorn-frontend.longhorn-system.svc.cluster.local
   kubernetes.yaml: |
     mode: cluster
-  bookmarks.yaml: ""
+  bookmarks.yaml: |
+    - Homelab:
+        - Repo:
+            - abbr: GH
+              icon: github.svg
+              href: https://github.com/Thomas-3145/homelab
+        - Cloudflare:
+            - abbr: CF
+              icon: cloudflare.svg
+              href: https://dash.cloudflare.com/
+        - Proxmox VE:
+            - abbr: PVE
+              icon: proxmox.svg
+              href: https://192.168.10.11:8006
+    - Docs:
+        - Kubernetes:
+            - abbr: K8S
+              icon: kubernetes.svg
+              href: https://kubernetes.io/docs/home/
+        - ArgoCD:
+            - abbr: CD
+              icon: argo-cd.svg
+              href: https://argo-cd.readthedocs.io/en/stable/
+        - Longhorn:
+            - abbr: LH
+              icon: longhorn.svg
+              href: https://longhorn.io/docs/
+        - Vikunja:
+            - abbr: VK
+              icon: vikunja.svg
+              href: https://vikunja.io/docs/
   services.yaml: |
     - Kalender:
         - Kalender:
@@ -85,6 +115,15 @@ data:
               url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local
               username: {{HOMEPAGE_VAR_GRAFANA_USER}}
               password: {{HOMEPAGE_VAR_GRAFANA_PASSWORD}}
+        - ntfy:
+            icon: ntfy.svg
+            href: https://ntfy.3145.blog/homelab
+            description: Senaste alerten
+            widget:
+              type: ntfy
+              url: http://ntfy.ntfy.svc.cluster.local
+              topic: homelab
+              fields: ["title", "message", "priority", "lastReceived"]
     - Kluster:
         - AdGuardHome:
             icon: si-adguard
@@ -92,18 +131,23 @@ data:
             description: DNS-filtrering
             # No widget: AdGuard runs with GL.iNet's --glinet auth (Admin-Token
             # cookie), which the Homepage adguard widget (basic auth) can't use.
+            # siteMonitor gives up/down without touching auth.
+            siteMonitor: http://192.168.8.1:3000/
         - Switch:
             icon: mikrotik.svg
             href: http://192.168.10.2
             description: MikroTik CRS310
+            ping: 192.168.10.2
         - Longhorn:
             icon: longhorn.svg
-            href: http://longhorn.3145.blog
+            href: https://longhorn.3145.blog
             description: Persistent Storage
+            siteMonitor: http://longhorn-frontend.longhorn-system.svc.cluster.local
         - Headlamp:
             icon: headlamp.svg
             href: http://headlamp.local
             description: Kubernetes Dashboard
+            siteMonitor: http://headlamp.headlamp.svc.cluster.local
         - ingress-nginx:
             icon: nginx.svg
             description: Ingress Controller
@@ -131,10 +175,12 @@ data:
             icon: it-tools.svg
             href: http://it-tools.local
             description: Developer utilities
+            siteMonitor: http://it-tools.it-tools.svc.cluster.local
         - Ghost:
             icon: ghost.png
             href: https://3145.blog/
             description: Blogg
+            siteMonitor: http://ghost.ghost.svc.cluster.local
         - Ghost Admin:
             icon: ghost.png
             href: https://3145.blog/ghost
@@ -143,10 +189,17 @@ data:
             icon: stirling-pdf.png
             href: http://stirling-pdf.local/
             description: PDF-fix
+            siteMonitor: http://stirling-pdf.stirling-pdf.svc.cluster.local
         - Vaultwarden:
             icon: vaultwarden.svg
             href: https://vault.3145.blog/
             description: Lösenordshantering
+            siteMonitor: http://vaultwarden.vaultwarden.svc.cluster.local
+        - ibindex:
+            icon: si-chartdotjs
+            href: https://ibindex.3145.blog/
+            description: Portföljanalys
+            siteMonitor: http://ibindex.ibindex.svc.cluster.local
         - Vikunja:
             icon: vikunja.svg
             href: https://vikunja.3145.blog/
