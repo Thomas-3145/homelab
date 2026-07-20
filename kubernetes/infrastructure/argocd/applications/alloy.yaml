@@ -1,0 +1,108 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: alloy
+    # NOTE: verify against the latest alloy chart before first sync — Renovate
+    # will bump it afterwards. If the hostPath mount key below errors, check the
+    # chart's values (alloy.mounts.varlog) for that version.
+    targetRevision: 1.2.1
+    helm:
+      releaseName: alloy
+      valuesObject:
+        controller:
+          type: daemonset
+          # Run on control-plane nodes too (Loki + most infra pods live there).
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+        alloy:
+          # Mount /var/log (host) so loki.source.file can read node-local
+          # /var/log/pods/*.log — the DaemonSet model, no cross-node duplication.
+          mounts:
+            varlog: true
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 20m
+            limits:
+              memory: 256Mi
+              cpu: 200m
+          # River/Alloy config: discover pods -> relabel -> tail node-local files
+          # -> parse CRI -> ship to the existing Loki backend. Mirrors what the
+          # promtail DaemonSet was doing (same Loki push endpoint).
+          configMap:
+            content: |-
+              discovery.kubernetes "pod" {
+                role = "pod"
+              }
+
+              discovery.relabel "pod_logs" {
+                targets = discovery.kubernetes.pod.targets
+
+                rule {
+                  source_labels = ["__meta_kubernetes_namespace"]
+                  target_label  = "namespace"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_name"]
+                  target_label  = "pod"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_container_name"]
+                  target_label  = "container"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_node_name"]
+                  target_label  = "node_name"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_container_name"]
+                  separator     = "/"
+                  target_label  = "job"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+                  separator     = "/"
+                  action        = "replace"
+                  replacement   = "/var/log/pods/*$1/*.log"
+                  target_label  = "__path__"
+                }
+              }
+
+              local.file_match "pod_logs" {
+                path_targets = discovery.relabel.pod_logs.output
+              }
+
+              loki.source.file "pod_logs" {
+                targets    = local.file_match.pod_logs.targets
+                forward_to = [loki.process.pod_logs.receiver]
+              }
+
+              loki.process "pod_logs" {
+                stage.cri {}
+                forward_to = [loki.write.default.receiver]
+              }
+
+              loki.write "default" {
+                endpoint {
+                  url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+                }
+              }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true

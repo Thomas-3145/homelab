@@ -47,6 +47,11 @@ all:
               # Hardened to 22456 by the common role. The ai-lab playbook
               # auto-detects port 22 on a freshly provisioned LXC during bootstrap.
               ansible_port: 22456
+            pbs:
+              ansible_host: 192.168.10.30
+              # Debian 13 VM (cloud-init user "ubuntu", inherited from proxmox_vms).
+              # The pbs playbook probes port 22 (fresh) / 22456 (hardened) itself.
+              ansible_port: 22456
         test:
           hosts: {}
         k3s_workers:

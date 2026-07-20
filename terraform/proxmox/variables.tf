@@ -85,14 +85,15 @@ variable "worker_disk" {
 }
 
 variable "service_vms" {
-  description = "Permanent service VMs running standalone workloads (e.g. arr-stack)"
+  description = "Permanent service VMs running standalone workloads (e.g. arr-stack, PBS)"
   type = map(object({
-    ip          = string
-    node_name   = string
-    cores       = number
-    memory      = number
-    disk        = number
-    template_id = number
+    ip             = string
+    node_name      = string
+    cores          = number
+    memory         = number
+    disk           = number
+    template_id    = number
+    datastore_disk = optional(number) # extra data disk in GB (e.g. the PBS datastore) — attached as virtio1
   }))
   default = {}
 }

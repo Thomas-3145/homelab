@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vikunja
+  namespace: vikunja
+spec:
+  replicas: 1
+  # RWO volume (Longhorn) — the surge pod can never attach while the old pod
+  # holds the volume, so rolling updates deadlock. Recreate stops the old pod first.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: vikunja
+  template:
+    metadata:
+      labels:
+        app: vikunja
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+      containers:
+        - name: vikunja
+          image: vikunja/vikunja:2.4.0
+          env:
+            - name: VIKUNJA_SERVICE_PUBLICURL
+              value: https://vikunja.3145.blog/
+            - name: VIKUNJA_SERVICE_TIMEZONE
+              value: Europe/Stockholm
+            # Vikunja blocks ALL signups when this is false, including the very
+            # first one. Register your account, then flip to "false" and commit.
+            - name: VIKUNJA_SERVICE_ENABLEREGISTRATION
+              value: "true"
+            - name: VIKUNJA_SERVICE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: vikunja-secret
+                  key: VIKUNJA_SERVICE_SECRET
+            - name: VIKUNJA_DATABASE_TYPE
+              value: sqlite
+            # Both the DB and attachments live on the single PVC.
+            - name: VIKUNJA_DATABASE_PATH
+              value: /app/vikunja/files/vikunja.db
+            - name: VIKUNJA_FILES_BASEPATH
+              value: /app/vikunja/files
+          ports:
+            - containerPort: 3456
+          volumeMounts:
+            - name: data
+              mountPath: /app/vikunja/files
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/info
+              port: 3456
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/info
+              port: 3456
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vikunja-data

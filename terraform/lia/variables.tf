@@ -38,7 +38,7 @@ variable "vm_datastore" {
 }
 
 variable "vms" {
-  description = "LIA lab VM definitions (name -> {ip, node_name, cores, memory (MB), disk (GB), template_id?, username?})"
+  description = "LIA lab VM definitions (name -> {ip, node_name, cores, memory (MB), disk (GB), template_id?, username?, disk_interface?})"
   type = map(object({
     ip          = string
     node_name   = string
@@ -47,5 +47,9 @@ variable "vms" {
     disk        = number
     template_id = optional(number)
     username    = optional(string)
+    # Must match the boot disk interface of the template being cloned
+    # (AlmaLinux template = virtio0, Ubuntu cloud image template = scsi0);
+    # otherwise the size applies to a second, unused disk.
+    disk_interface = optional(string)
   }))
 }

@@ -16,6 +16,9 @@ data:
       searchDescriptions: true
       provider: google
     layout:
+      Kalender:
+        style: row
+        columns: 1
       System:
       Kluster:
         initiallyCollapsed: false
@@ -30,6 +33,24 @@ data:
     mode: cluster
   bookmarks.yaml: ""
   services.yaml: |
+    - Kalender:
+        - Kalender:
+            widget:
+              type: calendar
+              view: monthly
+              firstDayInWeek: monday
+              maxEvents: 10
+              showTime: true
+              timezone: Europe/Stockholm
+              integrations:
+                - type: sonarr
+                  service_group: Nedladdningar
+                  service_name: Sonarr
+                  color: teal
+                - type: radarr
+                  service_group: Nedladdningar
+                  service_name: Radarr
+                  color: amber
     - System:
         - Gatus:
             icon: gatus.svg
@@ -126,6 +147,16 @@ data:
             icon: vaultwarden.svg
             href: https://vault.3145.blog/
             description: Lösenordshantering
+        - Vikunja:
+            icon: vikunja.svg
+            href: https://vikunja.3145.blog/
+            description: Uppgifter & planering
+            widget:
+              type: vikunja
+              url: http://vikunja.vikunja.svc.cluster.local:3456
+              key: {{HOMEPAGE_VAR_VIKUNJA_KEY}}
+              version: 2
+              enableTaskList: true
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg

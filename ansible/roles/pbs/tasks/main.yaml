@@ -1,0 +1,83 @@
+---
+# Proxmox Backup Server — install + local datastore.
+# Runs on a Debian 13 VM (see scripts/create-debian-template.sh + Terraform
+# service_vms.pbs). S3-to-R2 offsite sync is a separate manual step — see
+# docs/runbooks/pbs-setup.md (needs R2 credentials).
+#
+# Idempotent: safe to re-run. The filesystem module won't reformat an existing
+# datastore disk, and datastore/schedule creation is guarded on current state.
+
+- name: Ensure apt keyrings dir exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Proxmox release GPG key
+  ansible.builtin.get_url:
+    url: "{{ pbs_repo_key_url }}"
+    dest: "{{ pbs_repo_keyring }}"
+    mode: "0644"
+
+- name: Remove PBS enterprise (paid) repo if present
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/pbs-enterprise.list
+    state: absent
+
+- name: Add PBS no-subscription repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ pbs_repo_keyring }}] http://download.proxmox.com/debian/pbs {{ pbs_release }} pbs-no-subscription"
+    filename: pbs-no-subscription
+    state: present
+    update_cache: true
+
+- name: Install proxmox-backup-server
+  ansible.builtin.apt:
+    name: proxmox-backup-server
+    state: present
+
+- name: Create filesystem on the datastore disk
+  community.general.filesystem:
+    fstype: ext4
+    dev: "{{ pbs_datastore_disk }}"
+    # never reformat a disk that already has a filesystem
+    force: false
+
+- name: Mount the datastore disk
+  ansible.posix.mount:
+    path: "{{ pbs_datastore_path }}"
+    src: "{{ pbs_datastore_disk }}"
+    fstype: ext4
+    opts: defaults
+    state: mounted
+
+- name: Check whether the datastore already exists
+  ansible.builtin.command: proxmox-backup-manager datastore list --output-format json
+  register: pbs_datastore_list
+  changed_when: false
+
+- name: Create the datastore
+  ansible.builtin.command: >-
+    proxmox-backup-manager datastore create
+    {{ pbs_datastore_name }} {{ pbs_datastore_path }}
+    --gc-schedule {{ pbs_gc_schedule }}
+  when: pbs_datastore_name not in (pbs_datastore_list.stdout | from_json | map(attribute='name') | list)
+  register: pbs_datastore_created
+
+- name: Configure prune (retention) job on the datastore
+  ansible.builtin.command: >-
+    proxmox-backup-manager prune-job {{ 'create' if pbs_datastore_created.changed else 'update' }}
+    prune-{{ pbs_datastore_name }}
+    --store {{ pbs_datastore_name }} --schedule daily {{ pbs_prune_options }}
+  register: pbs_prune_job
+  changed_when: pbs_prune_job.rc == 0
+  failed_when: pbs_prune_job.rc != 0 and 'already exists' not in pbs_prune_job.stderr
+
+- name: Configure verify job on the datastore
+  ansible.builtin.command: >-
+    proxmox-backup-manager verify-job {{ 'create' if pbs_datastore_created.changed else 'update' }}
+    verify-{{ pbs_datastore_name }}
+    --store {{ pbs_datastore_name }} --schedule {{ pbs_verify_schedule }}
+  register: pbs_verify_job
+  changed_when: pbs_verify_job.rc == 0
+  failed_when: pbs_verify_job.rc != 0 and 'already exists' not in pbs_verify_job.stderr
