@@ -61,8 +61,21 @@ spec:
             receivers:
               - name: ntfy
                 webhook_configs:
-                  - url: http://ntfy.ntfy.svc.cluster.local/homelab
+                  # ?template=alertmanager makes ntfy render the webhook payload
+                  # into a readable title/message instead of dumping raw JSON.
+                  # Requires ntfy >= v2.12 (see kubernetes/apps/ntfy).
+                  - url: http://ntfy.ntfy.svc.cluster.local/homelab?template=alertmanager
                     send_resolved: true
+        # k3s runs the control plane as a single process and exposes no separate
+        # metrics endpoints for these components, so the chart's default scrape
+        # targets are permanently absent and fire *Down alerts forever. Turning
+        # them off removes three standing critical false positives.
+        kubeControllerManager:
+          enabled: false
+        kubeProxy:
+          enabled: false
+        kubeScheduler:
+          enabled: false
         additionalPrometheusRulesMap:
           custom-alerts:
             groups:

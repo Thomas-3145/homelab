@@ -15,7 +15,11 @@ spec:
     spec:
       containers:
         - name: ntfy
-          image: binwiederhier/ntfy:v2.11.0
+          # v2.11 has no message templating — Alertmanager webhooks arrive as
+          # raw JSON. Templating (and the built-in alertmanager template) needs
+          # a newer server; verified against the live v2.11 that ?template= is
+          # silently ignored.
+          image: binwiederhier/ntfy:v2.26.0
           args: ["serve"]
           env:
             - name: NTFY_BASE_URL
