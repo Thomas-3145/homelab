@@ -17,12 +17,12 @@ data:
       searchDescriptions: true
       provider: google
     layout:
-      Homelab:
-        style: row
-        columns: 3
       Kalender:
         style: row
         columns: 1
+      Homelab:
+        style: row
+        columns: 3
       System:
         style: row
         columns: 4
@@ -88,21 +88,18 @@ data:
               - type: glances
                 url: http://192.168.10.11:61208
                 version: 4
-                metric: cpu
-                chart: false
-              - type: glances
-                url: http://192.168.10.11:61208
-                version: 4
                 metric: memory
                 chart: false
               - type: glances
                 url: http://192.168.10.11:61208
                 version: 4
                 metric: fs:/
+                chart: false
               - type: glances
                 url: http://192.168.10.11:61208
                 version: 4
                 metric: sensor:Package id 0
+                chart: false
         - pve2:
             icon: proxmox.svg
             href: https://192.168.10.12:8006
@@ -111,21 +108,18 @@ data:
               - type: glances
                 url: http://192.168.10.12:61208
                 version: 4
-                metric: cpu
-                chart: false
-              - type: glances
-                url: http://192.168.10.12:61208
-                version: 4
                 metric: memory
                 chart: false
               - type: glances
                 url: http://192.168.10.12:61208
                 version: 4
                 metric: fs:/
+                chart: false
               - type: glances
                 url: http://192.168.10.12:61208
                 version: 4
                 metric: sensor:Package id 0
+                chart: false
         - pve3:
             icon: proxmox.svg
             href: https://192.168.10.13:8006
@@ -134,21 +128,18 @@ data:
               - type: glances
                 url: http://192.168.10.13:61208
                 version: 4
-                metric: cpu
-                chart: false
-              - type: glances
-                url: http://192.168.10.13:61208
-                version: 4
                 metric: memory
                 chart: false
               - type: glances
                 url: http://192.168.10.13:61208
                 version: 4
                 metric: fs:/
+                chart: false
               - type: glances
                 url: http://192.168.10.13:61208
                 version: 4
                 metric: sensor:Package id 0
+                chart: false
     - Kalender:
         - Kalender:
             widget:
@@ -369,12 +360,4 @@ data:
           showLabel: true
           label: "cluster"
         nodes:
-          show: true
-          cpu: true
-          memory: true
-          showLabel: true
-    - longhorn:
-        expanded: false
-        total: true
-        labels: false
-        nodes: false
+          show: false
