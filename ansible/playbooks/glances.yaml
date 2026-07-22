@@ -1,0 +1,15 @@
+---
+# Glances web/API server on the Proxmox hosts — feeds the Homepage "Homelab"
+# host cards (CPU, RAM, disk, temperature).
+#
+# Run with:
+#   ansible-playbook -i inventory/hosts.yaml playbooks/glances.yaml
+#
+# Recommended: --check --diff first, then apply one node at a time starting with
+# pve3 (lowest blast radius): --limit pve3
+- name: Install Glances on physical hosts
+  hosts: physical_hosts
+  become: true
+  gather_facts: true # needs ansible_default_ipv4 for the bind address
+  roles:
+    - glances

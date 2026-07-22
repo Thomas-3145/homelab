@@ -17,6 +17,9 @@ data:
       searchDescriptions: true
       provider: google
     layout:
+      Homelab:
+        style: row
+        columns: 3
       Kalender:
         style: row
         columns: 1
@@ -71,6 +74,81 @@ data:
               icon: vikunja.svg
               href: https://vikunja.io/docs/
   services.yaml: |
+    # Glances runs on each Proxmox host (glances -w, port 61208) — see
+    # ansible/roles/glances. No auth: LAN-only, never exposed via Cloudflare.
+    # Hosts run Debian 13 → glances v4, hence `version: 4` (API path /api/4).
+    # NOTE: `sensor:Package id 0` is the usual Intel coretemp label; confirm the
+    # exact name per host with:  curl http://192.168.10.11:61208/api/4/sensors
+    - Homelab:
+        - pve1:
+            icon: proxmox.svg
+            href: https://192.168.10.11:8006
+            description: EliteDesk G8 · hypervisor
+            widgets:
+              - type: glances
+                url: http://192.168.10.11:61208
+                version: 4
+                metric: cpu
+                chart: false
+              - type: glances
+                url: http://192.168.10.11:61208
+                version: 4
+                metric: memory
+                chart: false
+              - type: glances
+                url: http://192.168.10.11:61208
+                version: 4
+                metric: fs:/
+              - type: glances
+                url: http://192.168.10.11:61208
+                version: 4
+                metric: sensor:Package id 0
+        - pve2:
+            icon: proxmox.svg
+            href: https://192.168.10.12:8006
+            description: EliteDesk G1i · hypervisor
+            widgets:
+              - type: glances
+                url: http://192.168.10.12:61208
+                version: 4
+                metric: cpu
+                chart: false
+              - type: glances
+                url: http://192.168.10.12:61208
+                version: 4
+                metric: memory
+                chart: false
+              - type: glances
+                url: http://192.168.10.12:61208
+                version: 4
+                metric: fs:/
+              - type: glances
+                url: http://192.168.10.12:61208
+                version: 4
+                metric: sensor:Package id 0
+        - pve3:
+            icon: proxmox.svg
+            href: https://192.168.10.13:8006
+            description: EliteDesk G8 · hypervisor
+            widgets:
+              - type: glances
+                url: http://192.168.10.13:61208
+                version: 4
+                metric: cpu
+                chart: false
+              - type: glances
+                url: http://192.168.10.13:61208
+                version: 4
+                metric: memory
+                chart: false
+              - type: glances
+                url: http://192.168.10.13:61208
+                version: 4
+                metric: fs:/
+              - type: glances
+                url: http://192.168.10.13:61208
+                version: 4
+                metric: sensor:Package id 0
     - Kalender:
         - Kalender:
             widget:

@@ -1,0 +1,6 @@
+---
+- name: Restart glances
+  ansible.builtin.systemd:
+    name: glances
+    state: restarted
+    daemon_reload: true

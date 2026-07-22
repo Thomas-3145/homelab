@@ -1,0 +1,55 @@
+---
+# Glances runs in web-server mode (glances -w) to expose its REST API, which the
+# Homepage `glances` widget reads. lm-sensors + the coretemp module make the CPU
+# temperature sensor available to psutil (the metric shown on the host cards).
+
+- name: Install Glances and sensor tooling
+  ansible.builtin.apt:
+    name:
+      - glances
+      - python3-uvicorn # ASGI server for `glances -w` (Recommends on Debian 13, pin it explicitly)
+      - lm-sensors
+    state: present
+    install_recommends: true
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure coretemp module is loaded at boot (CPU temperature sensor)
+  ansible.builtin.copy:
+    content: "coretemp\n"
+    dest: /etc/modules-load.d/coretemp.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Load coretemp module now
+  community.general.modprobe:
+    name: coretemp
+    state: present
+  failed_when: false # some CPUs expose temps via a different driver; don't hard-fail
+
+- name: Create glances system user
+  ansible.builtin.user:
+    name: "{{ glances_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Install glances systemd service
+  ansible.builtin.template:
+    src: glances.service.j2
+    dest: /etc/systemd/system/glances.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart glances
+
+- name: Enable and start glances
+  ansible.builtin.systemd:
+    name: glances
+    enabled: true
+    state: started
+    daemon_reload: true
+  # In --check on a fresh host the unit file isn't actually written yet, so a
+  # dry-run start would fail looking up a not-yet-created service. Skip it there.
+  when: not ansible_check_mode

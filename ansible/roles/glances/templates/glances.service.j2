@@ -1,0 +1,16 @@
+[Unit]
+Description=Glances web/API server (metrics for Homepage)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ glances_user }}
+Group={{ glances_user }}
+Type=simple
+# --disable-webui: the Debian package ships no built Web UI static files, so the
+# full web server crashes on startup. We only need the REST API for Homepage.
+ExecStart=/usr/bin/glances -w --disable-webui --bind {{ glances_bind_ip }} --port {{ glances_port }}
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
