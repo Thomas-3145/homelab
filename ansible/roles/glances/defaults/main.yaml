@@ -1,0 +1,8 @@
+---
+glances_port: 61208
+glances_user: glances
+# Bind to the host's LAN address (vmbr0 / default route, e.g. 192.168.10.11) so
+# the REST API is reachable from the Homepage pod over 192.168.10.0/24 but is not
+# served on every interface. Homepage fetches server-side, so no auth is used —
+# keep this on the trusted LAN only, never expose via the Cloudflare tunnel.
+glances_bind_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
