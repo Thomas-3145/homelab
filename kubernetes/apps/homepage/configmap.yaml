@@ -9,9 +9,10 @@ data:
     language: sv
     theme: dark
     color: slate
-    headerStyle: clean
+    headerStyle: boxedWidgets
     statusStyle: dot
     hideVersion: true
+    useEqualHeights: true
     quicklaunch:
       searchDescriptions: true
       provider: google
@@ -20,12 +21,19 @@ data:
         style: row
         columns: 1
       System:
-      Kluster:
-        initiallyCollapsed: false
+        style: row
+        columns: 4
       Tjänster:
-        initiallyCollapsed: false
+        style: row
+        columns: 4
+      Kluster:
+        style: row
+        columns: 4
+        initiallyCollapsed: true
       Nedladdningar:
-        initiallyCollapsed: false
+        style: row
+        columns: 4
+        initiallyCollapsed: true
     providers:
       longhorn:
         url: http://longhorn-frontend.longhorn-system.svc.cluster.local
