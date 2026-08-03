@@ -1,0 +1,29 @@
+services:
+  # Whisper {{ whisper_model }} for study transcription, moved off pve2 so it stops
+  # competing with the LLM for the only DDR5 host. Reached by the studieplugg
+  # pipeline on ai-lab at http://192.168.10.42:{{ whisper_port }}/asr.
+  whisper-large:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: whisper-large
+    restart: unless-stopped
+    environment:
+      - ASR_ENGINE=faster_whisper
+      - ASR_MODEL={{ whisper_model }}
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/whisper/cache:/root/.cache
+    # UHD 750 render node, bind-mounted for future OpenVINO acceleration. The
+    # faster_whisper engine is CPU-only today, same as it was on pve2.
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "993"
+      - "44"
+    ports:
+      - {{ whisper_port }}:9000
+    networks:
+      - whisper
+
+networks:
+  whisper:
+    driver: bridge

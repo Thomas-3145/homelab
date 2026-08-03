@@ -63,6 +63,74 @@ resource "proxmox_virtual_environment_container" "arr_stack" {
   }
 }
 
+# Whisper node on pve3. Transcription is CPU-bound and was competing with the LLM
+# for pve2, which is the only host with DDR5 and therefore the only sensible place
+# to run inference. Splitting the two lets a lecture transcribe here while the
+# previous one is summarised on pve2, and leaves pve2's cores and RAM to the model.
+#
+# pve3 also runs k3s-cp-03 (etcd), which is latency-sensitive, so this container is
+# given a low CPU weight rather than few cores: it uses whatever is idle but yields
+# immediately under contention.
+resource "proxmox_virtual_environment_container" "whisper" {
+  node_name = "pve3"
+  vm_id     = 202
+
+  unprivileged = true
+
+  features {
+    nesting = true
+  }
+
+  initialization {
+    hostname = "whisper"
+
+    dns {
+      servers = ["1.1.1.1", "8.8.8.8"]
+    }
+
+    ip_config {
+      ipv4 {
+        address = "192.168.10.42/24"
+        gateway = "192.168.10.1"
+      }
+    }
+
+    user_account {
+      keys = [file(pathexpand(var.ssh_public_key_path))]
+    }
+  }
+
+  network_interface {
+    name   = "eth0"
+    bridge = "vmbr0"
+  }
+
+  operating_system {
+    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    type             = "ubuntu"
+  }
+
+  disk {
+    datastore_id = var.vm_datastore
+    # large-v3 model cache (~6 GB) + docker images + room for a second model.
+    size = 40
+  }
+
+  cpu {
+    cores = 8
+    # PVE cgroup v2 default is 100. Deprioritised against cp-03's etcd.
+    units = 20
+  }
+
+  memory {
+    dedicated = 8192
+  }
+
+  lifecycle {
+    ignore_changes = [initialization, operating_system]
+  }
+}
+
 # AI lab: local Whisper large-v3 (lecture/YouTube transcription) and, later,
 # Ollama + Open WebUI for LLM summaries. Kept separate from the arr-stack LXC so
 # AI experiments don't touch the media services; shares the Arc iGPU via /dev/dri.
@@ -107,9 +175,10 @@ resource "proxmox_virtual_environment_container" "ai_lab" {
 
   disk {
     datastore_id = var.vm_datastore
-    # 120 GB: the 70B model (~42 GB) + Whisper cache (~6 GB) + images + room for a
-    # second model. vmdata has ~1.7 TB free.
-    size = 120
+    # 180 GB: llama3.3:70b (~42 GB) and qwen3.6:35b-a3b (~22 GB) are kept side by
+    # side while their speed and output quality are compared, plus Open WebUI and
+    # its RAG store. vmdata has ~1.2 TB free.
+    size = 180
   }
 
   cpu {

@@ -47,6 +47,12 @@ all:
               # Hardened to 22456 by the common role. The ai-lab playbook
               # auto-detects port 22 on a freshly provisioned LXC during bootstrap.
               ansible_port: 22456
+            whisper:
+              ansible_host: 192.168.10.42
+              ansible_user: root
+              # LXC 202 on pve3 — transcription, kept off pve2 so it doesn't
+              # compete with the LLM. Same SSH port handling as ai-lab.
+              ansible_port: 22456
             pbs:
               ansible_host: 192.168.10.30
               # Debian 13 VM (cloud-init user "ubuntu", inherited from proxmox_vms).
@@ -81,6 +87,10 @@ all:
           ansible_host: pve2.taild78f1d.ts.net
           ansible_user: root
           ansible_port: 22
+          # 65 W desktop CPU in a chassis pve1/pve3 use for 35 W T-processors. It
+          # reaches 100 C under sustained load without plateauing, so cap PL1.
+          # Only this host — pve1/pve3 run within their thermal envelope.
+          proxmox_power_limit_watts: 45
         pve3:
           ansible_host: pve3.taild78f1d.ts.net
           ansible_user: root

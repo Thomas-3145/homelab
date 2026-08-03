@@ -1,0 +1,5 @@
+---
+# Whisper model served to the studieplugg pipeline on ai-lab. large-v3 is the same
+# model that used to run inside the ai-lab LXC, so transcript quality is unchanged.
+whisper_model: "large-v3"
+whisper_port: 9000
