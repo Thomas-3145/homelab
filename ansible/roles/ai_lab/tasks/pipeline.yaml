@@ -38,7 +38,8 @@
   delay: 6
   until: ai_lab_ollama_models.rc == 0
 
-- name: Pull the LLM model (large — one-time, ~45 GB)
-  ansible.builtin.command: docker exec ollama ollama pull {{ ai_lab_llm_model }}
-  when: ai_lab_llm_model not in ai_lab_ollama_models.stdout
+- name: Pull the LLM models (large — one-time, tens of GB each)
+  ansible.builtin.command: docker exec ollama ollama pull {{ item }}
+  loop: "{{ ai_lab_llm_models }}"
+  when: item not in ai_lab_ollama_models.stdout
   changed_when: true

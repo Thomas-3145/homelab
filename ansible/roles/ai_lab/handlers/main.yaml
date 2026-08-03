@@ -4,3 +4,4 @@
     project_src: /opt/ai-lab
     state: present
     recreate: always
+    remove_orphans: true

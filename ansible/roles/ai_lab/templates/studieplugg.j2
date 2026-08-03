@@ -17,14 +17,17 @@ export PATH="/usr/local/bin:${PATH}"
 INPUT="${1:?Usage: studieplugg <url|file> [lang] [model]}"
 LANG_CODE="${2:-sv}"
 MODEL="${3:-{{ ai_lab_llm_model }}}"
-WHISPER="http://localhost:9000"
+WHISPER="{{ ai_lab_whisper_url }}"
 OLLAMA="http://localhost:11434"
 NTFY_URL="${NTFY_URL:-{{ ai_lab_ntfy_url }}}"
 NTFY_RESOLVE="{{ ai_lab_ntfy_resolve }}"
 
 # num_ctx 8192 keeps the 70B KV-cache within the 52 GB LXC (32768 OOM-kills the
 # llama-server). CHUNK_WORDS leaves room for the prompt + output inside that window.
-NUM_CTX="${NUM_CTX:-8192}"
+NUM_CTX="${NUM_CTX:-{{ ai_lab_num_ctx }}}"
+# Generation is latency-bound, not parallel: 14 threads measured 6.3 tok/s against
+# 6 threads at 14.2. More threads only help prefill. Ollama auto-detects otherwise.
+NUM_THREAD="${NUM_THREAD:-{{ ai_lab_num_thread }}}"
 CHUNK_WORDS="${CHUNK_WORDS:-3000}"
 KEEP_ALIVE="${KEEP_ALIVE:-15m}"   # keep the model loaded between chunk calls within one run
 
@@ -33,8 +36,8 @@ work="/opt/ai-lab/work/${ts}"; mkdir -p "${work}"
 
 # Call Ollama /api/generate with a prompt, print the response text.
 ollama_gen() {
-  jq -n --arg m "${MODEL}" --arg p "$1" --arg ka "${KEEP_ALIVE}" --argjson ctx "${NUM_CTX}" \
-    '{model:$m, prompt:$p, stream:false, keep_alive:$ka, options:{num_ctx:$ctx}}' \
+  jq -n --arg m "${MODEL}" --arg p "$1" --arg ka "${KEEP_ALIVE}" --argjson ctx "${NUM_CTX}" --argjson nt "${NUM_THREAD}" \
+    '{model:$m, prompt:$p, stream:false, keep_alive:$ka, options:{num_ctx:$ctx, num_thread:$nt}}' \
   | curl -s --max-time 0 "${OLLAMA}/api/generate" -d @- | jq -r '.response'
 }
 

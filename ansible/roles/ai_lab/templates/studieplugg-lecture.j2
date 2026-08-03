@@ -13,11 +13,14 @@ export PATH="/usr/local/bin:${PATH}"
 NAME="${1:?Usage: studieplugg-lecture <name> [lang] [model]}"
 LANG_CODE="${2:-sv}"
 MODEL="${3:-{{ ai_lab_llm_model }}}"
-WHISPER="http://localhost:9000"
+WHISPER="{{ ai_lab_whisper_url }}"
 OLLAMA="http://localhost:11434"
 NTFY_URL="${NTFY_URL:-{{ ai_lab_ntfy_url }}}"
 NTFY_RESOLVE="{{ ai_lab_ntfy_resolve }}"
-NUM_CTX="${NUM_CTX:-8192}"
+NUM_CTX="${NUM_CTX:-{{ ai_lab_num_ctx }}}"
+# Generation is latency-bound, not parallel: 14 threads measured 6.3 tok/s against
+# 6 threads at 14.2. More threads only help prefill. Ollama auto-detects otherwise.
+NUM_THREAD="${NUM_THREAD:-{{ ai_lab_num_thread }}}"
 CHUNK_WORDS="${CHUNK_WORDS:-3000}"
 KEEP_ALIVE="${KEEP_ALIVE:-15m}"
 PDF_REF_CHARS="${PDF_REF_CHARS:-8000}"   # cap slide text so it fits the context window
@@ -28,8 +31,8 @@ out="/opt/ai-lab/out/${NAME}"; mkdir -p "${out}"
 work="/opt/ai-lab/work/${NAME}-$(date +%s)"; mkdir -p "${work}"
 
 ollama_gen() {
-  jq -n --arg m "${MODEL}" --arg p "$1" --arg ka "${KEEP_ALIVE}" --argjson ctx "${NUM_CTX}" \
-    '{model:$m, prompt:$p, stream:false, keep_alive:$ka, options:{num_ctx:$ctx}}' \
+  jq -n --arg m "${MODEL}" --arg p "$1" --arg ka "${KEEP_ALIVE}" --argjson ctx "${NUM_CTX}" --argjson nt "${NUM_THREAD}" \
+    '{model:$m, prompt:$p, stream:false, keep_alive:$ka, options:{num_ctx:$ctx, num_thread:$nt}}' \
   | curl -s --max-time 0 "${OLLAMA}/api/generate" -d @- | jq -r '.response'
 }
 
