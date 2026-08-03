@@ -30,9 +30,14 @@ src="/opt/ai-lab/inbox/${NAME}"
 out="/opt/ai-lab/out/${NAME}"; mkdir -p "${out}"
 work="/opt/ai-lab/work/${NAME}-$(date +%s)"; mkdir -p "${work}"
 
+# think:false is required for reasoning models. qwen3.6 otherwise puts its
+# chain-of-thought in a separate `thinking` field and only writes `response` once it
+# has finished — the reduce step filled all 8192 context tokens with deliberation and
+# returned an empty summary. Harmless on models that do not reason (verified against
+# llama3.3:70b).
 ollama_gen() {
   jq -n --arg m "${MODEL}" --arg p "$1" --arg ka "${KEEP_ALIVE}" --argjson ctx "${NUM_CTX}" --argjson nt "${NUM_THREAD}" \
-    '{model:$m, prompt:$p, stream:false, keep_alive:$ka, options:{num_ctx:$ctx, num_thread:$nt}}' \
+    '{model:$m, prompt:$p, stream:false, keep_alive:$ka, think:false, options:{num_ctx:$ctx, num_thread:$nt}}' \
   | curl -s --max-time 0 "${OLLAMA}/api/generate" -d @- | jq -r '.response'
 }
 
