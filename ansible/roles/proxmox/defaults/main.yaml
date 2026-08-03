@@ -13,6 +13,17 @@ proxmox_disable_subscription_popup: true
 proxmox_e1000e_workaround_enabled: true
 proxmox_e1000e_nic_name: nic0
 
+# CPU sustained power limit (RAPL PL1) in watts — opt-in, empty = leave BIOS default.
+# pve2 has a 65 W desktop CPU (Core Ultra 5 235) in the same mini chassis that pve1
+# and pve3 use for 35 W T-processors. Under sustained all-core load it climbs to
+# 100 °C without finding a plateau and throttles hundreds of times, which makes every
+# measurement a measurement of the cooler rather than the CPU. Capping PL1 near what
+# the chassis can actually dissipate trades peak turbo for a stable clock — and for
+# workloads that already thermally throttle, that is usually a net *gain* in
+# sustained throughput. Verify with scripts/llm-bench.sh before trusting a value.
+proxmox_power_limit_watts: ""
+proxmox_power_limit_sysfs: /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
+
 # SSH hardening — key-only root, password auth off, fail2ban, unattended-upgrades.
 # All of this is safe on a clustered Proxmox node (inter-node SSH uses root keys,
 # which are left working).

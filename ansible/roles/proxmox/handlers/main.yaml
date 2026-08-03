@@ -17,6 +17,14 @@
     name: disable-eee.service
     state: restarted
 
+- name: Restart cpu-power-limit
+  ansible.builtin.systemd:
+    name: cpu-power-limit.service
+    state: restarted
+    daemon_reload: true
+  # The unit does not exist yet during a check-mode run.
+  ignore_errors: "{{ ansible_check_mode }}"
+
 - name: Reload udev rules
   ansible.builtin.command: udevadm control --reload-rules
   changed_when: true
