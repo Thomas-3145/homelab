@@ -1,0 +1,3 @@
+---
+- ansible.builtin.import_tasks: docker.yaml
+- ansible.builtin.import_tasks: compose.yaml

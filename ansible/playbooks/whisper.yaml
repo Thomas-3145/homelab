@@ -1,0 +1,83 @@
+---
+- name: Configure GPU passthrough on pve3
+  hosts: pve3
+  become: true
+  vars:
+    whisper_vmid: 202
+  tasks:
+    # Proxmox rewrites the LXC config and strips comment markers, so blockinfile
+    # duplicates its block on every run. Manage each line idempotently instead.
+    - name: Allow root to map the host render(993)/video(44) GIDs into the LXC
+      ansible.builtin.lineinfile:
+        path: /etc/subgid
+        line: "root:{{ item }}:1"
+        state: present
+      loop:
+        - 44
+        - 993
+
+    - name: Add GPU passthrough and GID idmap to LXC config
+      ansible.builtin.lineinfile:
+        path: "/etc/pve/lxc/{{ whisper_vmid }}.conf"
+        line: "{{ item }}"
+        state: present
+      register: lxc_config
+      loop:
+        # Device passthrough (UHD 750 render node, for future OpenVINO use)
+        - "lxc.cgroup2.devices.allow: c 226:* rwm"
+        - "lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir 0 0"
+        # TUN for Tailscale (tailscaled needs /dev/net/tun to bring up its interface)
+        - "lxc.cgroup2.devices.allow: c 10:200 rwm"
+        - "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file 0 0"
+        # Unprivileged LXC: map host video(44)/render(993) GIDs 1:1 so the
+        # /dev/dri nodes are group-accessible (containers join them via group_add).
+        - "lxc.idmap: u 0 100000 65536"
+        - "lxc.idmap: g 0 100000 44"
+        - "lxc.idmap: g 44 44 1"
+        - "lxc.idmap: g 45 100045 948"
+        - "lxc.idmap: g 993 993 1"
+        - "lxc.idmap: g 994 100994 64542"
+
+    - name: Restart LXC to apply GPU config
+      ansible.builtin.command: pct reboot {{ whisper_vmid }}
+      when: lxc_config.changed
+      changed_when: true
+
+- name: Configure whisper
+  hosts: whisper
+  become: true
+  gather_facts: false
+
+  # The common role hardens SSH to port 22456. A freshly provisioned LXC, however,
+  # still listens on the default port 22. Probe both from the control node and pick
+  # the reachable one, so this playbook works on first bootstrap (port 22) and on
+  # every later run (port 22456) without manual overrides.
+  pre_tasks:
+    - name: Probe candidate SSH ports (prefer hardened 22456)
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: "{{ item }}"
+        timeout: 3
+      delegate_to: localhost
+      become: false
+      register: whisper_ssh_probe
+      ignore_errors: true
+      loop:
+        - 22456
+        - 22
+
+    - name: Fail if neither SSH port is reachable
+      ansible.builtin.fail:
+        msg: "whisper ({{ ansible_host }}) is not reachable on port 22 or 22456."
+      when: whisper_ssh_probe.results | selectattr('failed', 'equalto', false) | list | length == 0
+
+    - name: Select the first reachable SSH port
+      ansible.builtin.set_fact:
+        ansible_port: "{{ whisper_ssh_probe.results | selectattr('failed', 'equalto', false) | map(attribute='item') | first }}"
+
+    - name: Gather facts now that the SSH port is known
+      ansible.builtin.setup:
+
+  roles:
+    - common
+    - whisper

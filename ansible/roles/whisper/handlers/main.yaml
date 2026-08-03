@@ -1,0 +1,6 @@
+---
+- name: Restart whisper
+  community.docker.docker_compose_v2:
+    project_src: /opt/whisper
+    state: present
+    recreate: always

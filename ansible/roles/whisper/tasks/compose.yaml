@@ -1,0 +1,21 @@
+---
+- name: Create whisper directories
+  ansible.builtin.file:
+    path: "/opt/whisper/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - cache
+
+- name: Deploy docker-compose.yaml
+  ansible.builtin.template:
+    src: docker-compose.yaml.j2
+    dest: /opt/whisper/docker-compose.yaml
+    mode: "0644"
+  notify: Restart whisper
+
+- name: Start whisper
+  community.docker.docker_compose_v2:
+    project_src: /opt/whisper
+    state: present
+    pull: missing
