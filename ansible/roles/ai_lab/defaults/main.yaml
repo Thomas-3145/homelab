@@ -1,7 +1,77 @@
 ---
-# LLM model pulled into Ollama and used by the studieplugg pipeline. llama3.3:70b
-# (q4, ~45 GB) is the best that fits pve2's RAM for overnight summarization.
+# Models pulled into Ollama. Both are kept while they are compared head to head:
+#
+#   llama3.3:70b     dense, ~42 GB — every parameter is read per token, so generation
+#                    is capped by memory bandwidth at 42 GB / 77 GB/s ≈ 1.8 tok/s.
+#   qwen3.6:35b-a3b  MoE, ~22 GB — 34.7B parameters but only ~3B active per token, so
+#                    far less is read per token. Should be an order of magnitude faster.
+#
+# Quality is the open question, not speed: llama3.3 is a late-2024 dense model, qwen3.6
+# is 2026 but activates fewer parameters. Measure before picking a winner.
+ai_lab_llm_models:
+  - "llama3.3:70b"
+  - "qwen3.6:35b-a3b"
+  - "{{ ai_lab_embedding_model }}"
+
+# Embedding model backing Open WebUI's RAG. Small (~275 MB) and served by the same
+# Ollama instance, so there is only one model store to manage.
+ai_lab_embedding_model: "nomic-embed-text"
+
+# Open WebUI listens on the LAN address only — see the compose template for why.
+ai_lab_lan_ip: "192.168.10.41"
+ai_lab_openwebui_port: 3000
+
+# The one the studieplugg pipeline actually uses — switching is a one-line change.
 ai_lab_llm_model: "llama3.3:70b"
+
+# Context window for the pipeline. 8192 is set by llama3.3:70b — 32768 OOM-killed the
+# server because a 70B KV cache at that size blows past the LXC's 52 GB. The MoE has
+# far more headroom, so raise this to 32768 when switching to it: fewer map-reduce
+# rounds in studieplugg-lecture means faster *and* better summaries, since the model
+# sees more of the transcript at once.
+ai_lab_num_ctx: 8192
+
+# Ollama threads. Measured on qwen3.6:35b-a3b over the six P-cores (host CPUs 0-5,
+# which the studieplugg helpers pin the LXC to for the duration of a run):
+#
+#   6 threads   89.0 prefill / 14.2 generation   <- best
+#   5 threads   78.4 / 13.5
+#   14 threads  86.2 /  6.3
+#
+# Generation is a per-token barrier and does not parallelise; extra threads only add
+# synchronisation cost. Prefill does scale, but not enough to pay for the loss.
+#
+# Never run 8 threads against the E-core set (host CPUs 6-13): that combination
+# measured 0.22 and 0.25 tok/s across two runs — some 50x worse than 6 threads on the
+# same cores, with normal prefill. Reproducible, and unexplained.
+ai_lab_num_thread: 6
+
+# Whisper now runs on pve3 (LXC 202) instead of alongside the model, so a lecture
+# can transcribe there while the previous one is summarised here. Point this back
+# at http://localhost:9000 to fall back to a local Whisper container.
+ai_lab_whisper_url: "http://192.168.10.42:9000"
+
+# Ollama stores each model layer as a plain file under models/blobs; the layer with
+# mediaType application/vnd.ollama.image.model *is* the GGUF. llama.cpp can read it
+# directly, so the benchmark container reuses what Ollama already downloaded instead
+# of keeping a second multi-GB copy.
+# Assumes a library model (no namespace). A user-namespaced model such as
+# someone/model would live under registry.ollama.ai/someone/model/<tag> instead.
+ai_lab_ollama_manifest: >-
+  /opt/ai-lab/ollama/models/manifests/registry.ollama.ai/library/{{ ai_lab_llm_model | replace(':', '/') }}
+
+# Resolved from the manifest above at run time; empty until the model has been pulled,
+# which leaves the llamacpp service out of the compose file entirely.
+ai_lab_model_blob: ""
+
+# llama.cpp with the Vulkan backend, to measure what the Arrow Lake iGPU is worth on
+# prompt processing versus Ollama's CPU path. Behind the 'bench' compose profile — see
+# the template for why it must not run alongside Ollama.
+ai_lab_llamacpp_image: "ghcr.io/ggml-org/llama.cpp:server-vulkan"
+ai_lab_llamacpp_port: 8080
+ai_lab_llamacpp_ctx: 8192      # matches NUM_CTX in the studieplugg pipeline
+ai_lab_llamacpp_threads: 6     # LXC 201 has 6 cores
+ai_lab_llamacpp_ngl: 99        # offload everything; lower it if the iGPU can't allocate
 
 # ntfy topic pinged when a pipeline run finishes (empty = no notification).
 # The public hostname doesn't hairpin from inside the LAN, so reach ntfy via the

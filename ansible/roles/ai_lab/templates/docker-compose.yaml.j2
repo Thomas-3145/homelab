@@ -1,29 +1,8 @@
 services:
-  # Whisper large-v3 for study transcription (lectures, YouTube). Separate from the
-  # arr-stack 'whisper' (medium, for Bazarr) so the two don't compete. Exposed on the
-  # LAN at http://192.168.10.41:9000/asr. CPU-based; slower than medium but fine for
-  # background use.
-  whisper-large:
-    image: onerahmet/openai-whisper-asr-webservice:latest
-    container_name: whisper-large
-    restart: unless-stopped
-    environment:
-      - ASR_ENGINE=faster_whisper
-      - ASR_MODEL=large-v3
-      - TZ=Europe/Stockholm
-    volumes:
-      - /opt/ai-lab/whisper:/root/.cache
-    # Arc iGPU shared via bind mount (group render 993 / video 44) for future
-    # OpenVINO acceleration; works in parallel with the media LXC.
-    devices:
-      - /dev/dri:/dev/dri
-    group_add:
-      - "993"
-      - "44"
-    ports:
-      - 9000:9000
-    networks:
-      - ai
+  # Whisper moved to pve3 (LXC 202, http://192.168.10.42:9000) — transcription is
+  # CPU-bound and pve2 is the only DDR5 host, so its cores and RAM belong to the
+  # model. See ai_lab_whisper_url. The old /opt/ai-lab/whisper cache (~6 GB) is no
+  # longer used and can be deleted by hand once the move is verified.
 
   # Local LLM (CPU) for the study pipeline: turns Whisper transcripts into summaries +
   # study questions. Runs as overnight batch — quality over speed. Model llama3.3:70b
@@ -44,20 +23,72 @@ services:
     networks:
       - ai
 
-  # Open WebUI (interactive "chat with your lecture" / RAG frontend) — add later if
-  # wanted; the study pipeline itself is script-driven and doesn't need it.
-  # open-webui:
-  #   image: ghcr.io/open-webui/open-webui:main
-  #   container_name: open-webui
-  #   restart: unless-stopped
-  #   environment:
-  #     - OLLAMA_BASE_URL=http://ollama:11434
-  #   volumes:
-  #     - /opt/ai-lab/openwebui:/app/backend/data
-  #   ports:
-  #     - 3000:8080
-  #   networks:
-  #     - ai
+{% if ai_lab_model_blob %}
+  # Same GGUF as Ollama above, but served through llama.cpp's Vulkan backend so the
+  # Arrow Lake iGPU (/dev/dri, shared with the media LXC) can take prompt processing.
+  # Token generation is bound by DDR5 bandwidth and won't improve — prefill is the
+  # thing to measure, and the studieplugg map-reduce chunking is prefill-heavy.
+  #
+  # NOT started by default: the model is 42 GB and LXC 201 has 52 GB with no swap, so
+  # llama.cpp and Ollama must never hold it at the same time. Ollama's KEEP_ALIVE=0
+  # unloads after each run; check with `docker exec ollama ollama ps` before starting.
+  #   docker compose --profile bench up -d llamacpp
+  llamacpp:
+    image: {{ ai_lab_llamacpp_image }}
+    container_name: llamacpp
+    profiles:
+      - bench
+    restart: unless-stopped
+    command: >-
+      -m /models/{{ ai_lab_model_blob }}
+      --host 0.0.0.0
+      --port 8080
+      -c {{ ai_lab_llamacpp_ctx }}
+      -t {{ ai_lab_llamacpp_threads }}
+      -ngl {{ ai_lab_llamacpp_ngl }}
+      --parallel 1
+      --no-webui
+    volumes:
+      # Read-only: Ollama owns these blobs, llama.cpp is only a reader.
+      - /opt/ai-lab/ollama/models/blobs:/models:ro
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "993"
+      - "44"
+    ports:
+      # Loopback only: llama-server has no auth and allows all CORS origins. The
+      # studieplugg pipeline runs on this host anyway, so it never needs the LAN.
+      - 127.0.0.1:{{ ai_lab_llamacpp_port }}:8080
+    networks:
+      - ai
+
+{% endif %}
+  # Open WebUI — chat frontend plus RAG ("chat with your lecture"). The studieplugg
+  # scripts stay the batch path; this is for asking follow-up questions afterwards.
+  #
+  # Embeddings run through Ollama rather than Open WebUI's bundled sentence-transformers,
+  # so there is one model store to manage and no surprise download on first upload.
+  # Open WebUI keeps its own vector index in the data volume — no separate Qdrant/Chroma.
+  #
+  # Auth is on by default and THE FIRST ACCOUNT REGISTERED BECOMES ADMIN. Create yours
+  # immediately after the first start. Bound to the LAN address only, never published
+  # through cloudflared; reach it from outside over Tailscale.
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL={{ ai_lab_embedding_model }}
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/ai-lab/openwebui:/app/backend/data
+    ports:
+      - {{ ai_lab_lan_ip }}:{{ ai_lab_openwebui_port }}:8080
+    networks:
+      - ai
 
 networks:
   ai:

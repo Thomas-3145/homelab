@@ -17,6 +17,28 @@
     state: directory
     mode: "0755"
 
+# The GGUF path is only known once Ollama has pulled the model (pipeline.yaml, which
+# runs after this). On a first bootstrap these resolve to nothing and the llamacpp
+# service is simply omitted; the next run picks it up.
+- name: Check whether the LLM model has been pulled
+  ansible.builtin.stat:
+    path: "{{ ai_lab_ollama_manifest }}"
+  register: ai_lab_manifest
+
+- name: Read the Ollama manifest
+  ansible.builtin.slurp:
+    src: "{{ ai_lab_ollama_manifest }}"
+  register: ai_lab_manifest_raw
+  when: ai_lab_manifest.stat.exists
+
+- name: Resolve the GGUF blob filename
+  ansible.builtin.set_fact:
+    ai_lab_model_blob: >-
+      {{ (ai_lab_manifest_raw.content | b64decode | from_json).layers
+         | selectattr('mediaType', 'eq', 'application/vnd.ollama.image.model')
+         | map(attribute='digest') | first | replace(':', '-') }}
+  when: ai_lab_manifest.stat.exists
+
 - name: Deploy docker-compose.yaml
   ansible.builtin.template:
     src: docker-compose.yaml.j2
@@ -29,3 +51,7 @@
     project_src: /opt/ai-lab
     state: present
     pull: missing
+    # Whisper moved to pve3; without this the container it left behind keeps
+    # running and holding the port, since compose ignores services that have
+    # simply disappeared from the file.
+    remove_orphans: true
