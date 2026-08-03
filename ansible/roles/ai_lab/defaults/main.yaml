@@ -22,14 +22,20 @@ ai_lab_lan_ip: "192.168.10.41"
 ai_lab_openwebui_port: 3000
 
 # The one the studieplugg pipeline actually uses — switching is a one-line change.
-ai_lab_llm_model: "llama3.3:70b"
+# Measured against llama3.3:70b on the same lecture with the same inputs: 21x faster,
+# and better output. It pulled the lecturer names, course code and excursion dates out
+# of the slide PDF, and corrected "van der Waals" where Whisper had heard "vannevals"
+# and the 70B had copied the error through.
+ai_lab_llm_model: "qwen3.6:35b-a3b"
 
-# Context window for the pipeline. 8192 is set by llama3.3:70b — 32768 OOM-killed the
-# server because a 70B KV cache at that size blows past the LXC's 52 GB. The MoE has
-# far more headroom, so raise this to 32768 when switching to it: fewer map-reduce
-# rounds in studieplugg-lecture means faster *and* better summaries, since the model
-# sees more of the transcript at once.
-ai_lab_num_ctx: 8192
+# Context window for the pipeline. 8192 came from llama3.3:70b, whose KV cache at
+# 32768 OOM-killed the server on this LXC's 52 GB. It is too small for the MoE: a
+# lecture reduce step measured a 6841-token prompt (four partial summaries plus the
+# slide-PDF reference), leaving 1351 tokens for the answer and truncating the summary
+# mid-heading. The MoE's KV cache is a fraction of the 70B's, so it has the headroom.
+#
+# Drop this back to 8192 if switching the pipeline to llama3.3:70b.
+ai_lab_num_ctx: 32768
 
 # Ollama threads. Measured on qwen3.6:35b-a3b over the six P-cores (host CPUs 0-5,
 # which the studieplugg helpers pin the LXC to for the duration of a run):
