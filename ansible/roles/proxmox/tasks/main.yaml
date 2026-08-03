@@ -26,6 +26,10 @@
   ansible.builtin.import_tasks: eee.yaml
   when: proxmox_e1000e_workaround_enabled | bool
 
+- name: Cap CPU sustained power
+  ansible.builtin.import_tasks: power_limit.yaml
+  when: proxmox_power_limit_watts | string | length > 0
+
 - name: Harden SSH
   ansible.builtin.import_tasks: ssh.yaml
   when: proxmox_ssh_hardening_enabled | bool

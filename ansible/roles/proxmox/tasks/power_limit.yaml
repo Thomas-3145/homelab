@@ -1,0 +1,51 @@
+---
+# Cap the CPU's sustained power draw (RAPL PL1). See defaults/main.yaml for why.
+
+- name: Check that the RAPL package domain is present
+  ansible.builtin.stat:
+    path: "{{ proxmox_power_limit_sysfs }}"
+  register: proxmox_rapl
+
+- name: Fail if RAPL is unavailable
+  ansible.builtin.fail:
+    msg: >-
+      {{ proxmox_power_limit_sysfs }} not found — this CPU exposes no RAPL package
+      domain, so proxmox_power_limit_watts cannot be applied. Fall back to
+      intel_pstate/max_perf_pct or no_turbo.
+  when: not proxmox_rapl.stat.exists
+
+- name: Read the maximum power the firmware allows
+  ansible.builtin.slurp:
+    src: /sys/class/powercap/intel-rapl:0/constraint_0_max_power_uw
+  register: proxmox_rapl_max
+  failed_when: false
+
+# A limit above the firmware maximum is silently ignored, which would look like the
+# task succeeded while nothing changed.
+- name: Fail if the requested limit exceeds the firmware maximum
+  ansible.builtin.fail:
+    msg: >-
+      proxmox_power_limit_watts={{ proxmox_power_limit_watts }} exceeds the firmware
+      maximum of {{ (proxmox_rapl_max.content | b64decode | trim | int) // 1000000 }} W.
+  when:
+    - proxmox_rapl_max.content is defined
+    - (proxmox_rapl_max.content | b64decode | trim | int) > 0
+    - (proxmox_power_limit_watts | int) * 1000000 > (proxmox_rapl_max.content | b64decode | trim | int)
+
+- name: Install the CPU power limit unit
+  ansible.builtin.template:
+    src: cpu-power-limit.service.j2
+    dest: /etc/systemd/system/cpu-power-limit.service
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart cpu-power-limit
+
+- name: Enable and start the CPU power limit
+  ansible.builtin.systemd:
+    name: cpu-power-limit.service
+    enabled: true
+    state: started
+    daemon_reload: true
+  # In check mode the unit file was never written, so systemd cannot see it yet.
+  ignore_errors: "{{ ansible_check_mode }}"

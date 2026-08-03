@@ -1,0 +1,18 @@
+[Unit]
+Description=Cap CPU sustained power (RAPL PL1) at {{ proxmox_power_limit_watts }} W
+# RAPL limits reset to the BIOS default on every boot, so this has to run each time.
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Write PL1 (constraint_0, "long_term") in microwatts, then read it back — a writable
+# sysfs file does not mean the BIOS accepted the value, and a silent revert would
+# leave us measuring the wrong thing.
+ExecStart=/bin/sh -c 'echo {{ (proxmox_power_limit_watts | int) * 1000000 }} > {{ proxmox_power_limit_sysfs }}'
+ExecStart=/bin/sh -c 'v=$(cat {{ proxmox_power_limit_sysfs }}); \
+  test "$v" = "{{ (proxmox_power_limit_watts | int) * 1000000 }}" \
+  || { echo "RAPL PL1 rejected: wanted {{ (proxmox_power_limit_watts | int) * 1000000 }}, got $v" >&2; exit 1; }'
+
+[Install]
+WantedBy=multi-user.target
