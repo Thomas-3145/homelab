@@ -21,9 +21,11 @@ NUM_CTX="${NUM_CTX:-{{ ai_lab_num_ctx }}}"
 # Generation is latency-bound, not parallel: 14 threads measured 6.3 tok/s against
 # 6 threads at 14.2. More threads only help prefill. Ollama auto-detects otherwise.
 NUM_THREAD="${NUM_THREAD:-{{ ai_lab_num_thread }}}"
-CHUNK_WORDS="${CHUNK_WORDS:-3000}"
+CHUNK_WORDS="${CHUNK_WORDS:-{{ ai_lab_chunk_words }}}"
 KEEP_ALIVE="${KEEP_ALIVE:-15m}"
 PDF_REF_CHARS="${PDF_REF_CHARS:-8000}"   # cap slide text so it fits the context window
+VISION_SLIDES="${VISION_SLIDES:-{{ ai_lab_vision_slides }}}"  # figure-heavy pages sent as images; 0 = off
+VISION_WIDTH="${VISION_WIDTH:-{{ ai_lab_vision_width }}}"
 
 src="/opt/ai-lab/inbox/${NAME}"
 [[ -d "${src}" ]] || { echo "Hittar ingen inbox-mapp: ${src}"; exit 1; }
@@ -38,6 +40,18 @@ work="/opt/ai-lab/work/${NAME}-$(date +%s)"; mkdir -p "${work}"
 ollama_gen() {
   jq -n --arg m "${MODEL}" --arg p "$1" --arg ka "${KEEP_ALIVE}" --argjson ctx "${NUM_CTX}" --argjson nt "${NUM_THREAD}" \
     '{model:$m, prompt:$p, stream:false, keep_alive:$ka, think:false, options:{num_ctx:$ctx, num_thread:$nt}}' \
+  | curl -s --max-time 0 "${OLLAMA}/api/generate" -d @- | jq -r '.response'
+}
+
+# Same, but attaches the rendered slides. Only the final summary gets images — the
+# map step summarises transcript text and has no use for them.
+ollama_gen_vision() {
+  local imgs="${1}" prompt="${2}"
+  jq -n --arg m "${MODEL}" --arg p "${prompt}" --arg ka "${KEEP_ALIVE}" \
+        --argjson ctx "${NUM_CTX}" --argjson nt "${NUM_THREAD}" --slurpfile im "${imgs}" \
+    '{model:$m, prompt:$p, stream:false, keep_alive:$ka, think:false,
+      options:{num_ctx:$ctx, num_thread:$nt}}
+     + (if ($im[0] | length) > 0 then {images: $im[0]} else {} end)' \
   | curl -s --max-time 0 "${OLLAMA}/api/generate" -d @- | jq -r '.response'
 }
 
@@ -74,6 +88,37 @@ Föreläsningens slides (referens — använd för korrekta termer, namn och def
 ${ref}"
 fi
 
+# 2b. Figure-heavy slides → images, so the model can read what pdftotext cannot.
+# Ranked by embedded image count rather than by sparse text: sparse text picks out
+# blank and "Paus" slides, which carry nothing.
+images_json="${work}/images.json"; printf '[]' > "${images_json}"
+if [[ -n "${pdf}" ]] && (( VISION_SLIDES > 0 )) \
+   && command -v pdfimages >/dev/null && command -v pdftoppm >/dev/null; then
+  mapfile -t vpages < <(pdfimages -list "${pdf}" 2>/dev/null \
+    | awk 'NR > 2 && $1 ~ /^[0-9]+$/ { c[$1]++ } END { for (p in c) print c[p], p }' \
+    | sort -rn | head -"${VISION_SLIDES}" | awk '{print $2}' | sort -n)
+  # NOTE: bash's array-length syntax cannot be used in a .j2 — the brace-hash pair
+  # opens a Jinja comment and the template dies with "Missing end of comment tag".
+  # Test the expanded array for emptiness instead.
+  if [[ -n "${vpages[*]:-}" ]]; then
+    echo "[lecture] renderar bildtunga slides (sida ${vpages[*]}) …"
+    mkdir -p "${work}/slides"
+    for p in "${vpages[@]}"; do
+      pdftoppm -jpeg -r 100 -scale-to "${VISION_WIDTH}" -f "${p}" -l "${p}" \
+        "${pdf}" "${work}/slides/p$(printf '%03d' "${p}")" 2>/dev/null || true
+    done
+    find "${work}/slides" -type f -name '*.jpg' | sort \
+      | while IFS= read -r img; do base64 -w0 "${img}"; printf '\n'; done \
+      | jq -R . | jq -s . > "${images_json}"
+  fi
+fi
+
+vision_note=""
+[[ "$(jq 'length' "${images_json}" 2>/dev/null || echo 0)" != "0" ]] && vision_note="
+
+De bifogade bilderna är föreläsningens bildtunga slides. Läs av diagram, strukturformler
+och figurer där och väv in innehållet — det finns inte i transkriptet."
+
 final_tail="Ge studiematerialet på svenska i tre delar:
 1) En kort helhetssammanfattning (5–8 meningar).
 2) Huvudpunkter i punktform, grupperade per tema.
@@ -83,8 +128,8 @@ final_tail="Ge studiematerialet på svenska i tre delar:
 words="$(wc -w < "${transcript}")"
 if (( words <= CHUNK_WORDS )); then
   echo "[lecture] sammanfattar (${words} ord, single-pass) …"
-  ollama_gen "Du är en studiecoach. Skapa studiematerial från denna föreläsning.
-${final_tail}${ref_block}
+  ollama_gen_vision "${images_json}" "Du är en studiecoach. Skapa studiematerial från denna föreläsning.
+${final_tail}${ref_block}${vision_note}
 
 Transkript:
 $(cat "${transcript}")" > "${out}/sammanfattning.md"
@@ -109,8 +154,8 @@ $(cat "${c}")"
       printf '\n' ; } >> "${partials}"
   done
   echo "[lecture]   reduce → slutmaterial …"
-  ollama_gen "Nedan är delsammanfattningar av en föreläsning, i ordning. Skapa studiematerial utifrån dem.
-${final_tail}${ref_block}
+  ollama_gen_vision "${images_json}" "Nedan är delsammanfattningar av en föreläsning, i ordning. Skapa studiematerial utifrån dem.
+${final_tail}${ref_block}${vision_note}
 
 Delsammanfattningar:
 $(cat "${partials}")" > "${out}/sammanfattning.md"

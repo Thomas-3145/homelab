@@ -37,6 +37,35 @@ ai_lab_llm_model: "qwen3.6:35b-a3b"
 # Drop this back to 8192 if switching the pipeline to llama3.3:70b.
 ai_lab_num_ctx: 32768
 
+# Transcripts longer than this get map-reduced; shorter ones are summarised in a single
+# pass. A lecture now fits in 32768 whole, so single-pass is possible — but measured
+# worse. Raising this to 14000 dropped the course code, the excursion details and the
+# Oddo-Harkins rule from the F1 summary.
+#
+# Map-reduce has a property that looked like pure loss but is not: it *guarantees
+# coverage*. Every chunk is summarised on its own, so nothing can be skipped. Given the
+# whole transcript at once the model compresses harder and picks what to keep.
+#
+# Keep 3000 unless someone re-measures output quality, not just speed.
+ai_lab_chunk_words: 3000
+
+# Vision: send the figure-heavy slides to the model as images alongside the extracted
+# text. pdftotext gets the words but drops everything drawn — structural formulas,
+# phase diagrams, abundance plots, the periodic table figures — which on a chemistry
+# course is a lot of the content.
+#
+# Pages are picked by how many images they embed (pdfimages), not by how little text
+# they hold: "least text" selects blank and transition slides.
+#
+# OFF by default: measured, it made the F1 summary worse, not better. Eight images cost
+# ~6000 context tokens and cut generation from 14.2 to 5.0 tok/s, and the slide text
+# they were meant to complement got crowded out — every course detail disappeared.
+#
+# The mechanism was never isolated (the same run also switched to single-pass), so this
+# is worth revisiting with one variable at a time. Until then it stays off.
+ai_lab_vision_slides: 0
+ai_lab_vision_width: 1024
+
 # Ollama threads. Measured on qwen3.6:35b-a3b over the six P-cores (host CPUs 0-5,
 # which the studieplugg helpers pin the LXC to for the duration of a run):
 #
