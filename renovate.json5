@@ -21,6 +21,22 @@
   'pre-commit': {
     enabled: true,
   },
+  // The k3s pin lives in a plain Ansible var, which no built-in manager reads.
+  // (system-upgrade-controller needs no entry here — its image tag sits in a
+  // Deployment under kubernetes/, so the `kubernetes` manager above finds it.)
+  customManagers: [
+    {
+      // Bumping this alone does NOT upgrade the cluster — it only governs new node
+      // installs. The rollout is the matching `version:` change in both Plan CRDs
+      // under kubernetes/infrastructure/system-upgrade-controller/.
+      customType: 'regex',
+      description: 'k3s version pin in Ansible group_vars',
+      managerFilePatterns: ['ansible/inventory/group_vars/all.yaml'],
+      matchStrings: ['k3s_version:\\s*"(?<currentValue>v[^"]+)"'],
+      datasourceTemplate: 'github-releases',
+      depNameTemplate: 'k3s-io/k3s',
+    },
+  ],
   packageRules: [
     {
       description: 'Majors can contain migrations (authentik DB, Longhorn engine, kube-prometheus CRDs) — flag clearly, never automerge',
@@ -32,6 +48,12 @@
       description: 'Ghost image tracks major tag only (ghost:5) — let Renovate propose the pinned minor when ready',
       matchPackageNames: ['ghost'],
       enabled: false,
+    },
+    {
+      description: 'SUC manifests are vendored — a PR only bumps the image tag, crd.yaml must be re-vendored by hand (see its kustomization.yaml)',
+      matchPackageNames: ['rancher/system-upgrade-controller'],
+      labels: ['needs-revendor'],
+      automerge: false,
     },
   ],
   // Keep PR noise low on a single-maintainer repo
