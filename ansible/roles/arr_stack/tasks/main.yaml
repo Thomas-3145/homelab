@@ -1,3 +1,6 @@
 ---
-- ansible.builtin.import_tasks: docker.yaml
-- ansible.builtin.import_tasks: compose.yaml
+- name: Install Docker
+  ansible.builtin.import_tasks: docker.yaml
+
+- name: Deploy compose stack
+  ansible.builtin.import_tasks: compose.yaml

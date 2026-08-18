@@ -2,3 +2,7 @@
 collections:
   - name: community.sops
   - name: community.general
+  # Used by roles/common (authorized_key) and roles/pbs (mount).
+  - name: ansible.posix
+  # Used by roles/arr_stack, roles/ai_lab, roles/whisper (docker_compose_v2).
+  - name: community.docker

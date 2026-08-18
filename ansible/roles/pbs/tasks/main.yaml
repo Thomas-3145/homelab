@@ -63,6 +63,9 @@
     --gc-schedule {{ pbs_gc_schedule }}
   when: pbs_datastore_name not in (pbs_datastore_list.stdout | from_json | map(attribute='name') | list)
   register: pbs_datastore_created
+  # The `when` above already makes this run only when the datastore is absent,
+  # so reaching the command at all means something was created.
+  changed_when: true
 
 - name: Configure prune (retention) job on the datastore
   ansible.builtin.command: >-
