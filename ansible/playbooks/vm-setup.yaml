@@ -9,7 +9,10 @@
 #   ansible-playbook -i inventory/hosts.yaml playbooks/vm-setup.yaml -e target=k3s-cp-01
 
 - name: Set up VM
-  hosts: "{{ target }}"
+  # `target` is always passed with -e; the default only exists so the playbook is
+  # statically parseable (ansible-lint syntax-check) and so a bare run hits the
+  # empty `test` group instead of every host in the inventory.
+  hosts: "{{ target | default('test') }}"
   become: true
 
   roles:

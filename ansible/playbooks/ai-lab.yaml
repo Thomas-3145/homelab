@@ -38,7 +38,9 @@
         - "lxc.idmap: g 993 993 1"
         - "lxc.idmap: g 994 100994 64542"
 
-    - name: Restart LXC to apply GPU config
+    # Single trigger, and the reboot is the last task of this play — a handler
+    # would add indirection without changing the ordering.
+    - name: Restart LXC to apply GPU config  # noqa: no-handler
       ansible.builtin.command: pct reboot {{ ai_lab_vmid }}
       when: lxc_config.changed
       changed_when: true
