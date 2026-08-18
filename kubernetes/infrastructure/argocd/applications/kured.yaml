@@ -1,0 +1,68 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kured
+  namespace: argocd
+  annotations:
+    # Last wave — kured drains and reboots nodes, so everything it has to drain
+    # around (storage, ingress, monitoring) must be up first.
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  source:
+    repoURL: https://kubereboot.github.io/charts
+    chart: kured
+    targetRevision: 6.1.0
+    helm:
+      releaseName: kured
+      valuesObject:
+        configuration:
+          # unattended-upgrades installs security patches but never activates the
+          # ones needing a reboot. kured watches /var/run/reboot-required and
+          # drains + reboots + uncordons, one node at a time, at night.
+          startTime: "02:00"
+          endTime: "05:00"
+          timeZone: "Europe/Stockholm"
+          period: "1h"
+          concurrency: 1
+
+          # Longhorn's node-drain-policy is block-if-contains-last-replica. If a
+          # drain would strand the last replica of a volume it must FAIL and be
+          # retried next period — never reboot anyway and lose the data.
+          forceReboot: false
+          drainTimeout: "10m"
+
+          # Interlock with system-upgrade-controller: its upgrade jobs also drain
+          # nodes. Without this, kured could reboot one control-plane node while
+          # an upgrade job holds another — two of three CP nodes down at once is
+          # etcd quorum loss. kured stands down while any upgrade job runs.
+          #
+          # Existence selector on the plan label, NOT upgrade.cattle.io/controller:
+          # the controller's own Deployment pod carries that one permanently, which
+          # would block kured forever. Only job pods get upgrade.cattle.io/plan.
+          blockingPodSelector:
+            - upgrade.cattle.io/plan
+
+          # Taint the node pending reboot so it stops attracting pods that would
+          # only be evicted again moments later.
+          preferNoScheduleTaint: "weave.works/kured-node-reboot"
+          annotateNodes: true
+
+        # Scraped by kube-prometheus-stack; the KuredRebootStuck alert in that
+        # Application's additionalPrometheusRulesMap fires on kured_reboot_required.
+        metrics:
+          create: true
+          # Prometheus' serviceMonitorSelector is matchLabels release=kube-prometheus-stack.
+          # Without this label the ServiceMonitor is silently ignored and the alert
+          # never fires. Same pattern as kubernetes/infrastructure/monitoring/servicemonitor-*.yaml.
+          labels:
+            release: kube-prometheus-stack
+        service:
+          create: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
