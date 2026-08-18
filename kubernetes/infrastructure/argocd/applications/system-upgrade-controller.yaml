@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: system-upgrade-controller
+  namespace: argocd
+  annotations:
+    # Last wave — the Plans drain and restart nodes.
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Thomas-3145/homelab.git
+    targetRevision: HEAD
+    path: kubernetes/infrastructure/system-upgrade-controller
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: system-upgrade
+  # No CreateNamespace — the vendored manifest declares the system-upgrade
+  # Namespace itself, and ArgoCD applies CRDs and Namespaces before the Plans.
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
