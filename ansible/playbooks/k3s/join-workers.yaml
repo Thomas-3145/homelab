@@ -35,6 +35,7 @@
         cmd: curl -sfL https://get.k3s.io | sh -
         creates: /usr/local/bin/k3s
       environment:
+        INSTALL_K3S_VERSION: "{{ k3s_version }}"
         INSTALL_K3S_EXEC: "agent"
         K3S_URL: "https://192.168.10.100:6443"
         K3S_TOKEN: "{{ hostvars['k3s-cp-01'].k3s_token }}"

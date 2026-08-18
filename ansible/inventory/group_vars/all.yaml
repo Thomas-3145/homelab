@@ -1,0 +1,10 @@
+---
+# Pinned k3s version, applied by the install/join playbooks via INSTALL_K3S_VERSION.
+#
+# This governs NEW node installs only — the install tasks carry `creates:
+# /usr/local/bin/k3s`, so they are no-ops on nodes that already run k3s. Upgrading
+# existing nodes is system-upgrade-controller's job, see
+# kubernetes/infrastructure/system-upgrade-controller/.
+#
+# Keep in sync with the `version:` field of both Plan CRDs in that directory.
+k3s_version: "v1.35.5+k3s1"
