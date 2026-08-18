@@ -1,0 +1,46 @@
+---
+# Upgrades the three worker nodes (k3s agent).
+#
+# Keep `version` identical to plan-server.yaml — see the comment there.
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: k3s-agent
+  namespace: system-upgrade
+spec:
+  concurrency: 1
+
+  # Everything that is not a control-plane node.
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: DoesNotExist
+
+  serviceAccountName: system-upgrade
+
+  # Blocks until the k3s-server Plan has finished on every CP node. Agents must
+  # never run a newer kubelet than the API servers they talk to.
+  prepare:
+    image: rancher/k3s-upgrade
+    args:
+      - prepare
+      - k3s-server
+
+  # Workers carry the actual workload, so they get a real drain. `force` covers
+  # bare pods without a controller; Longhorn's own node-drain-policy
+  # (block-if-contains-last-replica) still refuses to strand the last replica of
+  # a volume, and the PDBs in kubernetes/infrastructure/pdb still apply.
+  drain:
+    force: true
+    skipWaitForDeleteTimeout: 60
+
+  window:
+    days: [su, mo, tu, we, th, fr, sa]
+    startTime: "21:00"
+    endTime: "01:00"
+    timeZone: "Europe/Stockholm"
+
+  upgrade:
+    image: rancher/k3s-upgrade
+
+  version: v1.35.5+k3s1

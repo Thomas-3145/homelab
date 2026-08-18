@@ -1,0 +1,46 @@
+---
+# Upgrades the three control-plane nodes (k3s server).
+#
+# To upgrade the cluster: bump `version` here AND in plan-agent.yaml, keep
+# ansible/inventory/group_vars/all.yaml in sync, then merge. ArgoCD syncs the
+# Plans and system-upgrade-controller does the rest — no curl | sh on six boxes.
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: k3s-server
+  namespace: system-upgrade
+spec:
+  # ONE control-plane node at a time. The three CP nodes run embedded etcd, so
+  # taking two down simultaneously loses quorum and the cluster goes read-only.
+  # This is the single most important field in the file.
+  concurrency: 1
+
+  # Cordon but do not drain the servers. Draining a CP node evicts the etcd-adjacent
+  # workload for no benefit — the k3s restart is quick and the node is back in
+  # seconds. Agents get a real drain, see plan-agent.yaml.
+  cordon: true
+
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: In
+        values:
+          - "true"
+
+  serviceAccountName: system-upgrade
+
+  # Evening window, deliberately disjoint from kured's 02:00-05:00 reboot window
+  # (kubernetes/infrastructure/argocd/applications/kured.yaml). Belt and braces:
+  # kured also refuses to reboot while any upgrade job pod exists.
+  window:
+    days: [su, mo, tu, we, th, fr, sa]
+    startTime: "21:00"
+    endTime: "01:00"
+    timeZone: "Europe/Stockholm"
+
+  upgrade:
+    image: rancher/k3s-upgrade
+
+  # Pinned, not a `channel:` — the upgrade must be a reviewable git diff, not
+  # something that fires because upstream published a release.
+  version: v1.35.5+k3s1

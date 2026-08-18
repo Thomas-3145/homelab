@@ -1,6 +1,13 @@
 ---
 extends: default
 
+# Vendored verbatim from upstream releases. Upstream uses a different sequence
+# indentation than this repo; reformatting would break `diff` against the release
+# artifact, which is the whole point of vendoring.
+ignore: |
+  kubernetes/infrastructure/system-upgrade-controller/crd.yaml
+  kubernetes/infrastructure/system-upgrade-controller/system-upgrade-controller.yaml
+
 rules:
   line-length:
     max: 150

@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# crd.yaml and system-upgrade-controller.yaml are vendored verbatim from the
+# rancher/system-upgrade-controller v0.20.1 release. They are NOT remote kustomize
+# bases on purpose: a `resources:` entry pointing at a GitHub URL would make every
+# ArgoCD sync depend on the repo-server reaching github.com. Renovate watches the
+# release feed (see renovate.json5 customManagers) and opens a PR when a new
+# version lands; re-vendor with:
+#
+#   v=vX.Y.Z
+#   curl -sfL -o crd.yaml \
+#     https://github.com/rancher/system-upgrade-controller/releases/download/$v/crd.yaml
+#   curl -sfL -o system-upgrade-controller.yaml \
+#     https://github.com/rancher/system-upgrade-controller/releases/download/$v/system-upgrade-controller.yaml
+
+resources:
+  - crd.yaml
+  - system-upgrade-controller.yaml
+  - plan-server.yaml
+  - plan-agent.yaml
