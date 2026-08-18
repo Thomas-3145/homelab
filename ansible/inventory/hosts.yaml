@@ -27,12 +27,18 @@ all:
               hosts:
                 k3s-cp-01:
                   ansible_host: 192.168.10.21
+                  k3s_node_labels:
+                    - "topology.kubernetes.io/zone=pve1"
             k3s_servers:
               hosts:
                 k3s-cp-02:
                   ansible_host: 192.168.10.22
+                  k3s_node_labels:
+                    - "topology.kubernetes.io/zone=pve2"
                 k3s-cp-03:
                   ansible_host: 192.168.10.23
+                  k3s_node_labels:
+                    - "topology.kubernetes.io/zone=pve3"
         services:
           hosts:
             arr-stack:
@@ -64,8 +70,12 @@ all:
           hosts:
             k3s-worker-01:
               ansible_host: 192.168.10.52
+              k3s_node_labels:
+                - "topology.kubernetes.io/zone=pve1"
             k3s-worker-02:
               ansible_host: 192.168.10.53
+              k3s_node_labels:
+                - "topology.kubernetes.io/zone=pve2"
               # pve2 also hosts the RAM-heavy media (LXC 200) + ai-lab (LXC 201)
               # guests, so keep the k3s footprint here minimal. This soft taint
               # makes the scheduler prefer worker-01 (pve1) + worker-03 (pve3) and
@@ -74,6 +84,8 @@ all:
                 - "workload=offload:PreferNoSchedule"
             k3s-worker-03:
               ansible_host: 192.168.10.54
+              k3s_node_labels:
+                - "topology.kubernetes.io/zone=pve3"
     physical_hosts:
       vars:
         ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096

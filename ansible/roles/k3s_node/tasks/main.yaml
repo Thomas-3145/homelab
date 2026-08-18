@@ -24,29 +24,36 @@
   ansible.builtin.hostname:
     name: "{{ inventory_hostname }}"
 
-# Optional per-node taints, set via the `k3s_node_taints` inventory var.
-# k3s reads /etc/rancher/k3s/config.yaml on start and reconciles node taints
-# from it, so this is the IaC-authoritative source (survives reboots/rejoin).
+# Per-node labels and taints, set via the `k3s_node_labels` / `k3s_node_taints`
+# inventory vars. k3s reads /etc/rancher/k3s/config.yaml on start and reconciles
+# both from it, so this is the IaC-authoritative source (survives reboots/rejoin).
+#
+# Labels carry the Proxmox host as topology.kubernetes.io/zone, which is what lets
+# Longhorn spread replicas across physical hosts instead of stacking them on one.
 - name: Ensure k3s config directory exists
   ansible.builtin.file:
     path: /etc/rancher/k3s
     state: directory
     mode: "0755"
-  when:
-    - k3s_node_taints is defined
-    - k3s_node_taints | length > 0
+  when: k3s_node_labels is defined or k3s_node_taints is defined
 
-- name: Configure k3s node taints
+- name: Configure k3s node labels and taints
   ansible.builtin.copy:
     dest: /etc/rancher/k3s/config.yaml
     mode: "0644"
     content: |
       # Managed by Ansible (k3s_node role) — do not edit by hand.
+      {% if k3s_node_labels is defined and k3s_node_labels | length > 0 %}
+      node-label:
+      {% for label in k3s_node_labels %}
+        - "{{ label }}"
+      {% endfor %}
+      {% endif %}
+      {% if k3s_node_taints is defined and k3s_node_taints | length > 0 %}
       node-taint:
       {% for taint in k3s_node_taints %}
         - "{{ taint }}"
       {% endfor %}
-  when:
-    - k3s_node_taints is defined
-    - k3s_node_taints | length > 0
-  notify: Restart k3s-agent
+      {% endif %}
+  when: k3s_node_labels is defined or k3s_node_taints is defined
+  notify: Restart k3s
