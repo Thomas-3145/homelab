@@ -1,8 +1,11 @@
 ---
-# Restart the k3s agent so it re-reads /etc/rancher/k3s/config.yaml.
+# Restart k3s so it re-reads /etc/rancher/k3s/config.yaml. The unit is named
+# differently on servers and agents, hence the group lookup — restarting the
+# wrong one silently does nothing.
+#
 # Running containers survive a kubelet restart, so this is non-disruptive;
 # a PreferNoSchedule taint never evicts existing pods either.
-- name: Restart k3s-agent
+- name: Restart k3s
   ansible.builtin.systemd:
-    name: k3s-agent
+    name: "{{ 'k3s' if inventory_hostname in groups['k3s_control_plane'] else 'k3s-agent' }}"
     state: restarted

@@ -22,6 +22,20 @@ spec:
         defaultSettings:
           defaultReplicaCount: 2
           taintToleration: "node-role.kubernetes.io/control-plane:NoSchedule"
+          # The six k3s VMs sit two per Proxmox host. Without this, Longhorn only
+          # knows they are distinct *nodes* and will happily put every replica of a
+          # volume on cp-01 + worker-01 — both VMs on pve1. That happened: on
+          # 2026-08-18 all persistent data (Vaultwarden, Ghost, both Postgres,
+          # Loki, Vikunja) had every replica on a single physical machine.
+          #
+          # topology.kubernetes.io/zone is set to the Proxmox host name by the
+          # k3s_node role (ansible/inventory/hosts.yaml -> k3s_node_labels), so
+          # requiring distinct zones means one replica per physical host.
+          replicaZoneSoftAntiAffinity: false
+          # Strict zone anti-affinity only governs NEW placements; existing
+          # badly-placed replicas stay put without this. best-effort moves them
+          # when it can and gives up quietly when it cannot.
+          replicaAutoBalance: best-effort
         longhornAdmissionWebhook:
           failurePolicy: Ignore
         preUpgradeChecker:
