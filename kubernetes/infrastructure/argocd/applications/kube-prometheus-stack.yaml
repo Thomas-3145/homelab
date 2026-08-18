@@ -159,6 +159,19 @@ spec:
                     annotations:
                       summary: "Certificate {{ $labels.name }} expires in less than 7 days"
                       description: "Certificate {{ $labels.name }} in namespace {{ $labels.namespace }} expires in {{ $value | humanizeDuration }}."
+              - name: kured-alerts
+                rules:
+                  # kured reboots nightly between 02:00 and 05:00, so a node that
+                  # still wants a reboot after two days is being blocked — usually a
+                  # drain that cannot satisfy a PDB or Longhorn's last-replica policy.
+                  - alert: KuredRebootStuck
+                    expr: kured_reboot_required == 1
+                    for: 48h
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Node {{ $labels.node }} has been waiting for a reboot for 48h"
+                      description: "kured has not been able to drain and reboot {{ $labels.node }}. Check `kubectl logs -n kube-system ds/kured`."
         grafana:
           admin:
             existingSecret: grafana-admin-secret
