@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+"""Whisper ASR over HTTP, running on the Arrow Lake NPU through OpenVINO GenAI.
+
+Speaks the slice of the openai-whisper-asr-webservice API that the studieplugg
+pipeline actually uses — POST /asr with an `audio_file` part, plain text back — so
+pointing ai_lab_whisper_url here instead of at the pve3 CPU service is a one-line
+change with no edits to the pipeline scripts.
+
+The pipeline is built once at startup, not per request: compiling Whisper for the NPU
+takes ~110 s against under a second for CPU, and GenAI's CACHE_DIR does not yet cover
+Whisper on NPU, so that cost cannot be cached away. It is therefore paid at container
+start — which is why this is a long-running service rather than a CLI per lecture.
+"""
+import os
+import subprocess
+import tempfile
+import threading
+import time
+from contextlib import asynccontextmanager
+
+import numpy as np
+import openvino_genai as ov_genai
+import uvicorn
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import PlainTextResponse
+from huggingface_hub import snapshot_download
+
+MODEL = os.environ.get("WHISPER_MODEL", "{{ ai_lab_whisper_npu_model }}")
+DEVICE = os.environ.get("WHISPER_DEVICE", "{{ ai_lab_whisper_npu_device }}")
+LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "{{ ai_lab_whisper_npu_language }}")
+SAMPLE_RATE = 16000
+
+# The NPU runs one inference at a time. Without this, two concurrent lectures would
+# interleave into the same pipeline object and fail inside the driver rather than
+# simply queueing.
+_lock = threading.Lock()
+_pipe = None
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    global _pipe
+    model_dir = snapshot_download(MODEL)
+    started = time.perf_counter()
+    _pipe = ov_genai.WhisperPipeline(model_dir, DEVICE)
+    print(f"[whisper-npu] {MODEL} compiled for {DEVICE} in "
+          f"{time.perf_counter() - started:.1f}s", flush=True)
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok" if _pipe else "loading", "device": DEVICE, "model": MODEL}
+
+
+def decode(path: str) -> np.ndarray:
+    """Decode any container ffmpeg understands to 16 kHz mono float32.
+
+    The pipeline posts raw lecture recordings (mp4/mkv/m4a), so ffmpeg rather than
+    soundfile: it is the only decoder that takes all of them without extra wheels.
+    """
+    raw = subprocess.run(
+        ["ffmpeg", "-nostdin", "-loglevel", "error", "-i", path,
+         "-f", "f32le", "-ac", "1", "-ar", str(SAMPLE_RATE), "-"],
+        check=True, stdout=subprocess.PIPE,
+    ).stdout
+    return np.frombuffer(raw, dtype=np.float32)
+
+
+@app.post("/asr", response_class=PlainTextResponse)
+async def asr(audio_file: UploadFile = File(...), task: str = "transcribe",
+              language: str = LANGUAGE, output: str = "txt") -> str:
+    # Audio goes via a temp file rather than a pipe: ffmpeg needs to seek to read
+    # the moov atom in an mp4, and cannot seek on stdin.
+    suffix = os.path.splitext(audio_file.filename or "")[1] or ".bin"
+    with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+        tmp.write(await audio_file.read())
+        tmp.flush()
+        audio = decode(tmp.name)
+
+    duration = len(audio) / SAMPLE_RATE
+    started = time.perf_counter()
+    with _lock:
+        result = _pipe.generate(audio, language=f"<|{language}|>", task=task)
+    elapsed = time.perf_counter() - started
+    print(f"[whisper-npu] {audio_file.filename}: {duration:.0f}s audio in "
+          f"{elapsed:.0f}s ({duration / elapsed:.1f}x realtime)", flush=True)
+
+    return str(result)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=9000)

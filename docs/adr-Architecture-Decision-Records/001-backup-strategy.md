@@ -2,7 +2,13 @@
 
 ## Status
 
-Accepted
+**Superseded by [ADR-002](002-backup-strategy-post-3145.md)** (2026-08-02).
+
+> ⚠️ **This ADR describes infrastructure that no longer exists.** Every backup target it
+> specifies lived on "Media Pi" (the Raspberry Pi 5 `3145`), decommissioned 2026-05. Garage,
+> Velero and PBS all went with it. There is currently **no backup of any kind** — see ADR-002.
+>
+> The decision below is retained unchanged as a historical record. Do not follow it.
 
 ## Context
 

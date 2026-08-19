@@ -1,0 +1,32 @@
+# Whisper on the Arrow Lake NPU, via OpenVINO GenAI.
+#
+# The kernel-mode driver (intel_vpu) and the NPU firmware blob live on the PVE host;
+# only /dev/accel/accel0 is passed into the LXC and on into this container. Everything
+# installed here is user-mode: the Level Zero loader, Intel's Level Zero NPU driver
+# and the NPU compiler that lowers an OpenVINO IR into something the NPU can run.
+#
+# Versions are pinned to the combination Intel validated for Arrow Lake in the
+# linux-npu-driver {{ ai_lab_npu_driver_version }} release notes. Mixing driver and
+# compiler versions is the usual cause of the NPU silently missing from
+# Core().available_devices — check that list first when this breaks.
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl ffmpeg libtbb12 python3 python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN set -eux; cd /tmp; \
+    curl -fsSLO "https://github.com/oneapi-src/level-zero/releases/download/v{{ ai_lab_level_zero_version }}/level-zero_{{ ai_lab_level_zero_version }}+u24.04_amd64.deb"; \
+    curl -fsSL "https://github.com/intel/linux-npu-driver/releases/download/v{{ ai_lab_npu_driver_version }}/{{ ai_lab_npu_driver_tarball }}" | tar xz; \
+    dpkg -i level-zero_*.deb intel-level-zero-npu_*.deb intel-driver-compiler-npu_*.deb; \
+    rm -f /tmp/*.deb /tmp/*.ddeb /tmp/*.asc
+
+RUN pip install --no-cache-dir --break-system-packages \
+        "openvino-genai=={{ ai_lab_openvino_version }}" \
+        huggingface-hub fastapi uvicorn python-multipart
+
+COPY server.py /opt/server.py
+
+ENV HF_HOME=/models
+EXPOSE 9000
+CMD ["python3", "/opt/server.py"]

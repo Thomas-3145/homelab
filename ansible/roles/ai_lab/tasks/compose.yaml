@@ -10,6 +10,9 @@
     - inbox
     - out
     - work
+    # Build context for the NPU Whisper image, plus its HF model cache.
+    - whisper-npu
+    - whisper-npu/models
 
 - name: Create compose directory
   ansible.builtin.file:
@@ -39,6 +42,19 @@
          | map(attribute='digest') | first | replace(':', '-') }}
   when: ai_lab_manifest.stat.exists
 
+# No published image carries both Intel's NPU user-mode stack and an ASR server, so
+# this one is built on the host from a two-file context.
+- name: Deploy the NPU Whisper build context
+  ansible.builtin.template:
+    src: "whisper-npu/{{ item }}.j2"
+    dest: "/opt/ai-lab/whisper-npu/{{ item }}"
+    mode: "0644"
+  loop:
+    - Dockerfile
+    - server.py
+  when: ai_lab_whisper_npu_enabled
+  notify: Restart ai-lab
+
 - name: Deploy docker-compose.yaml
   ansible.builtin.template:
     src: docker-compose.yaml.j2
@@ -51,6 +67,10 @@
     project_src: /opt/ai-lab
     state: present
     pull: missing
+    # The whisper-npu image is built here, and its tag doesn't change when the
+    # Dockerfile or server does — "policy" would keep serving the stale image.
+    # Layer caching makes a no-op rebuild cheap.
+    build: always
     # Whisper moved to pve3; without this the container it left behind keeps
     # running and holding the port, since compose ignores services that have
     # simply disappeared from the file.

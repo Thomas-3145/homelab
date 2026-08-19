@@ -264,7 +264,12 @@ data:
             icon: ghost.png
             href: https://3145.blog/
             description: Blogg
-            siteMonitor: http://ghost.ghost.svc.cluster.local
+            # Ghost is configured with an https url, so it 301s every plain-http
+            # request — including the in-cluster service URL. Homepage's redirect
+            # follower cannot switch protocol mid-chain (ERR_FR_REDIRECTION_FAILURE),
+            # so monitor the public hostname instead. This also covers the
+            # Cloudflare Tunnel path end to end.
+            siteMonitor: https://3145.blog/
         - Ghost Admin:
             icon: ghost.png
             href: https://3145.blog/ghost
@@ -273,7 +278,9 @@ data:
             icon: stirling-pdf.png
             href: http://stirling-pdf.local/
             description: PDF-fix
-            siteMonitor: http://stirling-pdf.stirling-pdf.svc.cluster.local
+            # Stirling's root path requires auth (401) — use its status endpoint,
+            # which is unauthenticated and returns {"status":"UP"}.
+            siteMonitor: http://stirling-pdf.stirling-pdf.svc.cluster.local/api/v1/info/status
         - Vaultwarden:
             icon: vaultwarden.svg
             href: https://vault.3145.blog/

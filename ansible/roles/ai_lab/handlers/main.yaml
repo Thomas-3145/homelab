@@ -5,3 +5,6 @@
     state: present
     recreate: always
     remove_orphans: true
+    # See the note on the Start task — the locally built image needs an explicit
+    # rebuild, since its tag is unchanged by an edit to the Dockerfile or server.
+    build: always
