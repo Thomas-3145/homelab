@@ -26,6 +26,11 @@
         # Device passthrough (GPU render node for Whisper/OpenVINO)
         - "lxc.cgroup2.devices.allow: c 226:* rwm"
         - "lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir 0 0"
+        # NPU (Arrow Lake, 00:0b.0) via the DRM accel subsystem: /dev/accel/accel0,
+        # char major 261, owned by root:render(993) — the same GID already mapped
+        # 1:1 below for /dev/dri, so containers reach it with the same group_add.
+        - "lxc.cgroup2.devices.allow: c 261:* rwm"
+        - "lxc.mount.entry: /dev/accel dev/accel none bind,optional,create=dir 0 0"
         # TUN for Tailscale (tailscaled needs /dev/net/tun to bring up its interface)
         - "lxc.cgroup2.devices.allow: c 10:200 rwm"
         - "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file 0 0"

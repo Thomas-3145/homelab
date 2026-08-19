@@ -113,3 +113,35 @@ ai_lab_llamacpp_ngl: 99        # offload everything; lower it if the iGPU can't 
 # ingress-nginx LB IP using --resolve (keeps the valid ntfy.3145.blog TLS cert).
 ai_lab_ntfy_url: "https://ntfy.3145.blog/studieplugg"
 ai_lab_ntfy_resolve: "ntfy.3145.blog:443:192.168.10.200"
+
+# --- Whisper on the NPU -----------------------------------------------------------
+# Arrow Lake's NPU ("Intel AI Boost", 13 TOPS INT8) reached through OpenVINO GenAI.
+# Measured on the same 300 s slice of F1_del_2, Swedish, 2026-08-19:
+#
+#   NPU  + large-v3-turbo-int8    24.9 s   12.1x realtime   pve2 at ~49 C
+#   CPU  + large-v3-turbo-int8    37.2 s    8.1x realtime   pve2 at  77 C
+#   pve3 + large-v3 (in use)     209.0 s    1.4x realtime
+#
+# Read the first two rows before crediting the NPU with the whole 8.4x: most of the
+# end-to-end gain is the turbo model, and the NPU is worth 1.5x on top of it. Its real
+# argument is the ~28 C it does not add to a host that already throttles (see the
+# thermal notes on E-core pinning above), and the six cores it does not take from k3s.
+#
+# Transcript quality came out at 95.0% word-level agreement with the large-v3 output.
+# The differences are numerals-versus-words and a couple of proper nouns, which the
+# slide-PDF grounding in studieplugg-lecture already corrects.
+ai_lab_whisper_npu_enabled: true
+ai_lab_whisper_npu_port: 9000
+ai_lab_whisper_npu_model: "OpenVINO/whisper-large-v3-turbo-int8-ov"
+# CPU is a valid value and needs no NPU passthrough — useful for isolating whether a
+# regression is the model or the accelerator.
+ai_lab_whisper_npu_device: "NPU"
+ai_lab_whisper_npu_language: "sv"
+
+# Pinned to the set Intel validated together for Arrow Lake in linux-npu-driver
+# v1.35.0. The kernel-mode driver and firmware come from the PVE host; these are the
+# user-mode halves. Bump them as a group, never individually.
+ai_lab_npu_driver_version: "1.35.0"
+ai_lab_npu_driver_tarball: "linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz"
+ai_lab_level_zero_version: "1.28.2"
+ai_lab_openvino_version: "2026.2.1.0"

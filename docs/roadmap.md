@@ -519,6 +519,13 @@ spec:
 
 ## Fase 4: Backup & Storage
 
+> ⚠️ **This phase has regressed — see Status at the end.** Everything in 4.1–4.3 ran on
+> "Media Pi" (`3145`), decommissioned 2026-05. Garage, Velero and PBS went with it and
+> nothing replaced them. Verified 2026-08-02: no Velero or Garage manifests exist in
+> `kubernetes/`, and no PBS VM is defined in Terraform. Sections 4.1–4.3 are kept as a
+> record of what was built, not as current state. Rebuild plan:
+> [ADR-002](adr-Architecture-Decision-Records/002-backup-strategy-post-3145.md).
+
 **Goal**: Complete backup infrastructure before migrating critical applications
 
 ### Objectives
@@ -563,14 +570,14 @@ Added PDBs (`maxUnavailable: 1`) for: Prometheus, Grafana, Alertmanager, Loki, i
 - Unused VMs: autostart disabled (lab VM, study VM)
 
 ### Success Criteria
-- ✅ Garage running as S3-compatible backup target
-- ✅ Velero backing up all namespaces nightly
-- ✅ 3-2-1 backup strategy fully operational (Garage → Media Pi → R2)
+- ❌ ~~Garage running as S3-compatible backup target~~ — gone with 3145 (2026-05)
+- ❌ ~~Velero backing up all namespaces nightly~~ — gone with 3145 (2026-05)
+- ❌ ~~3-2-1 backup strategy fully operational~~ — **no backup exists today**
 - ✅ Resource limits on all monitoring pods
 - ✅ PDBs protecting critical services during node drains
 - ✅ Proxmox stability issues resolved
 
-### Status: ✅ COMPLETE
+### Status: ⚠️ REGRESSED — was complete, then undone by the 3145 decommission
 ### Blog Posts: "Backing Up Kubernetes with Garage and Velero", "Velero Schedules, ServiceMonitors, and Keeping Dashboards in Git"
 
 ---

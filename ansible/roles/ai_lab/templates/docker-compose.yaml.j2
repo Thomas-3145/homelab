@@ -1,8 +1,49 @@
 services:
-  # Whisper moved to pve3 (LXC 202, http://192.168.10.42:9000) — transcription is
-  # CPU-bound and pve2 is the only DDR5 host, so its cores and RAM belong to the
-  # model. See ai_lab_whisper_url. The old /opt/ai-lab/whisper cache (~6 GB) is no
-  # longer used and can be deleted by hand once the move is verified.
+  # Whisper was moved to pve3 (LXC 202, http://192.168.10.42:9000) because CPU
+  # transcription competed with the model for pve2's cores. The NPU service below
+  # answers that objection — it uses no cores at all — so transcription can come back
+  # here. Both run in parallel until ai_lab_whisper_url is switched; the pve3 service
+  # stays as the fallback. The old /opt/ai-lab/whisper cache (~6 GB) is unused.
+
+{% if ai_lab_whisper_npu_enabled %}
+  # Whisper on the Arrow Lake NPU via OpenVINO GenAI. Built locally rather than pulled:
+  # no published image carries both the Intel NPU user-mode stack and an ASR server.
+  #
+  # Startup is slow on purpose — compiling Whisper for the NPU takes ~110 s and cannot
+  # be cached (GenAI's CACHE_DIR does not cover Whisper on NPU yet), so the healthcheck
+  # gets a start_period well past that. Requests before it finishes get a 503.
+  whisper-npu:
+    build:
+      context: /opt/ai-lab/whisper-npu
+    image: whisper-npu:{{ ai_lab_npu_driver_version }}
+    container_name: whisper-npu
+    restart: unless-stopped
+    environment:
+      - WHISPER_MODEL={{ ai_lab_whisper_npu_model }}
+      - WHISPER_DEVICE={{ ai_lab_whisper_npu_device }}
+      - WHISPER_LANGUAGE={{ ai_lab_whisper_npu_language }}
+      - TZ=Europe/Stockholm
+    volumes:
+      # Model cache (HF_HOME), so a restart doesn't re-download ~800 MB.
+      - /opt/ai-lab/whisper-npu/models:/models
+    devices:
+      - /dev/accel/accel0:/dev/accel/accel0
+    # render(993) — the same GID the iGPU nodes use, mapped 1:1 into this LXC by the
+    # idmap in playbooks/ai-lab.yaml.
+    group_add:
+      - "993"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 240s
+      retries: 3
+    ports:
+      - {{ ai_lab_whisper_npu_port }}:9000
+    networks:
+      - ai
+
+{% endif %}
 
   # Local LLM (CPU) for the study pipeline: turns Whisper transcripts into summaries +
   # study questions. Runs as overnight batch — quality over speed. Model llama3.3:70b
