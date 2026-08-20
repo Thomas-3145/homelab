@@ -53,6 +53,17 @@ proxmox_nut_server_host: pve3
 proxmox_nut_server_address: 192.168.10.13
 proxmox_nut_ups_name: apc
 proxmox_nut_ups_desc: APC BE650G2-GR
+# Low-battery thresholds. These live ON THE UPS (settable via upsrw), not in a
+# config file, so without this task they survive reboots but are lost if the unit
+# is replaced — and they are invisible to code review.
+#
+# The stock 120 s is too little. Worst case for pve3's shutdown chain (5 guests,
+# 4 parallel workers, 180 s per-guest cap) is ~6 min, so the UPS must declare LB
+# with at least that much runtime left. 420 s = 7 min.
+#
+# Only meaningful on the server (it holds the USB link to the UPS).
+proxmox_nut_battery_runtime_low: 420
+proxmox_nut_battery_charge_low: 10
 # Lazy-evaluated per host: anything matching proxmox_nut_server_host is the
 # server, everything else is a client.
 proxmox_nut_role: "{{ 'server' if inventory_hostname == proxmox_nut_server_host else 'client' }}"
