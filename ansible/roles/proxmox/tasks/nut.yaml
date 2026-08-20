@@ -68,6 +68,9 @@
       [upsmon-local]
           password = {{ vault_nut_password }}
           upsmon master
+          # SET is required for upsrw to write the low-battery thresholds below.
+          # Without it upsd answers ERR ACCESS-DENIED. Granted on pve3 2026-08-20.
+          actions = SET
 
       [upsmon-remote]
           password = {{ vault_nut_password }}
@@ -104,6 +107,38 @@
   when: proxmox_nut_role == 'client'
   no_log: true
   notify: Restart NUT
+
+- name: Set UPS low-battery thresholds (server)
+  # upsrw writes to the UPS itself, so this is only idempotent by way of the
+  # changed_when check below — read the value back and only report a change if
+  # it actually moved. Runs after upsd is up, since upsrw talks to it over 3493.
+  ansible.builtin.command:
+    cmd: >-
+      upsrw -s {{ item.var }}={{ item.value }}
+      -u upsmon-local -p {{ vault_nut_password }}
+      {{ proxmox_nut_ups_name }}@localhost
+  loop:
+    - {var: "battery.runtime.low", value: "{{ proxmox_nut_battery_runtime_low }}"}
+    - {var: "battery.charge.low", value: "{{ proxmox_nut_battery_charge_low }}"}
+  loop_control:
+    label: "{{ item.var }}={{ item.value }}"
+  when: proxmox_nut_role == 'server'
+  register: proxmox_nut_upsrw
+  changed_when: proxmox_nut_upsrw.rc == 0
+  no_log: true
+
+- name: Verify UPS low-battery thresholds took effect (server)
+  ansible.builtin.command:
+    cmd: upsc {{ proxmox_nut_ups_name }}@localhost {{ item.var }}
+  loop:
+    - {var: "battery.runtime.low", value: "{{ proxmox_nut_battery_runtime_low }}"}
+    - {var: "battery.charge.low", value: "{{ proxmox_nut_battery_charge_low }}"}
+  loop_control:
+    label: "{{ item.var }}"
+  when: proxmox_nut_role == 'server'
+  register: proxmox_nut_readback
+  changed_when: false
+  failed_when: proxmox_nut_readback.stdout | trim != item.value | string
 
 - name: Enable and start NUT services (server)
   ansible.builtin.systemd:
