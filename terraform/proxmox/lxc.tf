@@ -185,9 +185,15 @@ resource "proxmox_virtual_environment_container" "ai_lab" {
     cores = 6
   }
 
-  # 52 GB cap so an overnight Llama 3.3 70B (q4, ~45 GB) fits. It's a cap, not a
-  # reservation — daytime usage (Whisper only) stays low. 70B runs require the LIA
-  # VM (105) to be off so pve2's 62 GB total isn't exceeded alongside k3s.
+  # 52 GB cap so a large overnight model fits. It's a cap, not a reservation —
+  # Ollama unloads at idle (keep_alive=0) so daytime usage stays low.
+  #
+  # pve2 RAM budget (62 GB usable): cp-02 6 + worker-02 6 + arr-stack 6 + ai-lab 52
+  # = 70 GB of caps. That is deliberate overcommit, valid only because arr-stack
+  # rarely reaches its cap and ai-lab holds RAM only while a model is loaded.
+  # LIA VM 105 (central-01) is powered off permanently as of 2026-08-20, which is
+  # what makes the remaining overcommit survivable. If a run ever OOMs the host,
+  # shrink this cap first — cp-02 runs etcd and must not be the one that loses.
   memory {
     dedicated = 53248
   }

@@ -127,9 +127,31 @@ ai_lab_ntfy_resolve: "ntfy.3145.blog:443:192.168.10.200"
 # argument is the ~28 C it does not add to a host that already throttles (see the
 # thermal notes on E-core pinning above), and the six cores it does not take from k3s.
 #
-# Transcript quality came out at 95.0% word-level agreement with the large-v3 output.
-# The differences are numerals-versus-words and a couple of proper nouns, which the
-# slide-PDF grounding in studieplugg-lecture already corrects.
+# QUALITY CAVEAT — read before pointing ai_lab_whisper_url here.
+#
+# On a 5-minute sample this looked like a clean 95.0% word-level match with large-v3.
+# On the full F2 lecture (1h54m) it is 91.9%, and the gap is not cosmetic: turbo
+# silently drops passages. Two of ~50 words each went missing, one of them the
+# silver-in-lead-ore reasoning behind alchemical transmutation — exactly the kind of
+# course content these transcripts exist to capture.
+#
+# Isolated over F2_del_3 (1683 s), the dropped passage is present or absent as:
+#
+#   turbo int8, NPU                    142 s   absent
+#   turbo int8, NPU, return_timestamps 164 s   absent
+#   turbo int8, CPU                    210 s   absent
+#   turbo fp16, NPU                    156 s   absent
+#   large-v3 int8, CPU                 539 s   PRESENT
+#   large-v3 int8, NPU                    —    fails to execute on this NPU
+#
+# So it is the turbo architecture, not the accelerator, the precision or the
+# chunking — and large-v3, which does keep the content, compiles for this NPU but
+# dies at graph execute (ZE_RESULT_ERROR_UNINITIALIZED) regardless of audio length.
+# The NPU path is therefore locked to a model that loses text.
+#
+# Treat this service as the fast-draft path, not as a replacement for pve3, until
+# either a non-turbo model runs on the NPU or the loss is shown to be acceptable on
+# material that matters. ai_lab_whisper_url deliberately still points at pve3.
 ai_lab_whisper_npu_enabled: true
 ai_lab_whisper_npu_port: 9000
 ai_lab_whisper_npu_model: "OpenVINO/whisper-large-v3-turbo-int8-ov"

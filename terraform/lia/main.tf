@@ -4,6 +4,13 @@ resource "proxmox_virtual_environment_vm" "lia" {
   name      = each.key
   node_name = each.value.node_name
 
+  # LIA lab VMs are idle by default (2026-08-20). They sat running for months
+  # using ~1 GB of their 4-6 GB each. Kept defined so they can be raised on
+  # demand with `qm start <vmid>`, but powered off and excluded from host boot
+  # so they stop reserving RAM. Set started = true to bring them back via IaC.
+  started = false
+  on_boot = false
+
   agent {
     enabled = false
   }

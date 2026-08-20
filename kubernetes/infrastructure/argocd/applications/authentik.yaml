@@ -56,11 +56,17 @@ spec:
                 memory: 128Mi
                 cpu: 100m
 
-        # Scaled to zero 2026-07-20 — Authentik is deployed but unused, and the
-        # worker was firing a permanent CPUThrottlingHigh alert. Postgres and its
-        # PVC are left intact so the instance can be brought back with replicas: 1.
+        # Brought back up 2026-08-20 to serve as SSO in front of the public apps.
+        # The ingress lives in kubernetes/infrastructure/authentik/ingress.yaml
+        # (auth.3145.blog), not here — the chart ingress stays disabled so there
+        # is exactly one place that owns the host and the cert.
+        #
+        # The worker previously fired a permanent CPUThrottlingHigh alert at
+        # 200m. Raised to 500m: authentik's worker is bursty (blueprint
+        # reconciliation, outpost sync) and throttling it just makes the bursts
+        # last longer without saving anything on an idle cluster.
         server:
-          replicas: 0
+          replicas: 1
           ingress:
             enabled: false
           resources:
@@ -72,14 +78,14 @@ spec:
               cpu: 500m
 
         worker:
-          replicas: 0
+          replicas: 1
           resources:
             requests:
-              memory: 256Mi
-              cpu: 50m
-            limits:
               memory: 512Mi
-              cpu: 200m
+              cpu: 100m
+            limits:
+              memory: 1Gi
+              cpu: 500m
   destination:
     server: https://kubernetes.default.svc
     namespace: authentik
