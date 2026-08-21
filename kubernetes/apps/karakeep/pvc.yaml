@@ -1,0 +1,30 @@
+# Two separate volumes on purpose: the Meilisearch index is fully rebuildable
+# from the SQLite DB, the karakeep-data volume is not. Keeping them apart means
+# a corrupt index can be thrown away without touching the bookmarks.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: karakeep-data
+  namespace: karakeep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      # SQLite DB + screenshots + full-page archives. The archives dominate;
+      # roughly 1-3 MB per bookmark with CRAWLER_FULL_PAGE_ARCHIVE enabled.
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: karakeep-meilisearch
+  namespace: karakeep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi

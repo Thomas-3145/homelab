@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - meilisearch.yaml
+  - chrome.yaml
+  - web.yaml
+  - ingress.yaml
+
+generators:
+  - ksops-generator.yaml

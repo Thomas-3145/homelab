@@ -1,0 +1,81 @@
+# Headless Chrome used by the crawler to render pages before archiving them.
+# Fully stateless — no volume, and it can be restarted at any time.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chrome
+  namespace: karakeep
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chrome
+  template:
+    metadata:
+      labels:
+        app: chrome
+    spec:
+      # The image already declares USER 65534 (nobody); stating it here
+      # makes the guarantee enforceable by the kubelet instead of implicit.
+      securityContext:
+        runAsUser: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+      containers:
+        - name: chrome
+          # Tagged by CHROME version, not by karakeep version — do not try to
+          # match this to the web image tag when upgrading.
+          image: ghcr.io/karakeep-app/karakeep-chrome:151.0.7922.47-r1
+          args:
+            - --disable-gpu
+            # Container /dev/shm defaults to 64Mi, which Chrome overruns and
+            # crashes on. This makes it use /tmp instead.
+            - --disable-dev-shm-usage
+            - --hide-scrollbars
+            - --disable-blink-features=AutomationControlled
+            - --window-size=1440,900
+          ports:
+            - containerPort: 9222
+          # The image already declares USER 65534, so this only makes the
+          # existing behaviour explicit and drops what it never needs.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              # Chrome is the memory hog of the three. A heavy page can spike
+              # well past 512Mi; below ~1Gi it gets OOMKilled mid-crawl and the
+              # bookmark silently ends up without an archive.
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /json/version
+              port: 9222
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /json/version
+              port: 9222
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chrome
+  namespace: karakeep
+spec:
+  selector:
+    app: chrome
+  ports:
+    - port: 9222
+      targetPort: 9222
