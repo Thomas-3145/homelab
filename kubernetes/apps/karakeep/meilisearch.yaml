@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meilisearch
+  namespace: karakeep
+spec:
+  replicas: 1
+  # RWO volume (Longhorn) — a surge pod can never attach while the old pod holds
+  # the volume, so rolling updates deadlock. Recreate stops the old pod first.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: meilisearch
+  template:
+    metadata:
+      labels:
+        app: meilisearch
+    spec:
+      # The upstream image has no USER directive and would run as root.
+      # Meilisearch only ever writes to /meili_data, so a plain uid + fsGroup
+      # is enough. If it crashloops on a permission error, this block is the
+      # first thing to remove — see docs/runbooks.
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+      containers:
+        - name: meilisearch
+          image: getmeili/meilisearch:v1.41.0
+          env:
+            - name: MEILI_NO_ANALYTICS
+              value: "true"
+            - name: MEILI_ENV
+              value: production
+            # Shared with the web pod — both sides must present the same key.
+            - name: MEILI_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: karakeep-secret
+                  key: MEILI_MASTER_KEY
+          ports:
+            - containerPort: 7700
+          volumeMounts:
+            - name: data
+              mountPath: /meili_data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 7700
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 7700
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: karakeep-meilisearch
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: meilisearch
+  namespace: karakeep
+spec:
+  selector:
+    app: meilisearch
+  ports:
+    - port: 7700
+      targetPort: 7700

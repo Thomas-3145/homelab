@@ -1,0 +1,127 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: karakeep
+  namespace: karakeep
+spec:
+  replicas: 1
+  # RWO volume (Longhorn) — see the note in meilisearch.yaml.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: karakeep
+  template:
+    metadata:
+      labels:
+        app: karakeep
+    spec:
+      # NOTE: runs as root. The image entrypoint is /init (s6-overlay), which
+      # needs root to set up and drops privileges itself. Forcing runAsNonRoot
+      # here makes the container fail to start. Tracked with the other
+      # non-root work rather than worked around.
+      containers:
+        - name: karakeep
+          image: ghcr.io/karakeep-app/karakeep:0.33.2
+          env:
+            # DON'T CHANGE — the volume mount below is what relocates the data.
+            - name: DATA_DIR
+              value: /data
+            # Must be the public URL. If this is wrong, login redirects loop.
+            - name: NEXTAUTH_URL
+              value: https://karakeep.3145.blog
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: karakeep-secret
+                  key: NEXTAUTH_SECRET
+            - name: MEILI_ADDR
+              value: http://meilisearch:7700
+            - name: MEILI_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: karakeep-secret
+                  key: MEILI_MASTER_KEY
+            - name: BROWSER_WEB_URL
+              value: http://chrome:9222
+
+            # Keep a full offline copy of every page, not just text + screenshot.
+            # Enable from the start: it does NOT backfill bookmarks crawled while
+            # it was off.
+            - name: CRAWLER_FULL_PAGE_ARCHIVE
+              value: "true"
+            # Versions are pinned in git, so the in-app update nag is noise.
+            - name: DISABLE_NEW_RELEASE_CHECK
+              value: "true"
+            # Karakeep blocks ALL signups when true, including the first one.
+            # Leave false until the account exists, then flip and commit.
+            - name: DISABLE_SIGNUPS
+              value: "false"
+
+            # --- Local inference via Ollama on ai-lab (LXC 201, .41) ---
+            # Verified reachable from this network on 2026-08-21.
+            - name: OLLAMA_BASE_URL
+              value: http://192.168.10.41:11434
+            # MUST be set whenever OLLAMA_BASE_URL is. The default is an OpenAI
+            # model name, which Ollama rejects, and the only symptom is tags
+            # never appearing.
+            - name: INFERENCE_TEXT_MODEL
+              value: qwen3:8b
+            # Default is 2048 — too small to fit an article, which produces
+            # vague tags from a truncated page.
+            - name: INFERENCE_CONTEXT_LENGTH
+              value: "8192"
+            # Default is 30s. ai-lab unloads models when idle, so the first
+            # request after a pause pays a cold model load on E-cores.
+            - name: INFERENCE_JOB_TIMEOUT_SEC
+              value: "300"
+            # INFERENCE_IMAGE_MODEL is deliberately unset: ai-lab has no vision
+            # model pulled. Tagging of image bookmarks stays off until one is
+            # (`ollama pull qwen2.5vl:7b`), then set it here. Text bookmarks are
+            # unaffected.
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          # Next.js boot + SQLite migrations take a while on first start; the
+          # startup probe buys that time without a slack liveness period later.
+          startupProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: karakeep-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: karakeep
+  namespace: karakeep
+spec:
+  selector:
+    app: karakeep
+  ports:
+    - port: 3000
+      targetPort: 3000

@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: karakeep
+  namespace: karakeep
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Uploading PDFs and images as bookmarks; MAX_ASSET_SIZE_MB defaults to 50,
+    # so nginx must allow at least that much or the upload fails at the proxy.
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+    # Crawl-heavy pages can keep a request open longer than the 60s default.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - karakeep.3145.blog
+      secretName: karakeep-tls
+  rules:
+    - host: karakeep.3145.blog
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: karakeep
+                port:
+                  number: 3000
