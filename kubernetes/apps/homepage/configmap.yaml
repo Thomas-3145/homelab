@@ -301,6 +301,11 @@ data:
               key: {{HOMEPAGE_VAR_VIKUNJA_KEY}}
               version: 2
               enableTaskList: true
+        - Karakeep:
+            icon: karakeep.svg
+            href: https://karakeep.3145.blog/
+            description: Bokmärken & arkiv
+            siteMonitor: http://karakeep.karakeep.svc.cluster.local:3000
     - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
