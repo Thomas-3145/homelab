@@ -1,23 +1,43 @@
+# Cloudflare Tunnel — router edge
+#
+# ⚠️  THIS FILE IS A MIRROR, NOT THE SOURCE OF TRUTH.
+#
+# The tunnel is *remotely managed* from the Cloudflare dashboard. cloudflared
+# pulls that config on startup and logs "Updated to new configuration ... version=N",
+# which overrides whatever this file says. Editing this file changes nothing at the edge.
+# Verify with: ssh router 'docker logs cloudflared | grep "Updated to new configuration"'
+#
+# Keep this file in sync by hand whenever the dashboard config changes, so the repo
+# documents the real public surface. Switching to a locally-managed tunnel would mean
+# recreating it via `cloudflared tunnel create`, which changes the tunnel UUID and all
+# DNS records pointing at it — see docs/roadmap.md "Cloudflared GitOps".
+#
+# Last mirrored: 2026-08-21 (dashboard version 9)
+#
+# Reachability is decided by DNS, not by this list. A hostname here is only
+# internet-reachable if its Cloudflare record is a proxied CNAME to the tunnel.
+# Hosts with an A record to 192.168.10.200 stay LAN/Tailscale-only.
+
 tunnel: ce180050-7bb3-47bf-a4dd-a4ec5e56d592
 credentials-file: /etc/cloudflared/ce180050-7bb3-47bf-a4dd-a4ec5e56d592.json
 originRequest:
   noTLSVerify: true
 ingress:
-  # home.3145.blog (Homepage) and longhorn.3145.blog intentionally NOT exposed —
-  # reachable via LAN/Tailscale only. Homepage leaks internal topology; the Longhorn
-  # UI has no built-in auth. Do not re-add without an auth layer in front.
+  # Trimmed 2026-08-21 from 11 hostnames down to these five. Removed: home, argocd,
+  # grafana, longhorn, headlamp, it-tools — all reachable on LAN/Tailscale via their
+  # A records, and none of them should ever answer from the internet. Homepage in
+  # particular was live and unauthenticated, leaking internal topology and proxying
+  # the ArgoCD API to anonymous callers.
+  - hostname: 3145.blog
+    service: https://192.168.10.200
+  # Must stay public so GitHub can deliver push events. Guarded by a shared secret,
+  # not by a login — the only unauthenticated endpoint left on purpose.
   - hostname: argocd-webhook.3145.blog
-    service: https://192.168.10.200
-  - hostname: argocd.3145.blog
-    service: https://192.168.10.200
-  - hostname: grafana.3145.blog
-    service: https://192.168.10.200
-  - hostname: headlamp.3145.blog
-    service: https://192.168.10.200
-  - hostname: it-tools.3145.blog
     service: https://192.168.10.200
   - hostname: ibindex.3145.blog
     service: https://192.168.10.200
-  - hostname: ntfy.3145.blog
+  - hostname: vault.3145.blog
+    service: https://192.168.10.200
+  - hostname: auth.3145.blog
     service: https://192.168.10.200
   - service: http_status:404
