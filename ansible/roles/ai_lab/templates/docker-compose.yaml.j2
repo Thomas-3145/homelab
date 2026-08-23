@@ -1,45 +1,50 @@
 services:
-  # Whisper was moved to pve3 (LXC 202, http://192.168.10.42:9000) because CPU
-  # transcription competed with the model for pve2's cores. The NPU service below
-  # answers that objection — it uses no cores at all — so transcription can come back
-  # here. Both run in parallel until ai_lab_whisper_url is switched; the pve3 service
-  # stays as the fallback. The old /opt/ai-lab/whisper cache (~6 GB) is unused.
+  # Whisper was moved to pve3 (LXC 202) on 2026-08-02 because CPU transcription
+  # competed with the model for pve2's cores, on a host that was thermally unstable at
+  # the time. Both objections are gone: PL1=45W gave pve2 a 74 C plateau, and this
+  # service is 3.3x faster than pve3 on the same model, so a lecture spends far less
+  # time holding any cores at all. The old /opt/ai-lab/whisper cache (~6 GB) is unused.
 
-{% if ai_lab_whisper_npu_enabled %}
-  # Whisper on the Arrow Lake NPU via OpenVINO GenAI. Built locally rather than pulled:
-  # no published image carries both the Intel NPU user-mode stack and an ASR server.
+{% if ai_lab_whisper_ov_enabled %}
+  # Whisper through OpenVINO GenAI. Built locally rather than pulled: no published
+  # image carries both Intel's NPU user-mode stack and an ASR server.
   #
-  # Startup is slow on purpose — compiling Whisper for the NPU takes ~110 s and cannot
-  # be cached (GenAI's CACHE_DIR does not cover Whisper on NPU yet), so the healthcheck
-  # gets a start_period well past that. Requests before it finishes get a 503.
-  whisper-npu:
+  # The runtime target is ai_lab_whisper_ov_device — CPU in production, NPU and GPU
+  # switchable from the same image. See the defaults for why CPU won: the NPU path
+  # only executes the turbo model, which silently drops passages.
+  whisper-ov:
     build:
-      context: /opt/ai-lab/whisper-npu
-    image: whisper-npu:{{ ai_lab_npu_driver_version }}
-    container_name: whisper-npu
+      context: /opt/ai-lab/whisper-ov
+    image: whisper-ov:{{ ai_lab_npu_driver_version }}
+    container_name: whisper-ov
     restart: unless-stopped
     environment:
-      - WHISPER_MODEL={{ ai_lab_whisper_npu_model }}
-      - WHISPER_DEVICE={{ ai_lab_whisper_npu_device }}
-      - WHISPER_LANGUAGE={{ ai_lab_whisper_npu_language }}
+      - WHISPER_MODEL={{ ai_lab_whisper_ov_model }}
+      - WHISPER_DEVICE={{ ai_lab_whisper_ov_device }}
+      - WHISPER_LANGUAGE={{ ai_lab_whisper_ov_language }}
       - TZ=Europe/Stockholm
     volumes:
       # Model cache (HF_HOME), so a restart doesn't re-download ~800 MB.
-      - /opt/ai-lab/whisper-npu/models:/models
+      - /opt/ai-lab/whisper-ov/models:/models
+{% if ai_lab_whisper_ov_device == 'NPU' %}
     devices:
       - /dev/accel/accel0:/dev/accel/accel0
     # render(993) — the same GID the iGPU nodes use, mapped 1:1 into this LXC by the
     # idmap in playbooks/ai-lab.yaml.
     group_add:
       - "993"
+{% endif %}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
       interval: 30s
       timeout: 5s
-      start_period: 240s
+      # Compiling Whisper takes ~110 s for NPU and ~2.5 s for CPU, and GenAI's
+      # CACHE_DIR does not cover Whisper on NPU, so that cost is paid at every start.
+      # The CPU value still allows for a first-run model download.
+      start_period: {{ 240 if ai_lab_whisper_ov_device == 'NPU' else 120 }}s
       retries: 3
     ports:
-      - {{ ai_lab_whisper_npu_port }}:9000
+      - {{ ai_lab_whisper_ov_port }}:9000
     networks:
       - ai
 

@@ -10,9 +10,9 @@
     - inbox
     - out
     - work
-    # Build context for the NPU Whisper image, plus its HF model cache.
-    - whisper-npu
-    - whisper-npu/models
+    # Build context for the OpenVINO Whisper image, plus its HF model cache.
+    - whisper-ov
+    - whisper-ov/models
 
 - name: Create compose directory
   ansible.builtin.file:
@@ -44,15 +44,15 @@
 
 # No published image carries both Intel's NPU user-mode stack and an ASR server, so
 # this one is built on the host from a two-file context.
-- name: Deploy the NPU Whisper build context
+- name: Deploy the OpenVINO Whisper build context
   ansible.builtin.template:
-    src: "whisper-npu/{{ item }}.j2"
-    dest: "/opt/ai-lab/whisper-npu/{{ item }}"
+    src: "whisper-ov/{{ item }}.j2"
+    dest: "/opt/ai-lab/whisper-ov/{{ item }}"
     mode: "0644"
   loop:
     - Dockerfile
     - server.py
-  when: ai_lab_whisper_npu_enabled
+  when: ai_lab_whisper_ov_enabled
   notify: Restart ai-lab
 
 - name: Deploy docker-compose.yaml
@@ -67,7 +67,7 @@
     project_src: /opt/ai-lab
     state: present
     pull: missing
-    # The whisper-npu image is built here, and its tag doesn't change when the
+    # The whisper-ov image is built here, and its tag doesn't change when the
     # Dockerfile or server does — "policy" would keep serving the stale image.
     # Layer caching makes a no-op rebuild cheap.
     build: always

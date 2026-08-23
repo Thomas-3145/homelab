@@ -1,9 +1,13 @@
-# Whisper on the Arrow Lake NPU, via OpenVINO GenAI.
+# Whisper via OpenVINO GenAI. One image, three possible runtime targets — the device
+# is chosen at run time by ai_lab_whisper_ov_device, not baked in here.
 #
-# The kernel-mode driver (intel_vpu) and the NPU firmware blob live on the PVE host;
-# only /dev/accel/accel0 is passed into the LXC and on into this container. Everything
-# installed here is user-mode: the Level Zero loader, Intel's Level Zero NPU driver
-# and the NPU compiler that lowers an OpenVINO IR into something the NPU can run.
+# The NPU half of the stack is installed even though production runs on CPU, so that
+# switching back is one variable rather than a rebuild. The kernel-mode driver
+# (intel_vpu) and the NPU firmware blob live on the PVE host; only /dev/accel/accel0
+# is passed into the LXC and on into this container, and only when the device is NPU.
+# Everything installed here is user-mode: the Level Zero loader, Intel's Level Zero
+# NPU driver and the NPU compiler that lowers an OpenVINO IR into something the NPU
+# can run.
 #
 # Versions are pinned to the combination Intel validated for Arrow Lake in the
 # linux-npu-driver {{ ai_lab_npu_driver_version }} release notes. Mixing driver and
