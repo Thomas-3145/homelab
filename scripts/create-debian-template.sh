@@ -2,8 +2,8 @@
 # Create a Debian 13 (trixie) cloud-init template on a Proxmox node.
 #
 # Run this ON the Proxmox node that will host the VMs cloned from it. For PBS
-# that is pve2 (the services resource clones same-node), so:
-#   scp scripts/create-debian-template.sh root@pve2:/tmp/ && ssh root@pve2 'bash /tmp/create-debian-template.sh'
+# that is pve1 (the services resource clones same-node), so:
+#   scp scripts/create-debian-template.sh root@pve1:/tmp/ && ssh root@pve1 'bash /tmp/create-debian-template.sh'
 #
 # Produces VMID 9002 as a template. Terraform's service_vms.pbs then clones it.
 # Idempotent-ish: refuses to clobber an existing VMID 9002.
