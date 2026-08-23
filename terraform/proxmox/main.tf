@@ -4,8 +4,12 @@ resource "proxmox_virtual_environment_vm" "k3s_control_plane" {
   name      = each.key
   node_name = each.value.node_name
 
+  # Lets Proxmox freeze the guest filesystem before a vzdump snapshot, so PBS
+  # backups are filesystem-consistent instead of crash-consistent. Requires
+  # qemu-guest-agent inside the guest (installed by the common role) and a
+  # power-cycle — the virtio-serial device is only added at machine start.
   agent {
-    enabled = false
+    enabled = true
   }
 
   clone {
@@ -67,8 +71,12 @@ resource "proxmox_virtual_environment_vm" "k3s_workers" {
   name      = each.key
   node_name = each.value.node_name
 
+  # Lets Proxmox freeze the guest filesystem before a vzdump snapshot, so PBS
+  # backups are filesystem-consistent instead of crash-consistent. Requires
+  # qemu-guest-agent inside the guest (installed by the common role) and a
+  # power-cycle — the virtio-serial device is only added at machine start.
   agent {
-    enabled = false
+    enabled = true
   }
 
   clone {
@@ -128,8 +136,12 @@ resource "proxmox_virtual_environment_vm" "services" {
   name      = each.key
   node_name = each.value.node_name
 
+  # Lets Proxmox freeze the guest filesystem before a vzdump snapshot, so PBS
+  # backups are filesystem-consistent instead of crash-consistent. Requires
+  # qemu-guest-agent inside the guest (installed by the common role) and a
+  # power-cycle — the virtio-serial device is only added at machine start.
   agent {
-    enabled = false
+    enabled = true
   }
 
   clone {
@@ -166,6 +178,15 @@ resource "proxmox_virtual_environment_vm" "services" {
   }
 
   initialization {
+    # Without this, cloud-init inherits the Proxmox host's resolver. Every node
+    # runs Tailscale, so that resolver is MagicDNS (100.100.100.100) — which a
+    # fresh guest cannot reach until Tailscale is up, and Tailscale is installed
+    # by the common role, which needs working DNS to fetch packages. Pin public
+    # resolvers so the guest can bootstrap. Same as the LXCs in lxc.tf.
+    dns {
+      servers = ["1.1.1.1", "8.8.8.8"]
+    }
+
     ip_config {
       ipv4 {
         address = "${each.value.ip}/24"
@@ -193,8 +214,12 @@ resource "proxmox_virtual_environment_vm" "test" {
   name      = each.key
   node_name = each.value.node_name
 
+  # Lets Proxmox freeze the guest filesystem before a vzdump snapshot, so PBS
+  # backups are filesystem-consistent instead of crash-consistent. Requires
+  # qemu-guest-agent inside the guest (installed by the common role) and a
+  # power-cycle — the virtio-serial device is only added at machine start.
   agent {
-    enabled = false
+    enabled = true
   }
 
   clone {

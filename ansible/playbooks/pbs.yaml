@@ -30,21 +30,32 @@
       become: false
       register: pbs_ssh_probe
       ignore_errors: true
+      # wait_for is skipped under --check, and a skipped result is not "failed",
+      # so the selection below would always pick 22456 and make a dry-run against
+      # a fresh VM impossible. The probe only opens a TCP connection, so running
+      # it for real in check mode is safe.
+      check_mode: false
       loop:
         - 22456
         - 22
+      # These pre_tasks establish the connection and gather facts, so they must
+      # run even when the play is invoked with --tags (e.g. --tags qemu-agent).
+      tags: always
 
     - name: Fail if neither SSH port is reachable
       ansible.builtin.fail:
         msg: "pbs ({{ ansible_host }}) is not reachable on port 22 or 22456."
       when: pbs_ssh_probe.results | selectattr('failed', 'equalto', false) | list | length == 0
+      tags: always
 
     - name: Select the first reachable SSH port
       ansible.builtin.set_fact:
         ansible_port: "{{ pbs_ssh_probe.results | selectattr('failed', 'equalto', false) | map(attribute='item') | first }}"
+      tags: always
 
     - name: Gather facts now that the SSH port is known
       ansible.builtin.setup:
+      tags: always
 
   roles:
     - common

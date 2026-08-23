@@ -9,34 +9,72 @@ data:
     language: sv
     theme: dark
     color: slate
-    headerStyle: boxedWidgets
+    headerStyle: underlined
     statusStyle: dot
     hideVersion: true
-    useEqualHeights: true
+    target: _blank
     quicklaunch:
       searchDescriptions: true
       provider: google
+    # Tab order follows the order of the groups below. Bookmark groups carry no
+    # `tab:` and therefore render on every tab, which is what we want for the
+    # repo/Cloudflare/docs links.
+    #
+    # useEqualHeights is set per group, only where every tile in the group is
+    # the same kind — stretching a plain siteMonitor tile to the height of a
+    # widget tile leaves a large empty box.
     layout:
+      Appar:
+        tab: Hem
+        icon: mdi-apps
+        style: row
+        columns: 4
+      Verktyg:
+        tab: Hem
+        icon: mdi-tools
+        style: row
+        columns: 4
+        useEqualHeights: true
       Kalender:
+        tab: Hem
+        icon: mdi-calendar
         style: row
         columns: 1
-      Homelab:
+      Infrastruktur:
+        tab: Infra
+        icon: mdi-server
         style: row
         columns: 3
-      System:
+        useEqualHeights: true
+      Drift:
+        tab: Infra
+        icon: mdi-heart-pulse
         style: row
-        columns: 4
-      Tjänster:
-        style: row
-        columns: 4
+        columns: 3
+        useEqualHeights: true
       Kluster:
+        tab: Infra
+        icon: mdi-kubernetes
         style: row
         columns: 4
-        initiallyCollapsed: true
+      Nätverk:
+        tab: Infra
+        icon: mdi-lan
+        style: row
+        columns: 2
+        useEqualHeights: true
+      Media:
+        tab: Media
+        icon: mdi-play-circle
+        style: row
+        columns: 4
+        useEqualHeights: true
       Nedladdningar:
+        tab: Media
+        icon: mdi-download
         style: row
-        columns: 4
-        initiallyCollapsed: true
+        columns: 3
+        useEqualHeights: true
     providers:
       longhorn:
         url: http://longhorn-frontend.longhorn-system.svc.cluster.local
@@ -56,6 +94,10 @@ data:
             - abbr: PVE
               icon: proxmox.svg
               href: https://192.168.10.11:8006
+        - Ghost Admin:
+            - abbr: GA
+              icon: ghost.png
+              href: https://3145.blog/ghost
     - Docs:
         - Kubernetes:
             - abbr: K8S
@@ -79,12 +121,17 @@ data:
     # Hosts run Debian 13 → glances v4, hence `version: 4` (API path /api/4).
     # NOTE: `sensor:Package id 0` is the usual Intel coretemp label; confirm the
     # exact name per host with:  curl http://192.168.10.11:61208/api/4/sensors
-    - Homelab:
+    - Infrastruktur:
         - pve1:
             icon: proxmox.svg
             href: https://192.168.10.11:8006
-            description: EliteDesk G8 · hypervisor
+            description: EliteDesk G8 · i5-11500T · 32GB
             widgets:
+              - type: glances
+                url: http://192.168.10.11:61208
+                version: 4
+                metric: cpu
+                chart: false
               - type: glances
                 url: http://192.168.10.11:61208
                 version: 4
@@ -103,8 +150,13 @@ data:
         - pve2:
             icon: proxmox.svg
             href: https://192.168.10.12:8006
-            description: EliteDesk G1i · hypervisor
+            description: EliteDesk G1i · Ultra 5 · 64GB
             widgets:
+              - type: glances
+                url: http://192.168.10.12:61208
+                version: 4
+                metric: cpu
+                chart: false
               - type: glances
                 url: http://192.168.10.12:61208
                 version: 4
@@ -123,8 +175,13 @@ data:
         - pve3:
             icon: proxmox.svg
             href: https://192.168.10.13:8006
-            description: EliteDesk G8 · hypervisor
+            description: EliteDesk G8 · i5-11500T · 64GB
             widgets:
+              - type: glances
+                url: http://192.168.10.13:61208
+                version: 4
+                metric: cpu
+                chart: false
               - type: glances
                 url: http://192.168.10.13:61208
                 version: 4
@@ -140,43 +197,18 @@ data:
                 version: 4
                 metric: sensor:Package id 0
                 chart: false
-    - Kalender:
-        - Kalender:
-            widget:
-              type: calendar
-              view: monthly
-              firstDayInWeek: monday
-              maxEvents: 10
-              showTime: true
-              timezone: Europe/Stockholm
-              integrations:
-                # Google Calendar's secret iCal address — anyone holding the URL
-                # can read the whole calendar, so it lives in the sops secret and
-                # never in this configmap.
-                - type: ical
-                  url: {{HOMEPAGE_VAR_CALENDAR_ICAL}}
-                  name: Privat
-                  color: blue
-                - type: sonarr
-                  service_group: Nedladdningar
-                  service_name: Sonarr
-                  color: teal
-                - type: radarr
-                  service_group: Nedladdningar
-                  service_name: Radarr
-                  color: amber
-    - System:
+    - Drift:
         - Gatus:
             icon: gatus.svg
             href: http://192.168.8.1:8888
-            description: Nätverksövervakning
+            description: Hälsokontroller
             widget:
               type: gatus
               url: http://192.168.8.1:8888
         - Proxmox:
             icon: proxmox.svg
             href: https://192.168.10.11:8006
-            description: Hypervisor
+            description: VM & LXC-översikt
             widget:
               type: proxmox
               url: https://192.168.10.11:8006
@@ -185,20 +217,11 @@ data:
         - ArgoCD:
             icon: argo-cd.svg
             href: https://argocd.3145.blog
-            description: GitOps
+            description: GitOps-synk
             widget:
               type: argocd
               url: http://argocd-server.argocd.svc.cluster.local
               key: {{HOMEPAGE_VAR_ARGOCD_KEY}}
-        - Grafana:
-            icon: grafana.svg
-            href: https://grafana.3145.blog/d/b9a850a0-9e65-4b83-9c5c-8139d69340ff/cluster-overview?orgId=1&from=now-30m&to=now&timezone=browser
-            description: Dashboards & Metrics
-            widget:
-              type: grafana
-              url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local
-              username: {{HOMEPAGE_VAR_GRAFANA_USER}}
-              password: {{HOMEPAGE_VAR_GRAFANA_PASSWORD}}
         - ntfy:
             icon: ntfy.svg
             href: https://ntfy.3145.blog/homelab
@@ -208,37 +231,156 @@ data:
               url: http://ntfy.ntfy.svc.cluster.local
               topic: homelab
               fields: ["title", "message", "priority", "lastReceived"]
+        - UPS:
+            icon: mdi-battery-charging
+            description: APC BE650G2-GR · pve3
+            # NUT has no web UI — it speaks its own protocol on pve3:3493. The
+            # numbers come from nut-exporter (monitoring ns) via Prometheus.
+            widget:
+              type: prometheusmetric
+              url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+              refreshInterval: 30000
+              metrics:
+                - label: Batteri
+                  query: network_ups_tools_battery_charge
+                  format:
+                    type: number
+                    suffix: "%"
+                    options:
+                      maximumFractionDigits: 0
+                - label: Last
+                  query: network_ups_tools_ups_load
+                  format:
+                    type: number
+                    suffix: "%"
+                    options:
+                      maximumFractionDigits: 0
+                - label: Restid
+                  # Reported in seconds. Divided in PromQL rather than with
+                  # format.scale, which takes its fraction as a string.
+                  query: network_ups_tools_battery_runtime / 60
+                  format:
+                    type: number
+                    suffix: " min"
+                    options:
+                      maximumFractionDigits: 0
+                - label: Nät
+                  query: network_ups_tools_input_voltage
+                  format:
+                    type: number
+                    suffix: " V"
+                    options:
+                      maximumFractionDigits: 0
+        - Backup:
+            icon: velero.svg
+            description: Velero → Cloudflare R2
+            widget:
+              type: prometheusmetric
+              url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+              refreshInterval: 60000
+              metrics:
+                - label: Backuper
+                  query: velero_backup_total
+                  format:
+                    type: number
+                - label: Objektfel
+                  # velero_backup_last_status stays 1 through a PartiallyFailed
+                  # run, so it is useless as a health signal. Item errors is the
+                  # number that actually goes non-zero when a backup degrades.
+                  query: velero_backup_items_errors{schedule="daily-cluster"}
+                  format:
+                    type: number
+                - label: Storlek
+                  query: velero_backup_tarball_size_bytes
+                  format:
+                    type: bytes
     - Kluster:
-        - AdGuardHome:
-            icon: si-adguard
-            href: http://192.168.8.1:3000/
-            description: DNS-filtrering
-            # No widget: AdGuard runs with GL.iNet's --glinet auth (Admin-Token
-            # cookie), which the Homepage adguard widget (basic auth) can't use.
-            # siteMonitor gives up/down without touching auth.
-            siteMonitor: http://192.168.8.1:3000/
-        - Switch:
-            icon: mikrotik.svg
-            href: http://192.168.10.2
-            description: MikroTik CRS310
-            ping: 192.168.10.2
+        - Grafana:
+            icon: grafana.svg
+            href: https://grafana.3145.blog/d/b9a850a0-9e65-4b83-9c5c-8139d69340ff/cluster-overview?orgId=1&from=now-30m&to=now&timezone=browser
+            description: Dashboards & metrics
+            widget:
+              type: grafana
+              url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local
+              username: {{HOMEPAGE_VAR_GRAFANA_USER}}
+              password: {{HOMEPAGE_VAR_GRAFANA_PASSWORD}}
         - Longhorn:
             icon: longhorn.svg
             href: https://longhorn.3145.blog
-            description: Persistent Storage
+            description: Persistent storage
             siteMonitor: http://longhorn-frontend.longhorn-system.svc.cluster.local
         - Headlamp:
             icon: headlamp.svg
+            # headlamp.3145.blog is in the Ingress but has no DNS record
+            # (NXDOMAIN publicly and on the LAN) — .local resolves via /etc/hosts.
             href: http://headlamp.local
-            description: Kubernetes Dashboard
+            description: Kubernetes-dashboard
             siteMonitor: http://headlamp.headlamp.svc.cluster.local
-        - ingress-nginx:
-            icon: nginx.svg
-            description: Ingress Controller
-        - cert-manager:
-            icon: cert-manager.svg
-            description: Certifikathantering
-    - Tjänster:
+        - Authentik:
+            icon: authentik.svg
+            href: https://auth.3145.blog
+            description: SSO & identitet
+            # /-/health/live/ is Authentik's unauthenticated liveness probe; the
+            # root path redirects to the login flow.
+            siteMonitor: http://authentik-server.authentik.svc.cluster.local:80/-/health/live/
+    - Appar:
+        - Vaultwarden:
+            icon: vaultwarden.svg
+            href: https://vault.3145.blog/
+            description: Lösenordshantering
+            siteMonitor: http://vaultwarden.vaultwarden.svc.cluster.local
+        - Vikunja:
+            icon: vikunja.svg
+            href: https://vikunja.3145.blog/
+            description: Uppgifter & planering
+            widget:
+              type: vikunja
+              url: http://vikunja.vikunja.svc.cluster.local:3456
+              key: {{HOMEPAGE_VAR_VIKUNJA_KEY}}
+              version: 2
+              enableTaskList: true
+        - Karakeep:
+            icon: karakeep.svg
+            href: https://karakeep.3145.blog/
+            description: Bokmärken & arkiv
+            siteMonitor: http://karakeep.karakeep.svc.cluster.local:3000
+        - ibindex:
+            icon: si-chartdotjs
+            href: https://ibindex.3145.blog/
+            description: Portföljanalys
+            siteMonitor: http://ibindex.ibindex.svc.cluster.local
+    - Verktyg:
+        - Ghost:
+            icon: ghost.png
+            href: https://3145.blog/
+            description: Blogg
+            # Ghost is configured with an https url, so it 301s every plain-http
+            # request — including the in-cluster service URL. Homepage's redirect
+            # follower cannot switch protocol mid-chain (ERR_FR_REDIRECTION_FAILURE),
+            # so monitor the public hostname instead. This also covers the
+            # Cloudflare Tunnel path end to end.
+            siteMonitor: https://3145.blog/
+        - IT-Tools:
+            icon: it-tools.svg
+            # As with Headlamp: it-tools.3145.blog is in the Ingress but has
+            # no DNS record anywhere.
+            href: http://it-tools.local
+            description: Utvecklarverktyg
+            siteMonitor: http://it-tools.it-tools.svc.cluster.local
+        - Stirling-PDF:
+            icon: stirling-pdf.png
+            # No public hostname — only stirling-pdf.local via /etc/hosts.
+            href: http://stirling-pdf.local/
+            description: PDF-verktyg
+            # Stirling's root path requires auth (401) — use its status endpoint,
+            # which is unauthenticated and returns {"status":"UP"}.
+            siteMonitor: http://stirling-pdf.stirling-pdf.svc.cluster.local/api/v1/info/status
+        - Ollama:
+            icon: ollama.svg
+            href: http://192.168.10.41:11434
+            description: Lokal LLM · taggar Karakeep
+            siteMonitor: http://192.168.10.41:11434
+    - Media:
         - Jellyfin:
             icon: jellyfin.svg
             href: http://192.168.10.40:8096
@@ -255,58 +397,6 @@ data:
               type: overseerr
               url: http://192.168.10.40:5055
               key: {{HOMEPAGE_VAR_SEERR_KEY}}
-        - IT-Tools:
-            icon: it-tools.svg
-            href: http://it-tools.local
-            description: Developer utilities
-            siteMonitor: http://it-tools.it-tools.svc.cluster.local
-        - Ghost:
-            icon: ghost.png
-            href: https://3145.blog/
-            description: Blogg
-            # Ghost is configured with an https url, so it 301s every plain-http
-            # request — including the in-cluster service URL. Homepage's redirect
-            # follower cannot switch protocol mid-chain (ERR_FR_REDIRECTION_FAILURE),
-            # so monitor the public hostname instead. This also covers the
-            # Cloudflare Tunnel path end to end.
-            siteMonitor: https://3145.blog/
-        - Ghost Admin:
-            icon: ghost.png
-            href: https://3145.blog/ghost
-            description: Adminpanel
-        - Stirling-PDF:
-            icon: stirling-pdf.png
-            href: http://stirling-pdf.local/
-            description: PDF-fix
-            # Stirling's root path requires auth (401) — use its status endpoint,
-            # which is unauthenticated and returns {"status":"UP"}.
-            siteMonitor: http://stirling-pdf.stirling-pdf.svc.cluster.local/api/v1/info/status
-        - Vaultwarden:
-            icon: vaultwarden.svg
-            href: https://vault.3145.blog/
-            description: Lösenordshantering
-            siteMonitor: http://vaultwarden.vaultwarden.svc.cluster.local
-        - ibindex:
-            icon: si-chartdotjs
-            href: https://ibindex.3145.blog/
-            description: Portföljanalys
-            siteMonitor: http://ibindex.ibindex.svc.cluster.local
-        - Vikunja:
-            icon: vikunja.svg
-            href: https://vikunja.3145.blog/
-            description: Uppgifter & planering
-            widget:
-              type: vikunja
-              url: http://vikunja.vikunja.svc.cluster.local:3456
-              key: {{HOMEPAGE_VAR_VIKUNJA_KEY}}
-              version: 2
-              enableTaskList: true
-        - Karakeep:
-            icon: karakeep.svg
-            href: https://karakeep.3145.blog/
-            description: Bokmärken & arkiv
-            siteMonitor: http://karakeep.karakeep.svc.cluster.local:3000
-    - Nedladdningar:
         - Sonarr:
             icon: sonarr.svg
             href: http://192.168.10.40:8989
@@ -323,6 +413,7 @@ data:
               type: radarr
               url: http://192.168.10.40:7878
               key: {{HOMEPAGE_VAR_RADARR_KEY}}
+    - Nedladdningar:
         - Bazarr:
             icon: bazarr.svg
             href: http://192.168.10.40:6767
@@ -348,6 +439,45 @@ data:
               type: prowlarr
               url: http://192.168.10.40:9696
               key: {{HOMEPAGE_VAR_PROWLARR_KEY}}
+    - Nätverk:
+        - AdGuardHome:
+            icon: si-adguard
+            href: http://192.168.8.1:3000/
+            description: DNS-filtrering
+            # No widget: AdGuard runs with GL.iNet's --glinet auth (Admin-Token
+            # cookie), which the Homepage adguard widget (basic auth) can't use.
+            # siteMonitor gives up/down without touching auth.
+            siteMonitor: http://192.168.8.1:3000/
+        - Switch:
+            icon: mikrotik.svg
+            href: http://192.168.10.2
+            description: MikroTik CRS310
+            ping: 192.168.10.2
+    - Kalender:
+        - Kalender:
+            widget:
+              type: calendar
+              view: monthly
+              firstDayInWeek: monday
+              maxEvents: 10
+              showTime: true
+              timezone: Europe/Stockholm
+              integrations:
+                # Google Calendar's secret iCal address — anyone holding the URL
+                # can read the whole calendar, so it lives in the sops secret and
+                # never in this configmap.
+                - type: ical
+                  url: {{HOMEPAGE_VAR_CALENDAR_ICAL}}
+                  name: Privat
+                  color: blue
+                - type: sonarr
+                  service_group: Media
+                  service_name: Sonarr
+                  color: teal
+                - type: radarr
+                  service_group: Media
+                  service_name: Radarr
+                  color: amber
   widgets.yaml: |
     - search:
         provider: google
@@ -373,3 +503,9 @@ data:
           label: "cluster"
         nodes:
           show: false
+    # Uses providers.longhorn. Collapsed to the aggregate bar only — the
+    # per-node breakdown belongs in the Longhorn UI, not the header.
+    - longhorn:
+        expanded: false
+        total: true
+        labels: false

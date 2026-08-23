@@ -43,7 +43,54 @@
       - git
       - htop
       - wget
+      # apt_repository (used for the Tailscale repo below) shells out to gpg.
+      # Ubuntu cloud images ship it; the Debian genericcloud image does not,
+      # so install it explicitly. No-op on the Ubuntu hosts.
+      - gnupg
     state: present
+
+# -- QEMU guest agent (VMs only) --
+# Without it Proxmox cannot freeze the filesystem before a vzdump snapshot, so
+# backups are crash-consistent rather than filesystem-consistent. Skipped on the
+# LXC guests (arr-stack, ai-lab, whisper), where a QEMU agent has no meaning.
+# NOTE: the agent only becomes usable once the VM also has `agent: enabled=1` in
+# its Proxmox config AND has been power-cycled — the virtio-serial port is added
+# at machine start, so a reboot from inside the guest is not enough.
+# Tagged so they can be applied on their own with `--tags qemu-agent`, without
+# triggering this role's `upgrade: dist` on a running cluster.
+- name: Install qemu-guest-agent
+  ansible.builtin.apt:
+    name: qemu-guest-agent
+    state: present
+  when: ansible_virtualization_type != 'lxc'
+  tags: qemu-agent
+
+- name: Enable qemu-guest-agent
+  ansible.builtin.systemd:
+    name: qemu-guest-agent
+    enabled: true
+  when: ansible_virtualization_type != 'lxc'
+  tags: qemu-agent
+
+# The service requires the virtio-serial port, which QEMU only creates when the
+# VM has `agent: enabled=1` in its Proxmox config and has been power-cycled
+# (a reboot from inside the guest does not add the device). Starting it before
+# then fails with "a dependency job failed", so gate the start on the port.
+- name: Check for the guest-agent virtio port
+  ansible.builtin.stat:
+    path: /dev/virtio-ports/org.qemu.guest_agent.0
+  register: common_qga_port
+  when: ansible_virtualization_type != 'lxc'
+  tags: qemu-agent
+
+- name: Start qemu-guest-agent
+  ansible.builtin.systemd:
+    name: qemu-guest-agent
+    state: started
+  when:
+    - ansible_virtualization_type != 'lxc'
+    - common_qga_port.stat.exists | default(false)
+  tags: qemu-agent
 
 # -- SSH key --
 - name: Add SSH authorized key
