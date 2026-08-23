@@ -81,10 +81,14 @@ ai_lab_vision_width: 1024
 # same cores, with normal prefill. Reproducible, and unexplained.
 ai_lab_num_thread: 6
 
-# Whisper now runs on pve3 (LXC 202) instead of alongside the model, so a lecture
-# can transcribe there while the previous one is summarised here. Point this back
-# at http://localhost:9000 to fall back to a local Whisper container.
-ai_lab_whisper_url: "http://192.168.10.42:9000"
+# The whisper-ov service in this LXC, 3.3x faster than the pve3 one it replaced with
+# no loss of content (see the measurements further down). localhost, not the LAN
+# address: the pipeline runs inside this LXC, so this saves uploading every lecture
+# part over the network to reach a service on the same host.
+#
+# pve3 (LXC 202) is still running and still correct — point this at
+# http://192.168.10.42:9000 to fall back to it.
+ai_lab_whisper_url: "http://localhost:9000"
 
 # Ollama stores each model layer as a plain file under models/blobs; the layer with
 # mediaType application/vnd.ollama.image.model *is* the GGUF. llama.cpp can read it
@@ -114,26 +118,28 @@ ai_lab_llamacpp_ngl: 99        # offload everything; lower it if the iGPU can't 
 ai_lab_ntfy_url: "https://ntfy.3145.blog/studieplugg"
 ai_lab_ntfy_resolve: "ntfy.3145.blog:443:192.168.10.200"
 
-# --- Whisper on the NPU -----------------------------------------------------------
-# Arrow Lake's NPU ("Intel AI Boost", 13 TOPS INT8) reached through OpenVINO GenAI.
-# Measured on the same 300 s slice of F1_del_2, Swedish, 2026-08-19:
+# --- Whisper through OpenVINO ------------------------------------------------------
+# One image, one device knob. large-v3 int8 on pve2's E-cores is what the pipeline
+# uses; NPU and GPU stay reachable by changing ai_lab_whisper_ov_device alone.
 #
-#   NPU  + large-v3-turbo-int8    24.9 s   12.1x realtime   pve2 at ~49 C
-#   CPU  + large-v3-turbo-int8    37.2 s    8.1x realtime   pve2 at  77 C
-#   pve3 + large-v3 (in use)     209.0 s    1.4x realtime
+# WHY CPU AND NOT THE NPU. The NPU is much faster, and unusable anyway:
 #
-# Read the first two rows before crediting the NPU with the whole 8.4x: most of the
-# end-to-end gain is the turbo model, and the NPU is worth 1.5x on top of it. Its real
-# argument is the ~28 C it does not add to a host that already throttles (see the
-# thermal notes on E-core pinning above), and the six cores it does not take from k3s.
+#   NPU  + large-v3-turbo-int8       12.1x realtime   pve2 at ~49 C
+#   CPU  + large-v3-turbo-int8        8.1x realtime   pve2 at  77 C
+#   CPU  + large-v3 int8              3.8x realtime   <- in use, pve2 at 68 C
+#   pve3 + large-v3 (faster_whisper)  1.2x realtime
 #
-# QUALITY CAVEAT — read before pointing ai_lab_whisper_url here.
+# The last two rows are a head-to-head on F2_del_3 (1683 s), both services running at
+# once on their own hosts, 2026-08-23: 441 s here against 1441 s on pve3. That is 3.3x,
+# and it is the whole reason transcription came back to pve2. The old "pve3 does 1.4x"
+# figure came off a 300 s slice; over a full lecture it is 1.2x.
 #
-# On a 5-minute sample this looked like a clean 95.0% word-level match with large-v3.
-# On the full F2 lecture (1h54m) it is 91.9%, and the gap is not cosmetic: turbo
-# silently drops passages. Two of ~50 words each went missing, one of them the
-# silver-in-lead-ore reasoning behind alchemical transmutation — exactly the kind of
-# course content these transcripts exist to capture.
+# turbo silently drops passages. On a 5-minute sample it looked like a clean 95.0%
+# word-level match with large-v3; on the full F2 lecture (1h54m) it is 91.9%, and the
+# gap is not cosmetic — two passages of ~50 words each went missing, one of them the
+# silver-in-lead-ore reasoning behind alchemical transmutation. Exactly the kind of
+# course content these transcripts exist to capture. Short samples lie; measure on a
+# whole lecture.
 #
 # Isolated over F2_del_3 (1683 s), the dropped passage is present or absent as:
 #
@@ -141,24 +147,35 @@ ai_lab_ntfy_resolve: "ntfy.3145.blog:443:192.168.10.200"
 #   turbo int8, NPU, return_timestamps 164 s   absent
 #   turbo int8, CPU                    210 s   absent
 #   turbo fp16, NPU                    156 s   absent
-#   large-v3 int8, CPU                 539 s   PRESENT
+#   large-v3 int8, CPU                 441 s   PRESENT
 #   large-v3 int8, NPU                    —    fails to execute on this NPU
 #
-# So it is the turbo architecture, not the accelerator, the precision or the
-# chunking — and large-v3, which does keep the content, compiles for this NPU but
-# dies at graph execute (ZE_RESULT_ERROR_UNINITIALIZED) regardless of audio length.
-# The NPU path is therefore locked to a model that loses text.
+# So it is the turbo architecture, not the accelerator, the precision or the chunking.
+# large-v3 keeps the content but compiles-then-dies on this NPU at graph execute
+# (ZE_RESULT_ERROR_UNINITIALIZED) regardless of audio length. The NPU path is locked
+# to a model that loses text, which is why the slower CPU device is the one in use.
 #
-# Treat this service as the fast-draft path, not as a replacement for pve3, until
-# either a non-turbo model runs on the NPU or the loss is shown to be acceptable on
-# material that matters. ai_lab_whisper_url deliberately still points at pve3.
-ai_lab_whisper_npu_enabled: true
-ai_lab_whisper_npu_port: 9000
-ai_lab_whisper_npu_model: "OpenVINO/whisper-large-v3-turbo-int8-ov"
-# CPU is a valid value and needs no NPU passthrough — useful for isolating whether a
-# regression is the model or the accelerator.
-ai_lab_whisper_npu_device: "NPU"
-ai_lab_whisper_npu_language: "sv"
+# The 441 s above supersedes an earlier 539 s for the same configuration: that one was
+# measured before PL1=45W fixed pve2's thermal runaway, so it was throttled. Anything
+# measured on pve2 before 2026-08-20 understates the hardware.
+#
+# QUALITY, same head-to-head, against pve3's large-v3 as the reference: 94.8% word
+# match, and — the number that actually matters — the longest differing run is 9 words.
+# Not one contiguous block of 15+ went missing, where turbo lost two of ~50. The 70
+# fewer words are filler ("som är en del av det så"). Where the two disagree on course
+# terms this one is right and pve3 is wrong: flogistonteorin against "flog i stån
+# teorin", visestenen against "vises sten den kunde".
+#
+# Read the gap length, not the percentage. Turbo scored 95.0% on a short sample while
+# dropping whole passages; a similarity number alone cannot tell those two apart.
+ai_lab_whisper_ov_enabled: true
+ai_lab_whisper_ov_port: 9000
+ai_lab_whisper_ov_model: "OpenVINO/whisper-large-v3-int8-ov"
+# NPU and GPU are valid values. Both are also the isolation knob when something
+# regresses: same model, different device tells you whether it is the model's fault.
+# Only NPU needs the /dev/accel passthrough, which the compose template adds for it.
+ai_lab_whisper_ov_device: "CPU"
+ai_lab_whisper_ov_language: "sv"
 
 # Pinned to the set Intel validated together for Arrow Lake in linux-npu-driver
 # v1.35.0. The kernel-mode driver and firmware come from the PVE host; these are the

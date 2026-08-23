@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Whisper ASR over HTTP, running on the Arrow Lake NPU through OpenVINO GenAI.
+"""Whisper ASR over HTTP through OpenVINO GenAI, on CPU, NPU or GPU.
 
 Speaks the slice of the openai-whisper-asr-webservice API that the studieplugg
 pipeline actually uses — POST /asr with an `audio_file` part, plain text back — so
-pointing ai_lab_whisper_url here instead of at the pve3 CPU service is a one-line
-change with no edits to the pipeline scripts.
+pointing ai_lab_whisper_url here instead of at the pve3 service is a one-line change
+with no edits to the pipeline scripts.
 
-The pipeline is built once at startup, not per request: compiling Whisper for the NPU
-takes ~110 s against under a second for CPU, and GenAI's CACHE_DIR does not yet cover
-Whisper on NPU, so that cost cannot be cached away. It is therefore paid at container
-start — which is why this is a long-running service rather than a CLI per lecture.
+The pipeline is built once at startup, not per request. On CPU that is only ~2.5 s,
+but compiling for the NPU takes ~110 s and GenAI's CACHE_DIR does not yet cover
+Whisper on NPU, so that cost cannot be cached away. Paying it at container start is
+what makes the NPU device usable at all — hence a long-running service rather than a
+CLI per lecture.
 """
 import os
 import subprocess
@@ -25,14 +26,15 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import PlainTextResponse
 from huggingface_hub import snapshot_download
 
-MODEL = os.environ.get("WHISPER_MODEL", "{{ ai_lab_whisper_npu_model }}")
-DEVICE = os.environ.get("WHISPER_DEVICE", "{{ ai_lab_whisper_npu_device }}")
-LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "{{ ai_lab_whisper_npu_language }}")
+MODEL = os.environ.get("WHISPER_MODEL", "{{ ai_lab_whisper_ov_model }}")
+DEVICE = os.environ.get("WHISPER_DEVICE", "{{ ai_lab_whisper_ov_device }}")
+LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "{{ ai_lab_whisper_ov_language }}")
 SAMPLE_RATE = 16000
 
-# The NPU runs one inference at a time. Without this, two concurrent lectures would
-# interleave into the same pipeline object and fail inside the driver rather than
-# simply queueing.
+# One inference at a time. The NPU enforces this in hardware — without the lock two
+# concurrent lectures interleave into the same pipeline object and fail inside the
+# driver. On CPU it is still what you want: a second request would otherwise contend
+# for the same cores and slow both down rather than finishing either.
 _lock = threading.Lock()
 _pipe = None
 
@@ -43,7 +45,7 @@ async def lifespan(_app: FastAPI):
     model_dir = snapshot_download(MODEL)
     started = time.perf_counter()
     _pipe = ov_genai.WhisperPipeline(model_dir, DEVICE)
-    print(f"[whisper-npu] {MODEL} compiled for {DEVICE} in "
+    print(f"[whisper-ov] {MODEL} compiled for {DEVICE} in "
           f"{time.perf_counter() - started:.1f}s", flush=True)
     yield
 
@@ -86,7 +88,7 @@ async def asr(audio_file: UploadFile = File(...), task: str = "transcribe",
     with _lock:
         result = _pipe.generate(audio, language=f"<|{language}|>", task=task)
     elapsed = time.perf_counter() - started
-    print(f"[whisper-npu] {audio_file.filename}: {duration:.0f}s audio in "
+    print(f"[whisper-ov] {audio_file.filename}: {duration:.0f}s audio in "
           f"{elapsed:.0f}s ({duration / elapsed:.1f}x realtime)", flush=True)
 
     return str(result)
