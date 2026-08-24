@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: glance
+  namespace: glance
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    # letsencrypt-prod solves via DNS-01 against Cloudflare, so a certificate is
+    # issued even though the hostname resolves to a private address.
+    - hosts:
+        - glance.3145.blog
+      secretName: glance-tls
+  rules:
+    # glance.3145.blog needs an A record to 192.168.10.200 (the ingress-nginx
+    # MetalLB address) in Cloudflare — unproxied, exactly like home.3145.blog.
+    # Until that record exists, reach it via glance.local through /etc/hosts.
+    - host: glance.3145.blog
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: glance
+                port:
+                  number: 80
+    - host: glance.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: glance
+                port:
+                  number: 80

@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glance
+  namespace: glance
+  labels:
+    app: glance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: glance
+  template:
+    metadata:
+      labels:
+        app: glance
+    spec:
+      # Set at pod level as well as on the container: Trivy's KSV-0118 only
+      # recognises the pod-level block, and seccomp can only be set here.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: glance
+          # Not published on ghcr.io — Docker Hub is the only registry for this
+          # project.
+          image: docker.io/glanceapp/glance:v0.8.5
+          ports:
+            - containerPort: 8080
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 192Mi
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          volumeMounts:
+            # Glance only reads its config, so the ConfigMap is mounted straight
+            # in — no init container copy like Homepage needs. The trade-off is
+            # that a ConfigMap edit does not restart the pod on its own:
+            #   kubectl -n glance rollout restart deploy/glance
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: glance-config
