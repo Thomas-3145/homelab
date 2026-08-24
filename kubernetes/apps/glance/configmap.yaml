@@ -1,0 +1,517 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glance-config
+  namespace: glance
+data:
+  glance.yml: |
+    # Glance runs alongside Homepage (home.3145.blog) rather than replacing it.
+    # Homepage keeps the deep service integrations (Sonarr queue, ArgoCD sync,
+    # Vikunja tasks); Glance is the fast at-a-glance view: is everything up,
+    # what do the Proxmox hosts look like, what's the date and weather.
+    #
+    # No secrets are referenced here, which is deliberate — every data source is
+    # either unauthenticated on the LAN (Glances on the pve hosts) or reachable
+    # in-cluster without auth (Prometheus). That keeps this a plain ConfigMap
+    # with no SOPS/KSOPS moving parts.
+    server:
+      port: 8080
+      # Sits behind ingress-nginx, so trust X-Forwarded-* for client IPs.
+      proxied: true
+
+    theme:
+      # Glance's stock dark palette. The only change is a green positive colour
+      # so an "OK" in the monitor widget reads as green instead of the primary
+      # yellow, which is what makes the status column scannable.
+      background-color: 240 8 9
+      primary-color: 43 50 70
+      positive-color: 145 45 55
+      negative-color: 0 70 70
+
+    # Reused by the three Proxmox host widgets below. Each host runs `glances -w`
+    # on port 61208 (ansible/roles/glances) with no auth — LAN only, never
+    # exposed through the tunnel. The v4 API splits the metrics across endpoints,
+    # so one widget = one main request (load) plus four concurrent subrequests.
+    #
+    # This reimplements Glance's own server-stats widget, which can only talk to
+    # the Glance Agent, not to Glances. Same markup and CSS classes as the
+    # built-in widget so it looks native.
+    definitions:
+      - &pve-host
+        type: custom-api
+        cache: 30s
+        template: |
+          {{ $mem := .Subrequest "mem" }}
+          {{ $fs := .Subrequest "fs" }}
+          {{ $sensors := .Subrequest "sensors" }}
+          {{ $uptime := .Subrequest "uptime" }}
+
+          {{/* Glances reports raw load averages; Glance's own widget shows load
+                as a percentage of core count, so divide the same way. */}}
+          {{ $cores := .JSON.Float "cpucore" }}
+          {{ $load1 := div (mul (.JSON.Float "min1") 100.0) $cores }}
+          {{ $load15 := div (mul (.JSON.Float "min15") 100.0) $cores }}
+
+          {{ $ramPct := $mem.JSON.Float "percent" }}
+          {{ $ramUsed := div ($mem.JSON.Float "used") 1073741824.0 }}
+          {{ $ramTotal := div ($mem.JSON.Float "total") 1073741824.0 }}
+
+          {{ $root := index ($fs.JSON.Array "@this") 0 }}
+          {{ $diskPct := $root.Float "percent" }}
+          {{ $diskUsed := div ($root.Float "used") 1073741824.0 }}
+          {{ $diskTotal := div ($root.Float "size") 1073741824.0 }}
+
+          {{/* "Package id 0" is the Intel coretemp package sensor and exists on
+                all three hosts — verified against /api/4/sensors. */}}
+          {{ $temp := 0.0 }}
+          {{ range $sensors.JSON.Array "@this" }}
+            {{ if eq (.String "label") "Package id 0" }}{{ $temp = .Float "value" }}{{ end }}
+          {{ end }}
+
+          <div class="flex gap-15">
+            <div class="flex-1">
+              <div class="flex items-end size-h5">
+                <div>CPU</div>
+                <div class="color-highlight margin-left-auto text-very-compact">{{ printf "%.0f" $load1 }} <span class="color-base">%</span></div>
+              </div>
+              <div class="progress-bar progress-bar-combined">
+                <div class="progress-value{{ if ge $load1 85.0 }} progress-value-notice{{ end }}" style="--percent: {{ printf "%.0f" $load1 }}"></div>
+                <div class="progress-value{{ if ge $load15 85.0 }} progress-value-notice{{ end }}" style="--percent: {{ printf "%.0f" $load15 }}"></div>
+              </div>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-end size-h5">
+                <div>RAM</div>
+                <div class="color-highlight margin-left-auto text-very-compact">{{ printf "%.0f" $ramPct }} <span class="color-base">%</span></div>
+              </div>
+              <div class="progress-bar progress-bar-combined">
+                <div class="progress-value{{ if ge $ramPct 85.0 }} progress-value-notice{{ end }}" style="--percent: {{ printf "%.0f" $ramPct }}"></div>
+              </div>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-end size-h5">
+                <div>DISK</div>
+                <div class="color-highlight margin-left-auto text-very-compact">{{ printf "%.0f" $diskPct }} <span class="color-base">%</span></div>
+              </div>
+              <div class="progress-bar progress-bar-combined">
+                <div class="progress-value{{ if ge $diskPct 85.0 }} progress-value-notice{{ end }}" style="--percent: {{ printf "%.0f" $diskPct }}"></div>
+              </div>
+            </div>
+          </div>
+
+          <ul class="list list-gap-2 margin-top-10 size-h5">
+            <li class="flex">
+              <div>TEMP</div>
+              <div class="value-separator"></div>
+              <div class="{{ if ge $temp 80.0 }}color-negative{{ else }}color-highlight{{ end }} text-very-compact">
+                {{ printf "%.0f" $temp }} <span class="color-base">°C</span>
+              </div>
+            </li>
+            <li class="flex">
+              <div>RAM</div>
+              <div class="value-separator"></div>
+              <div class="color-highlight text-very-compact">
+                {{ printf "%.0f" $ramUsed }} <span class="color-base">/ {{ printf "%.0f" $ramTotal }} GB</span>
+              </div>
+            </li>
+            <li class="flex">
+              <div>DISK</div>
+              <div class="value-separator"></div>
+              <div class="color-highlight text-very-compact">
+                {{ printf "%.0f" $diskUsed }} <span class="color-base">/ {{ printf "%.0f" $diskTotal }} GB</span>
+              </div>
+            </li>
+            <li class="flex">
+              <div>UPTIME</div>
+              <div class="value-separator"></div>
+              <div class="color-highlight text-very-compact">{{ $uptime.JSON.String "@this" }}</div>
+            </li>
+          </ul>
+
+      # Prometheus instant queries all return the same envelope, so every widget
+      # below reads its numbers out of data.result.0.value.1.
+      - &prom-url http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query
+
+    pages:
+      - name: Hem
+        columns:
+          - size: small
+            widgets:
+              - type: calendar
+                first-day-of-week: monday
+
+              - type: bookmarks
+                groups:
+                  - title: Homelab
+                    links:
+                      - title: Proxmox pve1
+                        url: https://192.168.10.11:8006
+                      - title: Proxmox pve2
+                        url: https://192.168.10.12:8006
+                      - title: Proxmox pve3
+                        url: https://192.168.10.13:8006
+                      - title: Homepage
+                        url: https://home.3145.blog
+                  - title: Extern
+                    color: 25 70 55
+                    links:
+                      - title: GitHub — homelab
+                        url: https://github.com/Thomas-3145/homelab
+                      - title: Cloudflare
+                        url: https://dash.cloudflare.com/
+                      - title: Ghost Admin
+                        url: https://3145.blog/ghost
+                  - title: Dokumentation
+                    color: 200 50 50
+                    links:
+                      - title: Kubernetes
+                        url: https://kubernetes.io/docs/home/
+                      - title: ArgoCD
+                        url: https://argo-cd.readthedocs.io/en/stable/
+                      - title: Longhorn
+                        url: https://longhorn.io/docs/
+
+          - size: full
+            widgets:
+              - type: search
+                search-engine: google
+                new-tab: true
+                autofocus: true
+
+              - type: monitor
+                title: Appar
+                cache: 1m
+                sites:
+                  - title: Vaultwarden
+                    url: https://vault.3145.blog/
+                    check-url: http://vaultwarden.vaultwarden.svc.cluster.local
+                    icon: di:vaultwarden
+                  - title: Vikunja
+                    url: https://vikunja.3145.blog/
+                    check-url: http://vikunja.vikunja.svc.cluster.local:3456
+                    icon: di:vikunja
+                  - title: Karakeep
+                    url: https://karakeep.3145.blog/
+                    check-url: http://karakeep.karakeep.svc.cluster.local:3000
+                    # Karakeep answers 307 on / and redirects to its dashboard.
+                    # Accept it directly rather than relying on redirect following.
+                    alt-status-codes:
+                      - 307
+                    icon: di:karakeep
+                  - title: ibindex
+                    url: https://ibindex.3145.blog/
+                    check-url: http://ibindex.ibindex.svc.cluster.local
+                    icon: di:streamlit
+                  - title: Ghost
+                    # Ghost is configured with an https url and 301s every plain
+                    # http request, including the in-cluster one, so check the
+                    # public hostname. That also covers the tunnel path.
+                    url: https://3145.blog/
+                    icon: di:ghost
+                  - title: IT-Tools
+                    url: http://it-tools.local
+                    check-url: http://it-tools.it-tools.svc.cluster.local
+                    icon: di:it-tools
+                  - title: Stirling-PDF
+                    url: http://stirling-pdf.local/
+                    # Root requires auth (401); this endpoint is unauthenticated.
+                    check-url: http://stirling-pdf.stirling-pdf.svc.cluster.local/api/v1/info/status
+                    icon: di:stirling-pdf
+                  - title: Ollama
+                    url: http://192.168.10.41:11434
+                    icon: di:ollama
+
+              - type: monitor
+                title: Media
+                cache: 1m
+                sites:
+                  - title: Jellyfin
+                    url: http://192.168.10.40:8096
+                    icon: di:jellyfin
+                  - title: Seerr
+                    url: http://192.168.10.40:5055
+                    icon: di:jellyseerr
+                  - title: Sonarr
+                    url: http://192.168.10.40:8989
+                    icon: di:sonarr
+                  - title: Radarr
+                    url: http://192.168.10.40:7878
+                    icon: di:radarr
+                  - title: Bazarr
+                    url: http://192.168.10.40:6767
+                    icon: di:bazarr
+                  - title: Prowlarr
+                    url: http://192.168.10.40:9696
+                    icon: di:prowlarr
+                  - title: qBittorrent
+                    url: http://192.168.10.40:8085
+                    icon: di:qbittorrent
+
+          - size: small
+            widgets:
+              - type: weather
+                location: Stockholm, Sweden
+                units: metric
+                hour-format: 24h
+
+              - <<: *pve-host
+                title: pve1
+                title-url: https://192.168.10.11:8006
+                url: http://192.168.10.11:61208/api/4/load
+                subrequests:
+                  mem:
+                    url: http://192.168.10.11:61208/api/4/mem
+                  fs:
+                    url: http://192.168.10.11:61208/api/4/fs
+                  sensors:
+                    url: http://192.168.10.11:61208/api/4/sensors
+                  uptime:
+                    url: http://192.168.10.11:61208/api/4/uptime
+
+              - <<: *pve-host
+                title: pve2
+                title-url: https://192.168.10.12:8006
+                url: http://192.168.10.12:61208/api/4/load
+                subrequests:
+                  mem:
+                    url: http://192.168.10.12:61208/api/4/mem
+                  fs:
+                    url: http://192.168.10.12:61208/api/4/fs
+                  sensors:
+                    url: http://192.168.10.12:61208/api/4/sensors
+                  uptime:
+                    url: http://192.168.10.12:61208/api/4/uptime
+
+              - <<: *pve-host
+                title: pve3
+                title-url: https://192.168.10.13:8006
+                url: http://192.168.10.13:61208/api/4/load
+                subrequests:
+                  mem:
+                    url: http://192.168.10.13:61208/api/4/mem
+                  fs:
+                    url: http://192.168.10.13:61208/api/4/fs
+                  sensors:
+                    url: http://192.168.10.13:61208/api/4/sensors
+                  uptime:
+                    url: http://192.168.10.13:61208/api/4/uptime
+
+      - name: Infra
+        columns:
+          - size: full
+            widgets:
+              - type: monitor
+                title: Kluster
+                cache: 1m
+                sites:
+                  - title: ArgoCD
+                    url: https://argocd.3145.blog
+                    # argocd-server redirects http to https unless run with
+                    # --insecure; /healthz answers 200 over plain http.
+                    check-url: http://argocd-server.argocd.svc.cluster.local/healthz
+                    icon: di:argo-cd
+                  - title: Grafana
+                    url: https://grafana.3145.blog
+                    check-url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local/api/health
+                    icon: di:grafana
+                  - title: Prometheus
+                    url: https://grafana.3145.blog
+                    check-url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/healthy
+                    icon: di:prometheus
+                  - title: Longhorn
+                    url: https://longhorn.3145.blog
+                    check-url: http://longhorn-frontend.longhorn-system.svc.cluster.local
+                    icon: di:longhorn
+                  - title: Headlamp
+                    url: http://headlamp.local
+                    check-url: http://headlamp.headlamp.svc.cluster.local
+                    icon: di:headlamp
+                  - title: Authentik
+                    url: https://auth.3145.blog
+                    # Unauthenticated liveness probe; / redirects into the flow.
+                    check-url: http://authentik-server.authentik.svc.cluster.local:80/-/health/live/
+                    icon: di:authentik
+                  - title: ntfy
+                    url: https://ntfy.3145.blog/homelab
+                    check-url: http://ntfy.ntfy.svc.cluster.local
+                    icon: di:ntfy
+
+              - type: monitor
+                title: Nät & hostar
+                cache: 1m
+                sites:
+                  - title: pve1
+                    url: https://192.168.10.11:8006
+                    allow-insecure: true
+                    icon: di:proxmox
+                  - title: pve2
+                    url: https://192.168.10.12:8006
+                    allow-insecure: true
+                    icon: di:proxmox
+                  - title: pve3
+                    url: https://192.168.10.13:8006
+                    allow-insecure: true
+                    icon: di:proxmox
+                  - title: Gatus
+                    url: http://192.168.8.1:8888
+                    icon: di:gatus
+                  - title: AdGuard Home
+                    url: http://192.168.8.1:3000/
+                    icon: di:adguard-home
+                  - title: MikroTik
+                    url: http://192.168.10.2
+                    icon: di:mikrotik
+
+          - size: small
+            widgets:
+              - type: custom-api
+                title: k3s
+                cache: 1m
+                url: *prom-url
+                parameters:
+                  query: count(kube_node_status_condition{condition="Ready",status="true"} == 1)
+                subrequests:
+                  nodes-total:
+                    url: *prom-url
+                    parameters:
+                      query: count(kube_node_info)
+                  pods-running:
+                    url: *prom-url
+                    parameters:
+                      query: count(kube_pod_status_phase{phase="Running"} == 1)
+                  pods-bad:
+                    url: *prom-url
+                    parameters:
+                      query: count(kube_pod_status_phase{phase=~"Failed|Unknown|Pending"} == 1) or vector(0)
+                template: |
+                  {{ $ready := .JSON.Float "data.result.0.value.1" }}
+                  {{ $total := (.Subrequest "nodes-total").JSON.Float "data.result.0.value.1" }}
+                  {{ $running := (.Subrequest "pods-running").JSON.Float "data.result.0.value.1" }}
+                  {{ $bad := (.Subrequest "pods-bad").JSON.Float "data.result.0.value.1" }}
+
+                  <ul class="list list-gap-4">
+                    <li class="flex">
+                      <div class="size-h5">NODER</div>
+                      <div class="value-separator"></div>
+                      <div class="{{ if lt $ready $total }}color-negative{{ else }}color-positive{{ end }} text-very-compact">
+                        {{ printf "%.0f" $ready }} <span class="color-base size-h5">/ {{ printf "%.0f" $total }}</span>
+                      </div>
+                    </li>
+                    <li class="flex">
+                      <div class="size-h5">PODS</div>
+                      <div class="value-separator"></div>
+                      <div class="color-highlight text-very-compact">{{ printf "%.0f" $running }}</div>
+                    </li>
+                    <li class="flex">
+                      <div class="size-h5">EJ IGÅNG</div>
+                      <div class="value-separator"></div>
+                      <div class="{{ if gt $bad 0.0 }}color-negative{{ else }}color-positive{{ end }} text-very-compact">
+                        {{ printf "%.0f" $bad }}
+                      </div>
+                    </li>
+                  </ul>
+
+              - type: custom-api
+                title: UPS
+                title-url: https://grafana.3145.blog
+                cache: 30s
+                # NUT has no web UI — it speaks its own protocol on pve3:3493.
+                # These numbers come from nut-exporter via Prometheus.
+                url: *prom-url
+                parameters:
+                  query: network_ups_tools_battery_charge
+                subrequests:
+                  load:
+                    url: *prom-url
+                    parameters:
+                      query: network_ups_tools_ups_load
+                  runtime:
+                    url: *prom-url
+                    parameters:
+                      # Reported in seconds; divide here rather than formatting.
+                      query: network_ups_tools_battery_runtime / 60
+                  voltage:
+                    url: *prom-url
+                    parameters:
+                      query: network_ups_tools_input_voltage
+                template: |
+                  {{ $charge := .JSON.Float "data.result.0.value.1" }}
+                  {{ $load := (.Subrequest "load").JSON.Float "data.result.0.value.1" }}
+                  {{ $runtime := (.Subrequest "runtime").JSON.Float "data.result.0.value.1" }}
+                  {{ $voltage := (.Subrequest "voltage").JSON.Float "data.result.0.value.1" }}
+
+                  <div class="flex items-end size-h5">
+                    <div>BATTERI</div>
+                    <div class="color-highlight margin-left-auto text-very-compact">
+                      {{ printf "%.0f" $charge }} <span class="color-base">%</span>
+                    </div>
+                  </div>
+                  <div class="progress-bar progress-bar-combined">
+                    <div class="progress-value{{ if lt $charge 50.0 }} progress-value-notice{{ end }}" style="--percent: {{ printf "%.0f" $charge }}"></div>
+                  </div>
+
+                  <ul class="list list-gap-4 margin-top-10">
+                    <li class="flex">
+                      <div class="size-h5">LAST</div>
+                      <div class="value-separator"></div>
+                      <div class="color-highlight text-very-compact">{{ printf "%.0f" $load }} <span class="color-base size-h5">%</span></div>
+                    </li>
+                    <li class="flex">
+                      <div class="size-h5">RESTID</div>
+                      <div class="value-separator"></div>
+                      <div class="color-highlight text-very-compact">{{ printf "%.0f" $runtime }} <span class="color-base size-h5">min</span></div>
+                    </li>
+                    <li class="flex">
+                      <div class="size-h5">NÄT</div>
+                      <div class="value-separator"></div>
+                      <div class="color-highlight text-very-compact">{{ printf "%.0f" $voltage }} <span class="color-base size-h5">V</span></div>
+                    </li>
+                  </ul>
+
+              - type: custom-api
+                title: Backup
+                cache: 5m
+                url: *prom-url
+                parameters:
+                  query: velero_backup_total
+                subrequests:
+                  errors:
+                    url: *prom-url
+                    parameters:
+                      # velero_backup_last_status stays 1 through a
+                      # PartiallyFailed run, so it is useless as a health
+                      # signal. Item errors is what actually goes non-zero.
+                      # Size is shown in MB, not GB: the tarball currently holds
+                      # cluster metadata only (~1.6 MB) because CSI snapshots are
+                      # not wired up yet, so a GB figure would round to 0.0.
+                      query: velero_backup_items_errors{schedule="daily-cluster"}
+                  size:
+                    url: *prom-url
+                    parameters:
+                      query: velero_backup_tarball_size_bytes
+                template: |
+                  {{ $count := .JSON.Float "data.result.0.value.1" }}
+                  {{ $errors := (.Subrequest "errors").JSON.Float "data.result.0.value.1" }}
+                  {{ $size := (.Subrequest "size").JSON.Float "data.result.0.value.1" }}
+
+                  <ul class="list list-gap-4">
+                    <li class="flex">
+                      <div class="size-h5">BACKUPER</div>
+                      <div class="value-separator"></div>
+                      <div class="color-highlight text-very-compact">{{ printf "%.0f" $count }}</div>
+                    </li>
+                    <li class="flex">
+                      <div class="size-h5">OBJEKTFEL</div>
+                      <div class="value-separator"></div>
+                      <div class="{{ if gt $errors 0.0 }}color-negative{{ else }}color-positive{{ end }} text-very-compact">
+                        {{ printf "%.0f" $errors }}
+                      </div>
+                    </li>
+                    <li class="flex">
+                      <div class="size-h5">STORLEK</div>
+                      <div class="value-separator"></div>
+                      <div class="color-highlight text-very-compact">
+                        {{ printf "%.1f" (div $size 1048576.0) }} <span class="color-base size-h5">MB</span>
+                      </div>
+                    </li>
+                  </ul>
