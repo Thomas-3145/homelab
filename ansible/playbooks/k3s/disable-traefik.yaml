@@ -1,10 +1,20 @@
 ---
 # Disables Traefik and klipper-lb (servicelb) on an existing k3s cluster.
-# Run: ansible-playbook -i inventory/hosts.yaml playbooks/disable-traefik.yaml
+# Run: ansible-playbook -i inventory/hosts.yaml playbooks/k3s/disable-traefik.yaml
+#
+# The disable flags must be set on EVERY server. A single server without them
+# still runs the servicelb controller, which recreates the svclb DaemonSet for
+# every LoadBalancer service. Worse, the servers that *do* have servicelb
+# disabled drop net.ipv4.ip_forward from kubelet's unsafe-sysctl allowlist, so
+# the svclb pods scheduled there are rejected with SysctlForbidden in a loop.
+#
+# serial: 1 restarts one control plane node at a time. Restarting all three at
+# once would drop the etcd quorum and take the API server down with it.
 
 - name: Disable Traefik and servicelb on k3s servers
   hosts: k3s_control_plane
   become: true
+  serial: 1
 
   tasks:
     - name: Ensure k3s config directory exists
@@ -45,9 +55,13 @@
         cmd: kubectl delete helmchart traefik traefik-crd -n kube-system --ignore-not-found
       changed_when: true
 
-    - name: Delete klipper-lb daemonset
+    # Every klipper-lb DaemonSet carries this label, whichever service it was
+    # created for — svclb-traefik, svclb-ingress-nginx-controller-<hash>, etc.
+    - name: Delete klipper-lb daemonsets
       ansible.builtin.command:
-        cmd: kubectl delete daemonset svclb-traefik -n kube-system --ignore-not-found
+        cmd: >-
+          kubectl delete daemonset -n kube-system
+          -l svccontroller.k3s.cattle.io/svcname --ignore-not-found
       changed_when: true
 
     - name: Wait for Traefik pods to terminate

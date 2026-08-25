@@ -90,6 +90,10 @@ all:
       vars:
         ansible_ssh_private_key_file: ~/.ssh/id_rsa_4096
         ansible_python_interpreter: auto
+        # Applies to all three: paging guest memory out is invisible to the guest and
+        # shows up there as unexplained latency. See the role defaults for the reasoning.
+        proxmox_sysctl_settings:
+          vm.swappiness: 10
       hosts:
         pve1:
           ansible_host: pve1.taild78f1d.ts.net

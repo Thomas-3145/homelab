@@ -76,3 +76,9 @@
     state: restarted
     daemon_reload: true
   ignore_errors: "{{ ansible_check_mode }}"
+
+# --system re-reads every drop-in, so a value removed from proxmox_sysctl_settings
+# reverts here rather than lingering until the next reboot.
+- name: Reload sysctl
+  ansible.builtin.command: sysctl --system
+  changed_when: true

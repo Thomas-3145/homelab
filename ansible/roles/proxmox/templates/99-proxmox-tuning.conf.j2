@@ -1,0 +1,4 @@
+# Managed by Ansible (roles/proxmox/tasks/sysctl.yaml) — do not edit by hand.
+{% for key, value in proxmox_sysctl_settings.items() %}
+{{ key }} = {{ value }}
+{% endfor %}

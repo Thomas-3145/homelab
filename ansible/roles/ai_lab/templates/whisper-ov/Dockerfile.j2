@@ -1,5 +1,6 @@
 # Whisper via OpenVINO GenAI. One image, three possible runtime targets — the device
-# is chosen at run time by ai_lab_whisper_ov_device, not baked in here.
+# is chosen at run time by ai_lab_whisper_ov_device, not baked in here. Both the NPU
+# and GPU user-mode stacks are installed so switching device stays a variable change.
 #
 # The NPU half of the stack is installed even though production runs on CPU, so that
 # switching back is one variable rather than a rebuild. The kernel-mode driver
@@ -18,6 +19,37 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl ffmpeg libtbb12 python3 python3-pip \
     && rm -rf /var/lib/apt/lists/*
+
+# The GPU half of the stack. Without Intel's compute runtime the GPU plugin has no
+# backend and the device never appears in Core().available_devices.
+#
+# Do NOT use Ubuntu 24.04's archive packages here. They enumerate Arrow Lake fine
+# (clinfo reports the iGPU), which makes them look correct — but large-v3-int8 then
+# dies at model compile with SIGSEGV, "longjmp causes uninitialized stack frame",
+# before reading a second of audio. The archive ships compute-runtime 23.43 from
+# November 2023 against openvino-genai {{ ai_lab_openvino_version }}; enumeration
+# survives the gap and compilation does not. Intel's own packages fix it.
+#
+# Pinned as a group, like the NPU stack: compute-runtime names the exact IGC and
+# gmmlib builds it was made against, and mixing them is the usual cause of the GPU
+# silently missing or crashing. Bump all four together, never individually.
+#
+# This layer MUST stay before the NPU tarball below: that tarball is extracted into
+# /tmp and resets its permissions, after which apt — which drops to the unprivileged
+# _apt user — cannot write there and every later apt call fails with "Couldn't create
+# temporary file" and "repository is not signed".
+RUN set -eux; mkdir -p /tmp/neo; cd /tmp/neo; \
+    cr="https://github.com/intel/compute-runtime/releases/download/{{ ai_lab_compute_runtime_version }}"; \
+    igc="https://github.com/intel/intel-graphics-compiler/releases/download/v{{ ai_lab_igc_version }}"; \
+    curl -fsSLO "${igc}/intel-igc-core-2_{{ ai_lab_igc_version }}+{{ ai_lab_igc_build }}_amd64.deb"; \
+    curl -fsSLO "${igc}/intel-igc-opencl-2_{{ ai_lab_igc_version }}+{{ ai_lab_igc_build }}_amd64.deb"; \
+    curl -fsSLO "${cr}/intel-ocloc_{{ ai_lab_compute_runtime_version }}-0_amd64.deb"; \
+    curl -fsSLO "${cr}/intel-opencl-icd_{{ ai_lab_compute_runtime_version }}-0_amd64.deb"; \
+    curl -fsSLO "${cr}/libze-intel-gpu1_{{ ai_lab_compute_runtime_version }}-0_amd64.deb"; \
+    curl -fsSLO "${cr}/libigdgmm12_{{ ai_lab_gmmlib_version }}_amd64.deb"; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ./*.deb; \
+    rm -rf /tmp/neo /var/lib/apt/lists/*
 
 RUN set -eux; cd /tmp; \
     curl -fsSLO "https://github.com/oneapi-src/level-zero/releases/download/v{{ ai_lab_level_zero_version }}/level-zero_{{ ai_lab_level_zero_version }}+u24.04_amd64.deb"; \
