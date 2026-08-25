@@ -26,13 +26,20 @@ services:
     volumes:
       # Model cache (HF_HOME), so a restart doesn't re-download ~800 MB.
       - /opt/ai-lab/whisper-ov/models:/models
-{% if ai_lab_whisper_ov_device == 'NPU' %}
+{% if ai_lab_whisper_ov_device in ['NPU', 'GPU'] %}
     devices:
+{% if ai_lab_whisper_ov_device == 'NPU' %}
       - /dev/accel/accel0:/dev/accel/accel0
+{% else %}
+      - /dev/dri:/dev/dri
+{% endif %}
     # render(993) — the same GID the iGPU nodes use, mapped 1:1 into this LXC by the
-    # idmap in playbooks/ai-lab.yaml.
+    # idmap in playbooks/ai-lab.yaml. video(44) is what the GPU plugin opens card1 with.
     group_add:
       - "993"
+{% if ai_lab_whisper_ov_device == 'GPU' %}
+      - "44"
+{% endif %}
 {% endif %}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
@@ -41,7 +48,7 @@ services:
       # Compiling Whisper takes ~110 s for NPU and ~2.5 s for CPU, and GenAI's
       # CACHE_DIR does not cover Whisper on NPU, so that cost is paid at every start.
       # The CPU value still allows for a first-run model download.
-      start_period: {{ 240 if ai_lab_whisper_ov_device == 'NPU' else 120 }}s
+      start_period: {{ 120 if ai_lab_whisper_ov_device == 'CPU' else 240 }}s
       retries: 3
     ports:
       - {{ ai_lab_whisper_ov_port }}:9000

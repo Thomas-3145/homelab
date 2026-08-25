@@ -155,27 +155,56 @@ ai_lab_ntfy_resolve: "ntfy.3145.blog:443:192.168.10.200"
 # (ZE_RESULT_ERROR_UNINITIALIZED) regardless of audio length. The NPU path is locked
 # to a model that loses text, which is why the slower CPU device is the one in use.
 #
-# The 441 s above supersedes an earlier 539 s for the same configuration: that one was
-# measured before PL1=45W fixed pve2's thermal runaway, so it was throttled. Anything
-# measured on pve2 before 2026-08-20 understates the hardware.
+# GPU WORKS as of 2026-08-25, and is the fastest device that keeps the text. Two things
+# had to be fixed to get there, both of which looked like "the GPU is unsupported":
 #
-# QUALITY, same head-to-head, against pve3's large-v3 as the reference: 94.8% word
-# match, and — the number that actually matters — the longest differing run is 9 words.
-# Not one contiguous block of 15+ went missing, where turbo lost two of ~50. The 70
-# fewer words are filler ("som är en del av det så"). Where the two disagree on course
-# terms this one is right and pve3 is wrong: flogistonteorin against "flog i stån
-# teorin", visestenen against "vises sten den kunde".
+#   1. The image had no GPU backend at all — the Dockerfile installed only the NPU
+#      user-mode stack, so the plugin had nothing to bind to and available_devices
+#      returned ['CPU'] even with /dev/dri passed in. The compose template also only
+#      added a device for NPU, so setting GPU would not have got /dev/dri anyway.
+#   2. Ubuntu 24.04's archive compute-runtime (23.43, Nov 2023) enumerates Arrow Lake
+#      correctly but SIGSEGVs at model compile ("longjmp causes uninitialized stack
+#      frame") against openvino-genai 2026.2.1. Intel's own packages fix it.
 #
-# Read the gap length, not the percentage. Turbo scored 95.0% on a short sample while
-# dropping whole passages; a similarity number alone cannot tell those two apart.
+# Measured on F2_del_3 (1683 s), the same file as every other row here:
+#
+#   GPU  + large-v3 int8   386 s   4.36x realtime   <- P-cores 20.7%, iGPU 2000 MHz
+#   CPU  + large-v3 int8   441 s   3.82x realtime      P-cores ~92%
+#
+# 386 s and 388 s across two runs, one of them with llama-server busy on the CPU —
+# the timing is reproducible and the LLM does not disturb it, which is the point.
+#
+# The wall-clock gain is only 12.5%. The reason to switch is the other column: on GPU
+# the transcription leaves the P-cores free, so Whisper and the model stop competing
+# for the same six cores. On CPU they cannot run at once without both slowing down.
+#
+# Content is equivalent, checked the same way the turbo model was rejected: 98.4%
+# word-level match against the CPU output, longest run present in only one of them
+# 5 words, and zero differences of 8 words or more. Compare with CPU-vs-pve3 at 94.8%
+# and a 9-word longest run. This is not the turbo trap again.
+#
+# Not yet checked on a full 1h54m lecture — F2_del_3 is 28 minutes. The turbo lesson
+# says short samples lie, so run one whole lecture through both devices before
+# trusting this for a term's worth of transcripts.
 ai_lab_whisper_ov_enabled: true
 ai_lab_whisper_ov_port: 9000
 ai_lab_whisper_ov_model: "OpenVINO/whisper-large-v3-int8-ov"
 # NPU and GPU are valid values. Both are also the isolation knob when something
 # regresses: same model, different device tells you whether it is the model's fault.
-# Only NPU needs the /dev/accel passthrough, which the compose template adds for it.
+# The compose template adds the right passthrough per device: /dev/accel for NPU,
+# /dev/dri for GPU. Switching device is a variable change and a rebuild is not needed
+# — both user-mode stacks are in the image.
 ai_lab_whisper_ov_device: "CPU"
 ai_lab_whisper_ov_language: "sv"
+
+# Intel's GPU compute runtime, pinned as a group the same way. compute-runtime's
+# release notes name the exact intel-graphics-compiler and gmmlib builds it was made
+# against — take all four from one release or expect the GPU to vanish or crash.
+# Ubuntu's archive build is far too old; see the Dockerfile for what that looks like.
+ai_lab_compute_runtime_version: "26.27.39122.11"
+ai_lab_igc_version: "2.38.2"
+ai_lab_igc_build: "22051"
+ai_lab_gmmlib_version: "22.10.0"
 
 # Pinned to the set Intel validated together for Arrow Lake in linux-npu-driver
 # v1.35.0. The kernel-mode driver and firmware come from the PVE host; these are the

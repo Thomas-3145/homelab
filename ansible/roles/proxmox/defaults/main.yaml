@@ -22,6 +22,17 @@ proxmox_e1000e_nic_name: nic0
 # workloads that already thermally throttle, that is usually a net *gain* in
 # sustained throughput. Verify with scripts/llm-bench.sh before trusting a value.
 proxmox_power_limit_watts: ""
+# Kernel tunables, written as one drop-in in /etc/sysctl.d. Empty = change nothing.
+#
+# vm.swappiness — Debian ships 60, which is tuned for a desktop where swapping an idle
+# application out to make room for page cache is a win. On a hypervisor the "idle
+# application" is a guest's memory, and paging that to disk turns a guest's RAM access
+# into a disk seek that the guest cannot see or account for; it shows up inside the
+# guest as unexplained latency. 10 keeps swap as an emergency reserve rather than a
+# routine tier. It is not 0: that would leave no headroom before the OOM killer, and
+# pve2's ai-lab LXC has a 52 GB cap on a 62 GB host.
+proxmox_sysctl_settings: {}
+
 proxmox_power_limit_sysfs: /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
 
 # SSH hardening — key-only root, password auth off, fail2ban, unattended-upgrades.

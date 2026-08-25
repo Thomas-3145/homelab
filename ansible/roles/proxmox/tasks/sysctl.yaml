@@ -1,0 +1,41 @@
+---
+# Kernel tunables written to /etc/sysctl.d. See defaults/main.yaml for the values
+# and why each one is set.
+
+- name: Write sysctl drop-in
+  ansible.builtin.template:
+    src: 99-proxmox-tuning.conf.j2
+    dest: /etc/sysctl.d/99-proxmox-tuning.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload sysctl
+
+# The read-back below must see the reloaded values, so run the handler now rather
+# than at the end of the play.
+- name: Flush handlers so sysctl is reloaded before verifying
+  ansible.builtin.meta: flush_handlers
+
+# Skipped under --check: nothing was written, so reading back would always report
+# the old value and fail the guard below on a run that changed nothing.
+- name: Read back the applied values
+  ansible.builtin.command: "sysctl -n {{ item.key }}"
+  loop: "{{ proxmox_sysctl_settings | dict2items }}"
+  register: proxmox_sysctl_applied
+  changed_when: false
+  when: not ansible_check_mode
+
+# A drop-in in /etc/sysctl.d can be overridden by a later-sorting file, which would
+# look like the task succeeded while the running kernel kept the old value.
+- name: Fail if a value did not take effect
+  ansible.builtin.fail:
+    msg: >-
+      {{ item.item.key }} is {{ item.stdout | trim }} but should be {{ item.item.value }}.
+      Another file in /etc/sysctl.d sorts after 99-proxmox-tuning.conf, or the key is
+      being reset at boot by something else.
+  loop: "{{ proxmox_sysctl_applied.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+  when:
+    - not ansible_check_mode
+    - (item.stdout | trim) != (item.item.value | string)
