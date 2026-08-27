@@ -6,13 +6,30 @@ on:
   pull_request:
     branches: [main]
 
+# Public repo — the default token scope is wider than anything here needs.
+permissions:
+  contents: read
+
+# A quick follow-up push should cancel the previous run, not race it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  KUSTOMIZE_VERSION: v5.8.1
+  KUBECONFORM_VERSION: v0.8.0
+
 jobs:
   terraform:
-    name: Terraform
+    name: Terraform (${{ matrix.dir }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [terraform/proxmox, terraform/lia]
     defaults:
       run:
-        working-directory: terraform/proxmox
+        working-directory: ${{ matrix.dir }}
     steps:
       - uses: actions/checkout@v7
 
@@ -62,8 +79,8 @@ jobs:
 
       - name: Install kubeconform
         run: |
-          curl -fsSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
-            | tar xz -C /usr/local/bin
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin
 
       - name: Validate manifests
         run: |
@@ -77,9 +94,73 @@ jobs:
               -ignore-missing-schemas \
               -summary
 
+  kustomize:
+    name: Kustomize Render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install kustomize + kubeconform
+        run: |
+          kustomize_base=https://github.com/kubernetes-sigs/kustomize/releases/download
+          curl -fsSL "${kustomize_base}/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin
+
+      - name: Stub ksops
+        # KSOPS decrypts secrets at render time and needs the age key, which does
+        # not belong in CI on a public repo. This stub returns an empty resource
+        # list instead: secret *values* are not what breaks a render — dangling
+        # patch targets, bad name references and malformed resources are, and
+        # those are all still caught below.
+        run: |
+          sudo tee /usr/local/bin/ksops >/dev/null <<'EOF'
+          #!/usr/bin/env bash
+          cat >/dev/null
+          echo "apiVersion: config.kubernetes.io/v1"
+          echo "kind: ResourceList"
+          echo "items: []"
+          EOF
+          sudo chmod +x /usr/local/bin/ksops
+
+      - name: Build and validate every overlay
+        run: |
+          # pipefail is load-bearing: without it a failed `kustomize build`
+          # is masked by kubeconform, which happily exits 0 on empty input.
+          set -o pipefail
+          fail=0
+          while read -r kustomization; do
+            dir=$(dirname "$kustomization")
+            echo "::group::$dir"
+            if ! kustomize build --enable-alpha-plugins --enable-exec "$dir" \
+                 | kubeconform -strict -ignore-missing-schemas -summary; then
+              echo "::error file=$kustomization::kustomize build or schema validation failed"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done < <(find kubernetes -name kustomization.yaml | sort)
+          exit $fail
+
+  gitleaks:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
   trivy:
     name: Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v7
 
@@ -91,10 +172,19 @@ jobs:
           exit-code: 1
           severity: HIGH,CRITICAL
 
+      # Kubernetes findings are tracked in the Security tab rather than blocking
+      # the build — see the non-root images TODO. SARIF gives them history.
       - name: Run Trivy (Kubernetes)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: kubernetes/
-          exit-code: 0
+          format: sarif
+          output: trivy-kubernetes.sarif
           severity: HIGH,CRITICAL
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-kubernetes.sarif
+          category: trivy-kubernetes

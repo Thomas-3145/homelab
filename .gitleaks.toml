@@ -1,0 +1,23 @@
+# Gitleaks config for this repo.
+# Extends the upstream default ruleset and carves out the two things here that
+# look like secrets to a scanner but are safe by design.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "SOPS ciphertext and age public keys are safe to commit"
+
+paths = [
+  # Encrypted with age; only `data`/`stringData` values are ciphertext, so the
+  # surrounding YAML stays readable — and scannable-looking.
+  '''.*\.sops\.yaml$''',
+  # Contains age *public* recipients only.
+  '''^\.sops\.yaml$''',
+]
+
+regexes = [
+  # SOPS ciphertext blobs.
+  '''ENC\[AES256_GCM,.*\]''',
+  # age public keys (age1...) — recipients, never private material.
+  '''age1[0-9a-z]{58}''',
+]
