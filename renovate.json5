@@ -59,6 +59,16 @@
       datasourceTemplate: 'github-releases',
       depNameTemplate: 'yannh/kubeconform',
     },
+    {
+      // Keep this in step with the gitleaks `rev` in .pre-commit-config.yaml,
+      // which the pre-commit manager updates separately.
+      customType: 'regex',
+      description: 'gitleaks pin in the lint workflow',
+      managerFilePatterns: ['^\\.github/workflows/lint\\.yaml$'],
+      matchStrings: ['GITLEAKS_VERSION:\\s*(?<currentValue>v\\S+)'],
+      datasourceTemplate: 'github-releases',
+      depNameTemplate: 'gitleaks/gitleaks',
+    },
   ],
   packageRules: [
     {
