@@ -62,6 +62,15 @@
   ],
   packageRules: [
     {
+      // Work happens directly on main here, so PRs would otherwise just pile up
+      // unreviewed. Automerge keeps dependencies moving; the rules below carve
+      // out everything that needs a human. Merges only once CI is green.
+      description: 'Automerge patch and minor updates after CI passes',
+      matchUpdateTypes: ['patch', 'minor', 'digest', 'pin'],
+      automerge: true,
+      automergeType: 'branch',
+    },
+    {
       description: 'Majors can contain migrations (authentik DB, Longhorn engine, kube-prometheus CRDs) — flag clearly, never automerge',
       matchUpdateTypes: ['major'],
       labels: ['major-upgrade'],
