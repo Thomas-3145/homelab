@@ -1,0 +1,27 @@
+# Dead credentials still reachable in git history.
+#
+# Committed March 2026, later removed from HEAD (homepage now reads
+# {{HOMEPAGE_VAR_*}} from a SOPS secret; the cloudflared secret is gone
+# entirely). Every key below has since been rotated, so the old values are
+# inert — the commits are just noise a scanner keeps rediscovering.
+#
+# Listed here so CI fails on *new* leaks instead of drowning in these ten.
+# Purging them for real would need git-filter-repo + a force push, which is
+# not worth it for credentials that no longer open anything.
+#
+# Do NOT add entries here to silence a live finding — rotate first, then
+# record the dead fingerprint.
+
+# kubernetes/apps/homepage/configmap.yaml — 9 finding(s), 2026-03-01
+63a313ba8cb60bf357f5bc0355af74e775a6b6bf:kubernetes/apps/homepage/configmap.yaml:generic-api-key:46
+309994a8d7eeadb64e01c54487817ec25684518a:kubernetes/apps/homepage/configmap.yaml:generic-api-key:55
+80df7d512fd507ebe1b54a24b98d3d571d91628d:kubernetes/apps/homepage/configmap.yaml:generic-api-key:58
+71974eeba93be19bf59df1b05dc8620bf3f06316:kubernetes/apps/homepage/configmap.yaml:generic-api-key:68
+309994a8d7eeadb64e01c54487817ec25684518a:kubernetes/apps/homepage/configmap.yaml:generic-api-key:76
+fd95969f1b874b1c04985d005cabdf08b67d34e1:kubernetes/apps/homepage/configmap.yaml:generic-api-key:80
+309994a8d7eeadb64e01c54487817ec25684518a:kubernetes/apps/homepage/configmap.yaml:generic-api-key:84
+309994a8d7eeadb64e01c54487817ec25684518a:kubernetes/apps/homepage/configmap.yaml:generic-api-key:92
+309994a8d7eeadb64e01c54487817ec25684518a:kubernetes/apps/homepage/configmap.yaml:generic-api-key:108
+
+# kubernetes/infrastructure/cloudflared/secret.yaml — 1 finding(s), 2026-03-03
+3afb8a6ee78e9ee5d8ad1d9900b11893c4300637:kubernetes/infrastructure/cloudflared/secret.yaml:generic-api-key:8

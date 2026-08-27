@@ -8,6 +8,10 @@
     ':timezone(Europe/Stockholm)',
     // Conventional commit messages (chore(deps): ...) — matches pre-commit hook
     ':semanticCommits',
+    // Pin GitHub Actions to commit SHAs — a mutable tag like @v7 is a supply
+    // chain hole in a workflow that can read the repo. Renovate keeps the
+    // human-readable version in a trailing comment.
+    'helpers:pinGitHubActionDigests',
   ],
   // Container images in plain manifests (Deployments etc.)
   kubernetes: {
@@ -35,6 +39,25 @@
       matchStrings: ['k3s_version:\\s*"(?<currentValue>v[^"]+)"'],
       datasourceTemplate: 'github-releases',
       depNameTemplate: 'k3s-io/k3s',
+    },
+    {
+      // CI installs these by curl, so no built-in manager sees them. Upstream
+      // tags them `kustomize/vX.Y.Z`, hence extractVersion.
+      customType: 'regex',
+      description: 'kustomize pin in the lint workflow',
+      managerFilePatterns: ['^\\.github/workflows/lint\\.yaml$'],
+      matchStrings: ['KUSTOMIZE_VERSION:\\s*(?<currentValue>v\\S+)'],
+      datasourceTemplate: 'github-releases',
+      depNameTemplate: 'kubernetes-sigs/kustomize',
+      extractVersionTemplate: '^kustomize/(?<version>.+)$',
+    },
+    {
+      customType: 'regex',
+      description: 'kubeconform pin in the lint workflow',
+      managerFilePatterns: ['^\\.github/workflows/lint\\.yaml$'],
+      matchStrings: ['KUBECONFORM_VERSION:\\s*(?<currentValue>v\\S+)'],
+      datasourceTemplate: 'github-releases',
+      depNameTemplate: 'yannh/kubeconform',
     },
   ],
   packageRules: [
