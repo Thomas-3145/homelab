@@ -18,6 +18,7 @@ concurrency:
 env:
   KUSTOMIZE_VERSION: v5.8.1
   KUBECONFORM_VERSION: v0.8.0
+  GITLEAKS_VERSION: v8.30.1
 
 jobs:
   terraform:
@@ -122,10 +123,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
+      # The gitleaks *action* requires a paid licence under an organisation
+      # account, which this repo sits under. The binary itself is MIT, so run
+      # it directly — same version the pre-commit hook uses.
+      - name: Install gitleaks
+        run: |
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin gitleaks
+
+      - name: Scan history for secrets
+        run: gitleaks git . --config .gitleaks.toml --redact --verbose
 
   trivy:
     name: Security Scan
@@ -156,7 +163,7 @@ jobs:
           severity: HIGH,CRITICAL
 
       - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-kubernetes.sarif
           category: trivy-kubernetes
