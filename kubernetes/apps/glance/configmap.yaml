@@ -144,6 +144,11 @@ data:
                 groups:
                   - title: Homelab
                     links:
+                      # Same URL as pve1 — Proxmox has no separate cluster
+                      # endpoint, the datacenter view is served by whichever
+                      # node you log in to. pve1 is the one that is always up.
+                      - title: Proxmox kluster
+                        url: https://192.168.10.11:8006
                       - title: Proxmox pve1
                         url: https://192.168.10.11:8006
                       - title: Proxmox pve2
