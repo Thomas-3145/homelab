@@ -12,6 +12,26 @@ ai_lab_llm_models:
   - "llama3.3:70b"
   - "qwen3.6:35b-a3b"
   - "{{ ai_lab_embedding_model }}"
+  - "{{ ai_lab_tagging_model }}"
+
+# Small model for short, structured, latency-sensitive calls from other services —
+# currently Karakeep's bookmark tagging (kubernetes/apps/karakeep/web.yaml), which
+# fires one call per bookmark and wants an answer in seconds, not a batch run.
+#
+# granite4.1:8b and NOT qwen3:8b, which was pulled by hand and used first. qwen3 is a
+# thinking model: measured here 2026-08-28 on the same tagging prompt, both cold,
+#
+#   qwen3:8b       69 s wall — 4 s load, 399 prefill tok,  25 gen tok
+#   granite4.1:8b  11 s wall — 4 s load,  46 prefill tok,  38 gen tok
+#
+# 6x, and the tags were equivalent. The difference is a reasoning trace that no
+# caller reads. Warm, granite answers in 6 s; generation is ~6.5 tok/s either way,
+# so the gap is entirely tokens produced, not tokens per second.
+#
+# Listed here because it was previously a manual `ollama pull` — an Ansible rebuild
+# of this LXC would have dropped it and Karakeep's tagging would have started
+# failing with no obvious cause.
+ai_lab_tagging_model: "granite4.1:8b"
 
 # Embedding model backing Open WebUI's RAG. Small (~275 MB) and served by the same
 # Ollama instance, so there is only one model store to manage.
