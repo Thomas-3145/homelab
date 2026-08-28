@@ -17,20 +17,15 @@ spec:
       labels:
         app: stirling-pdf
     spec:
-      # /configs, /logs and /pipeline are all owned by 1000 in the image; only
-      # /app is 1001, and that one is read-only anyway.
-      #
-      # readOnlyRootFilesystem is deliberately absent: the JVM and the PDF
-      # tooling write well outside /configs. Tracked in .trivyignore.yaml.
+      # Runs as root, and has to. The image entrypoint chowns and chmods
+      # /tmp/stirling-pdf and symlinks /usr/local/bin/diagnostics before the JVM
+      # starts; as UID 1000 with dropped capabilities every one of those fails
+      # and the container exits. Verified 2026-08-28 — the pod crashlooped on
+      #   chown: cannot read directory '/tmp/stirling-pdf': Permission denied
+      # Same shape as karakeep's s6-overlay entrypoint. Going non-root needs a
+      # different image, not a different securityContext. Seccomp is kept
+      # because it costs nothing here.
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        # Without this the kubelet re-walks the whole volume on every restart.
-        # OnRootMismatch does it once, then skips while the top directory
-        # already matches.
-        fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -41,10 +36,6 @@ spec:
               value: "-XX:MaxMetaspaceSize=256m"
           ports:
             - containerPort: 8080
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
           volumeMounts:
             - name: configs
               mountPath: /configs

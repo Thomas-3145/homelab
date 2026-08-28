@@ -46,14 +46,6 @@ misconfigurations:
 
   - id: KSV-0014
     paths:
-      - "apps/stirling-pdf/deployment.yaml"
-    statement: >-
-      The JVM and the PDF tooling write to /logs, /pipeline and /tmp, none of
-      which are on the configs PVC.
-    expired_at: 2027-03-01
-
-  - id: KSV-0014
-    paths:
       - "apps/homepage/deployment.yaml"
     statement: >-
       Next.js writes its cache under /app/.next. The config directory is already
@@ -69,6 +61,24 @@ misconfigurations:
     expired_at: 2027-03-01
 
   # ── Blocked on an upstream image ─────────────────────────────────────────
+  - id: KSV-0014
+    paths:
+      - "apps/stirling-pdf/deployment.yaml"
+    statement: >-
+      Blocked on the same root requirement as KSV-0118 below.
+    expired_at: 2027-03-01
+
+  - id: KSV-0118
+    paths:
+      - "apps/stirling-pdf/deployment.yaml"
+    statement: >-
+      The image entrypoint chowns /tmp/stirling-pdf and symlinks into
+      /usr/local/bin before the JVM starts. Tried as UID 1000 with dropped
+      capabilities on 2026-08-28 and the container crashlooped on
+      "chown: cannot read directory '/tmp/stirling-pdf': Permission denied".
+      Needs a different image, not a different securityContext.
+    expired_at: 2027-03-01
+
   - id: KSV-0014
     paths:
       - "apps/it-tools/deployment.yaml"
