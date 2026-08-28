@@ -140,6 +140,18 @@ data:
               - type: calendar
                 first-day-of-week: monday
 
+              # Glance's calendar is a date display and nothing more — one
+              # option, no events, no click target. Vikunja is embedded below it
+              # instead, so a date can actually be written to. It sends no
+              # X-Frame-Options or frame-ancestors, and its JWT lives in
+              # localStorage keyed to its own origin, so the frame is already
+              # logged in from a normal tab.
+              - type: iframe
+                title: Planering
+                title-url: https://vikunja.3145.blog/
+                source: https://vikunja.3145.blog/tasks/by/upcoming
+                height: 450
+
               - type: bookmarks
                 groups:
                   - title: Homelab
