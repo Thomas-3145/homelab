@@ -1,0 +1,32 @@
+---
+# Trivy defaults for this repo. Picked up automatically when trivy runs from the
+# repo root, so CI and local runs behave identically.
+#
+# Paths below are relative to the scan target (`trivy config kubernetes/` yields
+# targets like `apps/ghost/deployment.yaml`), not to the repo root.
+
+ignorefile: .trivyignore.yaml
+
+rego:
+  # Input for KSV-0125. Without it the check falls back to a built-in list of
+  # Azure/ECR/GCR domains and flags every image a homelab pulls; with it the
+  # check is real and fails on a registry we did not put here.
+  data:
+    - .trivy/data
+
+scan:
+  skip-dirs:
+    # Strategic-merge patch fragments, not standalone manifests. Trivy reads
+    # them as complete workloads and reports everything the base already sets.
+    # kubeconform skips them for the same reason; the rendered output is what
+    # scripts/validate-kustomizations.sh checks.
+    - "**/patches"
+
+  skip-files:
+    # Vendored upstream manifests. We do not author these, and the findings are
+    # inherent to what the components do:
+    #   kube-vip  — hostNetwork + NET_ADMIN/NET_RAW to answer ARP for the API VIP
+    #   system-upgrade-controller — hostPath and broad RBAC to drain and upgrade nodes
+    # Re-review on the next version bump rather than per commit.
+    - "bootstrap/kube-vip.yaml"
+    - "infrastructure/system-upgrade-controller/system-upgrade-controller.yaml"
