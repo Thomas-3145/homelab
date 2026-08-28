@@ -1,0 +1,12 @@
+---
+# Input data for KSV-0125 (restrict container images to trusted registries).
+# Without this the check falls back to its built-in list of Azure/ECR/GCR
+# domains, which flags every image in a homelab. With it the check becomes
+# useful: an image from anywhere else fails.
+ksv0125:
+  trusted_registries:
+    - ghcr.io
+    - docker.io
+    - registry.k8s.io
+    - quay.io
+    - lscr.io

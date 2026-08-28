@@ -153,14 +153,23 @@ jobs:
 
       # Kubernetes findings are tracked in the Security tab rather than blocking
       # the build — see the non-root images TODO. SARIF gives them history.
+      #
+      # limit-severities-for-sarif is required: without it the action drops
+      # TRIVY_SEVERITY for SARIF output and uploads every LOW and MEDIUM too,
+      # which buried the real findings under ~170 style nits.
+      #
+      # trivy.yaml (repo root) holds the skip-dirs/skip-files and points at
+      # .trivyignore.yaml, so local runs and CI see the same rule set.
       - name: Run Trivy (Kubernetes)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: kubernetes/
+          trivy-config: trivy.yaml
           format: sarif
           output: trivy-kubernetes.sarif
           severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
 
       - name: Upload Trivy results
         uses: github/codeql-action/upload-sarif@v4

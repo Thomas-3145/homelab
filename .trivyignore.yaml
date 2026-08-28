@@ -1,0 +1,103 @@
+---
+# Rule-specific suppressions. Everything not listed here is a real finding and
+# should be fixed rather than added to this file.
+#
+# Scope rule: only HIGH and CRITICAL are suppressed here, because only those are
+# uploaded to GitHub's Security tab (see limit-severities-for-sarif in
+# .github/workflows/lint.yaml). LOW and MEDIUM findings are left visible in a
+# local `trivy config kubernetes/` — they are worth reading, not worth a
+# permanent entry.
+#
+# Every entry carries expired_at. When the date passes the finding comes back,
+# which is the point: these are deferrals, not verdicts.
+#
+# `paths` are relative to the scan target — see the note in trivy.yaml.
+# Whole files that are never worth scanning belong in trivy.yaml's skip-files.
+
+misconfigurations:
+  # ── False positives ───────────────────────────────────────────────────────
+  - id: KSV-0109
+    paths:
+      - "apps/homepage/configmap.yaml"
+    statement: >-
+      The values are {{HOMEPAGE_VAR_*}} placeholders that homepage substitutes at
+      startup from its sops-encrypted secret. No credential is in the ConfigMap.
+      Real secrets in the repo are caught by gitleaks.
+    expired_at: 2027-08-01
+
+  - id: KSV-01010
+    paths:
+      - "apps/homepage/configmap.yaml"
+    statement: >-
+      Same placeholders as KSV-0109 above.
+    expired_at: 2027-08-01
+
+  # ── readOnlyRootFilesystem deferred: app writes outside its volume ────────
+  # These four now run non-root with dropped capabilities and RuntimeDefault
+  # seccomp. Only the read-only root filesystem is outstanding, and each needs
+  # its writable paths mapped to emptyDir mounts first.
+  - id: KSV-0014
+    paths:
+      - "apps/ghost/deployment.yaml"
+    statement: >-
+      Ghost rewrites /var/lib/ghost/.ghost-cli on boot, outside the content PVC.
+      Needs an emptyDir for it before the root filesystem can be sealed.
+    expired_at: 2027-03-01
+
+  - id: KSV-0014
+    paths:
+      - "apps/stirling-pdf/deployment.yaml"
+    statement: >-
+      The JVM and the PDF tooling write to /logs, /pipeline and /tmp, none of
+      which are on the configs PVC.
+    expired_at: 2027-03-01
+
+  - id: KSV-0014
+    paths:
+      - "apps/homepage/deployment.yaml"
+    statement: >-
+      Next.js writes its cache under /app/.next. The config directory is already
+      an emptyDir; the cache still needs one.
+    expired_at: 2027-03-01
+
+  - id: KSV-0014
+    paths:
+      - "apps/vaultwarden/deployment.yaml"
+    statement: >-
+      Rocket writes outside /data during upload handling. Low priority — the
+      container is non-root with no capabilities.
+    expired_at: 2027-03-01
+
+  # ── Blocked on an upstream image ─────────────────────────────────────────
+  - id: KSV-0014
+    paths:
+      - "apps/it-tools/deployment.yaml"
+    statement: >-
+      it-tools ships nginx running as root on :80. Going non-root and read-only
+      means rebuilding on an unprivileged nginx base (pid file, cache and temp
+      paths all move). Tracked with the non-root images work.
+    expired_at: 2027-03-01
+
+  - id: KSV-0118
+    paths:
+      - "apps/it-tools/deployment.yaml"
+    statement: >-
+      Same nginx-as-root blocker as KSV-0014 above.
+    expired_at: 2027-03-01
+
+  - id: KSV-0014
+    paths:
+      - "apps/karakeep/web.yaml"
+    statement: >-
+      The karakeep image entrypoint is /init (s6-overlay), which needs root and
+      capabilities to set up and then drops privileges itself. Forcing
+      runAsNonRoot or a read-only root here makes the container fail to start —
+      see the note in the manifest.
+    expired_at: 2027-03-01
+
+  - id: KSV-0118
+    paths:
+      - "apps/karakeep/web.yaml"
+    statement: >-
+      Same s6-overlay blocker as KSV-0014 above.
+    expired_at: 2027-03-01
