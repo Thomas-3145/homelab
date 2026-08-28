@@ -13,9 +13,17 @@ spec:
       labels:
         app: nut-exporter
     spec:
+      # A static Go binary that polls NUT over TCP and serves /ups_metrics. It
+      # owns no files, so it can run as nobody with nothing writable.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: nut-exporter
-          image: druggeri/nut_exporter:3.2
+          image: docker.io/druggeri/nut_exporter:3.2
           args:
             - --nut.server=192.168.10.13
             - --nut.vars_enable=battery.charge,battery.runtime,input.voltage,output.voltage,ups.load,ups.status
@@ -33,6 +41,11 @@ spec:
           ports:
             - name: metrics
               containerPort: 9199
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           resources:
             requests:
               memory: 16Mi
