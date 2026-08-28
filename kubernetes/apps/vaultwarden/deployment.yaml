@@ -17,9 +17,27 @@ spec:
       labels:
         app: vaultwarden
     spec:
+      # Unlike Ghost, /data here is root-owned from when the container ran as
+      # root, so fsGroup is doing real work: the kubelet chowns the volume on
+      # mount. It is ~1.5 MB of SQLite, so that is momentary.
+      #
+      # Port 80 as UID 1000 is fine — Kubernetes sets
+      # net.ipv4.ip_unprivileged_port_start=0, which is how ntfy has been
+      # serving :80 as 1000 all along.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        # Without this the kubelet re-walks the whole volume on every restart.
+        # OnRootMismatch does it once, then skips while the top directory
+        # already matches.
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: vaultwarden
-          image: vaultwarden/server:1.37.1
+          image: docker.io/vaultwarden/server:1.37.1
           env:
             - name: DOMAIN
               value: https://vault.3145.blog
@@ -36,6 +54,10 @@ spec:
                   key: ADMIN_TOKEN
           ports:
             - containerPort: 80
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: data
               mountPath: /data

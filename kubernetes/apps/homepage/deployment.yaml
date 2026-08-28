@@ -16,9 +16,22 @@ spec:
         app: homepage
     spec:
       serviceAccountName: homepage
+      # /app and /app/.next are owned by 1000 in the image. fsGroup is what lets
+      # the init container below (which stays at 65534) write into the config
+      # emptyDir — fsGroup lands as a supplemental group on every container.
+      #
+      # readOnlyRootFilesystem is deliberately absent: Next.js writes its cache
+      # under /app/.next. Tracked in .trivyignore.yaml.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         - name: copy-config
-          image: busybox:1.37
+          image: docker.io/library/busybox:1.37
           command: ["sh", "-c", "cp /config-source/* /app/config/"]
           securityContext:
             runAsNonRoot: true
@@ -26,6 +39,13 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
           volumeMounts:
             - name: config-source
               mountPath: /config-source

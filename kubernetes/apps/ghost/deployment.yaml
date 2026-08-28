@@ -17,9 +17,27 @@ spec:
       labels:
         app: ghost
     spec:
+      # /var/lib/ghost and everything on the content PVC is already owned by
+      # 1000 (the image's `node` user) — the container only ran as root because
+      # nothing said otherwise. fsGroup keeps the volume reachable if Longhorn
+      # ever re-provisions it.
+      #
+      # readOnlyRootFilesystem is deliberately absent: Ghost rewrites
+      # /var/lib/ghost/.ghost-cli on boot. Tracked in .trivyignore.yaml.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        # Without this the kubelet re-walks the whole volume on every restart.
+        # OnRootMismatch does it once, then skips while the top directory
+        # already matches.
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: ghost
-          image: ghost:5
+          image: docker.io/library/ghost:5
           env:
             - name: url
               value: https://3145.blog
@@ -31,6 +49,10 @@ spec:
               value: production
           ports:
             - containerPort: 2368
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: content
               mountPath: /var/lib/ghost/content

@@ -17,14 +17,34 @@ spec:
       labels:
         app: stirling-pdf
     spec:
+      # /configs, /logs and /pipeline are all owned by 1000 in the image; only
+      # /app is 1001, and that one is read-only anyway.
+      #
+      # readOnlyRootFilesystem is deliberately absent: the JVM and the PDF
+      # tooling write well outside /configs. Tracked in .trivyignore.yaml.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        # Without this the kubelet re-walks the whole volume on every restart.
+        # OnRootMismatch does it once, then skips while the top directory
+        # already matches.
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: stirling-pdf
-          image: stirlingtools/stirling-pdf:2.8.0
+          image: docker.io/stirlingtools/stirling-pdf:2.8.0
           env:
             - name: JAVA_TOOL_OPTIONS
               value: "-XX:MaxMetaspaceSize=256m"
           ports:
             - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: configs
               mountPath: /configs
