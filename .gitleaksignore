@@ -25,3 +25,17 @@ fd95969f1b874b1c04985d005cabdf08b67d34e1:kubernetes/apps/homepage/configmap.yaml
 
 # kubernetes/infrastructure/cloudflared/secret.yaml — 1 finding(s), 2026-03-03
 3afb8a6ee78e9ee5d8ad1d9900b11893c4300637:kubernetes/infrastructure/cloudflared/secret.yaml:generic-api-key:8
+
+# kubernetes/apps/homepage/homepage-secrets.sops.yaml — 1 finding(s), 2026-08-28
+#
+# PBS API token root@pam!homepage, pasted as a plaintext YAML *comment* into a
+# .sops.yaml — so SOPS never encrypted it and the old path-based allowlist in
+# .gitleaks.toml never scanned it. Public on origin/main from 2026-03-08.
+#
+# Confirmed inert 2026-08-28: `proxmox-backup-manager user delete-token
+# root@pam homepage` reports the token does not exist, and an API call with the
+# leaked value returns 401. Both keys are now removed from the secret entirely —
+# nothing referenced them.
+#
+# This is the finding that motivated narrowing the allowlist; see .gitleaks.toml.
+319fb0df53222484b87f8d537f826cb45817d7e3:kubernetes/apps/homepage/homepage-secrets.sops.yaml:generic-api-key:17

@@ -1,23 +1,29 @@
 # Gitleaks config for this repo.
-# Extends the upstream default ruleset and carves out the two things here that
-# look like secrets to a scanner but are safe by design.
+# Extends the upstream default ruleset and carves out the things here that look
+# like secrets to a scanner but are safe by design.
+#
+# Deliberately NOT allowlisted by path: a `*.sops.yaml` file is encrypted only
+# in its `data`/`stringData` *values*. Every comment, key and metadata field
+# around them is plaintext. A whole-file path allowlist therefore hides a real
+# secret pasted anywhere else in the file — which is exactly how the PBS API
+# token in 319fb0d sat unscanned in public history for six months.
+#
+# Allowlist the ciphertext itself instead, so the rest of those files stays
+# scanned. Anything added below must match encrypted material only, never a
+# whole file.
 [extend]
 useDefault = true
 
 [allowlist]
-description = "SOPS ciphertext and age public keys are safe to commit"
-
-paths = [
-  # Encrypted with age; only `data`/`stringData` values are ciphertext, so the
-  # surrounding YAML stays readable — and scannable-looking.
-  '''.*\.sops\.yaml$''',
-  # Contains age *public* recipients only.
-  '''^\.sops\.yaml$''',
-]
+description = "SOPS ciphertext and age public material are safe to commit"
 
 regexes = [
-  # SOPS ciphertext blobs.
+  # SOPS ciphertext blobs — the encrypted `data`/`stringData` values.
   '''ENC\[AES256_GCM,.*\]''',
   # age public keys (age1...) — recipients, never private material.
   '''age1[0-9a-z]{58}''',
+  # The per-recipient SOPS header block. This is the data key encrypted to a
+  # recipient, not a key itself, but it is high-entropy base64 wrapped in PEM
+  # armour and trips the generic rules.
+  '''-----BEGIN AGE ENCRYPTED FILE-----[\s\S]*?-----END AGE ENCRYPTED FILE-----''',
 ]
