@@ -65,8 +65,16 @@ spec:
             # MUST be set whenever OLLAMA_BASE_URL is. The default is an OpenAI
             # model name, which Ollama rejects, and the only symptom is tags
             # never appearing.
+            # granite4.1:8b, not qwen3:8b. Both produce good tags, but qwen3 is a
+            # thinking model and spends the bulk of a tagging call on a reasoning
+            # trace nobody reads. Measured on ai-lab 2026-08-28, same prompt, model
+            # cold in both cases:
+            #   qwen3:8b       69 s wall (4 s load, 399 prefill tok, 25 gen tok)
+            #   granite4.1:8b  11 s wall (4 s load,  46 prefill tok, 38 gen tok)
+            # Warm, granite answers in 6 s. Neither ever hit the 300 s timeout below
+            # — this is a 6x speedup, not a bug fix.
             - name: INFERENCE_TEXT_MODEL
-              value: qwen3:8b
+              value: granite4.1:8b
             # Default is 2048 — too small to fit an article, which produces
             # vague tags from a truncated page.
             - name: INFERENCE_CONTEXT_LENGTH
