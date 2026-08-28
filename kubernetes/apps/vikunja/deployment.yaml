@@ -22,9 +22,11 @@ spec:
         runAsGroup: 1000
         runAsNonRoot: true
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: vikunja
-          image: vikunja/vikunja:2.4.0
+          image: docker.io/vikunja/vikunja:2.4.0
           env:
             - name: VIKUNJA_SERVICE_PUBLICURL
               value: https://vikunja.3145.blog/
@@ -49,9 +51,19 @@ spec:
               value: /app/vikunja/files
           ports:
             - containerPort: 3456
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: data
               mountPath: /app/vikunja/files
+            # Both the DB and the attachments live on the PVC above, so nothing
+            # else needs to be writable. /tmp is mounted for SQLite's scratch
+            # files rather than left to fail at the first large query.
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 50m
@@ -75,3 +87,5 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: vikunja-data
+        - name: tmp
+          emptyDir: {}

@@ -21,6 +21,8 @@ spec:
         runAsUser: 65534
         runAsGroup: 65534
         runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: chrome
           # Tagged by CHROME version, not by karakeep version — do not try to
@@ -40,11 +42,21 @@ spec:
           # existing behaviour explicit and drops what it never needs.
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
             seccompProfile:
               type: RuntimeDefault
+          volumeMounts:
+            # --disable-dev-shm-usage above sends Chrome's render buffers to
+            # /tmp instead of the 64Mi default /dev/shm. That used to land on
+            # the container's writable layer; this mount keeps the same disk
+            # backing while the rest of the root filesystem goes read-only.
+            # Deliberately not medium: Memory — a tmpfs counts against the 1Gi
+            # limit and would turn a heavy page into an OOMKill.
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 100m
@@ -67,6 +79,10 @@ spec:
               port: 9222
             initialDelaySeconds: 30
             periodSeconds: 30
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 512Mi
 ---
 apiVersion: v1
 kind: Service

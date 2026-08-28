@@ -26,9 +26,11 @@ spec:
         runAsGroup: 1000
         runAsNonRoot: true
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: meilisearch
-          image: getmeili/meilisearch:v1.41.0
+          image: docker.io/getmeili/meilisearch:v1.41.0
           env:
             - name: MEILI_NO_ANALYTICS
               value: "true"
@@ -42,9 +44,16 @@ spec:
                   key: MEILI_MASTER_KEY
           ports:
             - containerPort: 7700
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: data
               mountPath: /meili_data
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 50m
@@ -68,6 +77,8 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: karakeep-meilisearch
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

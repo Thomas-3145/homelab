@@ -16,6 +16,14 @@ spec:
         app: headlamp
     spec:
       serviceAccountName: headlamp
+      # The image declares USER 100:101; repeating it here makes the kubelet
+      # enforce it, and the pod block is the only place seccomp can be set.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: headlamp
           image: ghcr.io/headlamp-k8s/headlamp:v0.40.1
@@ -26,9 +34,14 @@ spec:
           securityContext:
             runAsNonRoot: true
             runAsUser: 100
+            runAsGroup: 101
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 50m
@@ -48,3 +61,8 @@ spec:
               port: 4466
             initialDelaySeconds: 20
             periodSeconds: 30
+      # Headlamp keeps no state of its own — the cluster is the state. Only a
+      # scratch directory is needed.
+      volumes:
+        - name: tmp
+          emptyDir: {}

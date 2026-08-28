@@ -13,13 +13,21 @@ spec:
       labels:
         app: ntfy
     spec:
+      # Pod level as well as container level: Trivy's KSV-0118 only looks at the
+      # pod block, and seccompProfile cannot be set anywhere else.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: ntfy
           # v2.11 has no message templating — Alertmanager webhooks arrive as
           # raw JSON. Templating (and the built-in alertmanager template) needs
           # a newer server; verified against the live v2.11 that ?template= is
           # silently ignored.
-          image: binwiederhier/ntfy:v2.26.0
+          image: docker.io/binwiederhier/ntfy:v2.26.0
           args: ["serve"]
           env:
             - name: NTFY_BASE_URL
@@ -39,5 +47,16 @@ spec:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      # No cache or attachment dir is configured, so ntfy keeps messages in
+      # memory and the root filesystem can stay read-only. /tmp is mounted
+      # anyway — a Go binary that needs a scratch file should not crashloop.
+      volumes:
+        - name: tmp
+          emptyDir: {}
