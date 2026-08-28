@@ -71,6 +71,28 @@ services:
       - TZ=Europe/Stockholm
     volumes:
       - /opt/ai-lab/ollama:/root/.ollama
+    # NO /dev/dri HERE, DELIBERATELY — Ollama stays on the CPU. This was measured on
+    # 2026-08-28 and the iGPU lost on every axis, which is the opposite of what the
+    # llamacpp service below was built to test, so it is written down rather than
+    # left as a gap someone fills in again.
+    #
+    # Getting Vulkan running takes two things: `devices: /dev/dri` plus
+    # `group_add: ["993","44"]`, and OLLAMA_IGPU_ENABLE=1 — without the flag Ollama
+    # finds the device and discards it ("dropping integrated GPU"). With both, it
+    # reports library=Vulkan, type=iGPU, 46.7 GiB, and runs 100% GPU. It works. It is
+    # just slower, on the same prompt, same num_ctx, same 6 threads:
+    #
+    #   qwen3.6:35b-a3b   CPU  86.9 prefill / 14.5 generation tok/s
+    #                     iGPU 72.4 prefill /  5.0 generation    -17% / -66%
+    #   granite4.1:8b     CPU  ~46 prefill /  6.5 generation
+    #                     iGPU 55.9 prefill /  3.7 generation
+    #
+    # Both models, both a short and a 3400-token prompt, all worse. The reason it
+    # cannot win: the Arc iGPU shares the same DDR5 controller as the CPU, so it has
+    # no bandwidth advantage to trade for its weaker compute, and generation is pure
+    # bandwidth. Prefill was supposed to be the win and it did not materialise either.
+    #
+    # A discrete GPU over Thunderbolt would change the premise. This iGPU will not.
     ports:
       - 11434:11434
     networks:
