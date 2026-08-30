@@ -5,7 +5,9 @@
     state: directory
     mode: "0755"
   loop:
-    - whisper
+    # 'whisper' is deliberately absent: the old faster_whisper cache (~6 GB) was
+    # removed 2026-08-30 with the onerahmet image it belonged to. Recreating the
+    # directory here would just leave an empty one behind.
     - ollama
     - inbox
     - out

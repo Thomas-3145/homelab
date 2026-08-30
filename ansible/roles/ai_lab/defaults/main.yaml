@@ -1,16 +1,18 @@
 ---
-# Models pulled into Ollama. Both are kept while they are compared head to head:
+# Models pulled into Ollama. EVERY consumer of this Ollama must have its model listed
+# here: an Ansible rebuild of this LXC pulls exactly this list, and a model missing
+# from it fails at the consumer, not here.
 #
-#   llama3.3:70b     dense, ~42 GB — every parameter is read per token, so generation
-#                    is capped by memory bandwidth at 42 GB / 77 GB/s ≈ 1.8 tok/s.
-#   qwen3.6:35b-a3b  MoE, ~22 GB — 34.7B parameters but only ~3B active per token, so
-#                    far less is read per token. Should be an order of magnitude faster.
-#
-# Quality is the open question, not speed: llama3.3 is a late-2024 dense model, qwen3.6
-# is 2026 but activates fewer parameters. Measure before picking a winner.
+# llama3.3:70b removed 2026-08-30. It was kept only while the dense-vs-MoE comparison
+# was open, and that is settled: qwen3.6:35b-a3b is 17.6x faster on generation and
+# produced better summaries — it pulled the course code and excursion dates out of the
+# slide PDF where the 70B copied Whisper's errors through. The dense model read all
+# 42 GB per token against ~77 GB/s of memory bandwidth; the MoE touches ~3B active
+# parameters. Nothing measured favoured keeping it, and it held 42 GB of a 177 GB
+# rootfs that was 72% full.
 ai_lab_llm_models:
-  - "llama3.3:70b"
   - "qwen3.6:35b-a3b"
+  - "{{ ai_lab_lecture_model }}"
   - "{{ ai_lab_embedding_model }}"
   - "{{ ai_lab_tagging_model }}"
 
@@ -32,6 +34,27 @@ ai_lab_llm_models:
 # of this LXC would have dropped it and Karakeep's tagging would have started
 # failing with no obvious cause.
 ai_lab_tagging_model: "granite4.1:8b"
+
+# The model ~/dev/lecture-assistant runs against this Ollama, for live classification
+# and answering of spoken questions during a lecture. Listed here because it was a
+# hand pull: an Ansible rebuild would have dropped it, and lecture.sh refuses to start
+# when MODEL is not pulled — which you would discover mid-lecture.
+#
+# qwen3:8b, and deliberately NOT the faster qwen3.6:35b-a3b nor granite4.1:8b.
+# Measured over that project's tests/golden.tsv 2026-08-18:
+#
+#   qwen3:8b          21/21 verdicts    6.6 tok/s
+#   qwen3.6:35b-a3b   19/21            15.4 tok/s   calls two real questions noise
+#   granite4.1:8b     15/21                         answers statements as questions
+#
+# The 35B is 2.3x faster and still wrong for this job: a missed question means the
+# tool is silent exactly when the lecturer asked something. The prompts there are
+# co-tuned with qwen3:8b and do not transfer. See docs/decisions/0001-latency-budget.md
+# in that repo before changing this.
+#
+# Note this is the same Ollama the batch pipeline uses, but a different model from
+# ai_lab_llm_model — the two workloads have opposite requirements.
+ai_lab_lecture_model: "qwen3:8b"
 
 # Embedding model backing Open WebUI's RAG. Small (~275 MB) and served by the same
 # Ollama instance, so there is only one model store to manage.
@@ -138,6 +161,35 @@ ai_lab_llamacpp_ngl: 99        # offload everything; lower it if the iGPU can't 
 ai_lab_ntfy_url: "https://ntfy.3145.blog/studieplugg"
 ai_lab_ntfy_resolve: "ntfy.3145.blog:443:192.168.10.200"
 
+# --- KB-Whisper for lecture-assistant ----------------------------------------------
+# A second whisper-ov container: same image, different model, different port. It
+# serves ~/dev/lecture-assistant (WHISPER_URL defaults to :9002 there), which posts a
+# few seconds of spoken question and needs the text back in well under a second. That
+# is the opposite of the batch pipeline's workload, where a lecture is transcribed
+# once and accuracy is everything.
+#
+# KBLab's Swedish-trained Whisper, small, exported to OpenVINO int8. The batch
+# argument for large-v3 — that turbo silently drops whole passages — does not carry
+# over to a ten-word question, and lecture-assistant measured 0.6 s for the Whisper
+# step on 2026-08-26 against 7.7 s for large-v3 in its earlier DESIGN.md numbers.
+# (Those two are not a controlled pair: different dates and hosts. The choice is
+# lecture-assistant's and documented there.)
+#
+# THIS RAN AS A HAND-STARTED CONTAINER UNTIL 2026-08-30. It carried this compose
+# project's labels without being a service in the file, so the next `docker compose
+# up` — i.e. any ansible-playbook run — would have removed it, and lecture.sh would
+# have failed its Whisper preflight with no obvious cause.
+#
+# REMAINING GAP: the model directory itself is still a manual artifact. It is a local
+# path under the shared HF cache, not a hub id, so a rebuild of this LXC restores the
+# container but not its model. Converting it with optimum-intel from an Ansible task
+# is the open work.
+ai_lab_whisper_kb_enabled: true
+ai_lab_whisper_kb_port: 9002
+ai_lab_whisper_kb_model: "/models/kb-whisper-small-int8-ov"
+ai_lab_whisper_kb_device: "CPU"
+ai_lab_whisper_kb_language: "sv"
+
 # --- Whisper through OpenVINO ------------------------------------------------------
 # One image, one device knob. large-v3 int8 on pve2's E-cores is what the pipeline
 # uses; NPU and GPU stay reachable by changing ai_lab_whisper_ov_device alone.
@@ -203,9 +255,36 @@ ai_lab_ntfy_resolve: "ntfy.3145.blog:443:192.168.10.200"
 # 5 words, and zero differences of 8 words or more. Compare with CPU-vs-pve3 at 94.8%
 # and a 9-word longest run. This is not the turbo trap again.
 #
-# Not yet checked on a full 1h54m lecture — F2_del_3 is 28 minutes. The turbo lesson
-# says short samples lie, so run one whole lecture through both devices before
-# trusting this for a term's worth of transcripts.
+# CHECKED ON A FULL LECTURE 2026-08-30, AND GPU FAILED. Whole F2 (1h54m, three
+# parts) through both devices. Per-part word-level match against CPU:
+#
+#   del 1   96.8%   ONE 64-WORD PASSAGE PRESENT ONLY ON CPU
+#   del 2   98.7%   longest one-sided run 5 words, zero >= 8
+#   del 3   98.3%   longest one-sided run 6 words, zero >= 8
+#
+# del 3 is the 28-minute file every earlier measurement used, and it passes cleanly
+# on GPU — which is exactly why the 2026-08-25 result looked like a pass. The failure
+# is in del 1, and it is not cosmetic. The lecturer introduces a quotation and reads
+# it aloud:
+#
+#   CPU  ... om Jeremias strafftal ... han skriver "de är allesammans avfälliga och
+#        gensträvliga ... blåsbälgen pustar men elden ... slagget blir ändå inte
+#        frånskilt, ett silver må kastas bort ..." han måste ha känt till den här
+#        kupellationsprocessen för att kunna få ihop den här texten
+#   GPU  ... om Jeremias strafftal ... han skriver för att kunna få ihop den här texten
+#
+# The quotation is gone and the surviving sentence is incoherent. This is the same
+# class of loss that disqualified the turbo model, on the same lecture and the same
+# subject matter (silver, lead, cupellation) though a different part of it — archaic
+# Swedish read aloud, which is as far out of distribution as this course material gets.
+#
+# So the device stays CPU. The 12.5% wall-clock gain and the free P-cores were never
+# worth a dropped passage, and this is the second time a short sample said a fast path
+# was safe when a full lecture said otherwise. Measure on a whole lecture or do not
+# change this variable.
+#
+# Not established: whether the drop is reproducible or an intermittent decode failure.
+# A GPU re-run of del 1 alone would settle it. Intermittent would be worse, not better.
 ai_lab_whisper_ov_enabled: true
 ai_lab_whisper_ov_port: 9000
 ai_lab_whisper_ov_model: "OpenVINO/whisper-large-v3-int8-ov"
