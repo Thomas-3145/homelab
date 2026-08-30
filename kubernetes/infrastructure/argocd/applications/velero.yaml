@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+  annotations:
+    # Before velero-config, which creates the Schedule against Velero's CRDs.
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: https://vmware-tanzu.github.io/helm-charts
+    chart: velero
+    # Pinned to the version already running in the cluster so adopting the
+    # existing install is a no-op sync. Renovate proposes upgrades.
+    targetRevision: 8.7.2
+    helm:
+      releaseName: velero
+      valuesObject:
+        credentials:
+          useSecret: true
+          # Created by velero-config via KSOPS.
+          existingSecret: velero-credentials
+        configuration:
+          backupStorageLocation:
+            - name: default
+              provider: aws
+              bucket: homelab-backups
+              prefix: velero
+              default: true
+              config:
+                region: auto
+                s3ForcePathStyle: "true"
+                s3Url: https://46f834d31a5157b819ff9c879ee07851.r2.cloudflarestorage.com
+          volumeSnapshotLocation:
+            - name: default
+              provider: csi
+          features: EnableCSI
+        initContainers:
+          - name: velero-plugin-for-aws
+            image: velero/velero-plugin-for-aws:v1.11.0
+            imagePullPolicy: IfNotPresent
+            volumeMounts:
+              - mountPath: /target
+                name: plugins
+        metrics:
+          serviceMonitor:
+            enabled: true
+            additionalLabels:
+              release: kube-prometheus-stack
+        # The chart's CRD upgrade is a Helm hook job, which ArgoCD would run on
+        # every sync. Velero's server reconciles its own CRDs at startup.
+        upgradeCRDs: false
+        snapshotsEnabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true

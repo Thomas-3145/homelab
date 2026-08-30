@@ -1,0 +1,10 @@
+apiVersion: viaduct.ai/v1
+kind: ksops
+metadata:
+  name: velero-secrets-generator
+  annotations:
+    config.kubernetes.io/function: |
+      exec:
+        path: ksops
+files:
+  - velero-credentials.sops.yaml
