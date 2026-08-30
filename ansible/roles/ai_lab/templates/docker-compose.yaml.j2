@@ -44,7 +44,17 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
       interval: 30s
-      timeout: 5s
+      # 5s was too tight. server.py is a single uvicorn worker, so while it is
+      # transcribing on CPU (P-cores ~92%) /health sometimes answers slower than
+      # that, and three misses in a row flip the container to unhealthy while it
+      # is working correctly. Seen 2026-08-30 mid-transcription of F2_del_2/F2_del_3.
+      #
+      # 30s and not more: OpenVINO releases the GIL during inference, so the
+      # event loop does serve /health while a lecture is being transcribed. That
+      # run spanned ~14 check intervals and missed only 2 of them — the worker is
+      # responsive, it just needs slack under load. If a whole transcription ever
+      # goes dark instead, the cause is different and this value is not the fix.
+      timeout: 30s
       # Compiling Whisper takes ~110 s for NPU and ~2.5 s for CPU, and GenAI's
       # CACHE_DIR does not cover Whisper on NPU, so that cost is paid at every start.
       # The CPU value still allows for a first-run model download.
@@ -52,6 +62,41 @@ services:
       retries: 3
     ports:
       - {{ ai_lab_whisper_ov_port }}:9000
+    networks:
+      - ai
+
+{% endif %}
+{% if ai_lab_whisper_kb_enabled %}
+  # The same image again, with KBLab's Swedish Whisper, for ~/dev/lecture-assistant.
+  # Separate container rather than a second model in the one above: OpenVINO GenAI
+  # compiles one model per process, and the two callers want opposite things — a
+  # lecture transcribed once at maximum accuracy, versus a spoken question answered
+  # in under a second. Sharing one service would make the question queue behind an
+  # hour-long batch job.
+  #
+  # Always CPU. It is small enough that device choice does not matter, and leaving the
+  # iGPU to the batch service keeps the two from contending.
+  whisper-kb:
+    build:
+      context: /opt/ai-lab/whisper-ov
+    image: whisper-ov:{{ ai_lab_npu_driver_version }}
+    container_name: whisper-kb
+    restart: unless-stopped
+    environment:
+      - WHISPER_MODEL={{ ai_lab_whisper_kb_model }}
+      - WHISPER_DEVICE={{ ai_lab_whisper_kb_device }}
+      - WHISPER_LANGUAGE={{ ai_lab_whisper_kb_language }}
+      - TZ=Europe/Stockholm
+    volumes:
+      - /opt/ai-lab/whisper-ov/models:/models
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
+    ports:
+      - {{ ai_lab_whisper_kb_port }}:9000
     networks:
       - ai
 
