@@ -21,7 +21,7 @@
 # Opt-in extras (toggle below or via --extra-vars):
 #   - Tailscale: installs and connects via the proxmox_vms group vault
 #     (community.sops required, age key present).
-#   - NUT: pve3 = netserver (USB UPS), pve1/pve2 = netclients over the LAN.
+#   - NUT: pve2 = netserver (USB UPS), pve1/pve3 = netclients over the LAN.
 #     Reads vault_nut_password from the proxmox_vms group vault.
 
 - name: Configure Proxmox hosts (apt repos, kernel pin, EEE workaround, SSH hardening)

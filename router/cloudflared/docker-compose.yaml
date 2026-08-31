@@ -4,6 +4,20 @@ services:
     container_name: cloudflared
     restart: unless-stopped
     command: tunnel --no-autoupdate --config /etc/cloudflared/config.yaml run
+    # Stay off a user-defined network so Docker's embedded resolver (127.0.0.11)
+    # is never used. After the 2026-08-31 power loss that resolver stopped
+    # answering inside the container netns even though its NAT rules and
+    # upstreams were correct, and the tunnel could not resolve argotunnel.com.
+    # cloudflared talks to no other container, so it needs no service discovery.
+    #
+    # Resolve via 172.17.0.1, the docker0 gateway, which is AdGuard on the
+    # router. The PREROUTING DNS hijack only matches br-* bridges, so docker0
+    # traffic leaves unredirected -- and public resolvers reached that way
+    # answer A queries but time out on the SRV lookup for argotunnel.com that
+    # the tunnel needs. AdGuard answers it correctly.
+    network_mode: bridge
+    dns:
+      - 172.17.0.1
     volumes:
       - ./config.yaml:/etc/cloudflared/config.yaml:ro
       - ./ce180050-7bb3-47bf-a4dd-a4ec5e56d592.json:/etc/cloudflared/ce180050-7bb3-47bf-a4dd-a4ec5e56d592.json:ro
