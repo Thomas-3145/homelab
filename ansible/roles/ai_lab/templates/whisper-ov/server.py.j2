@@ -42,7 +42,12 @@ _pipe = None
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     global _pipe
-    model_dir = snapshot_download(MODEL)
+    # An absolute path is a model directory under the mounted /models and is used
+    # as-is; anything else is a hub id to download. whisper-kb needs this: its model
+    # is KBLab's Swedish Whisper converted to OpenVINO locally, so it has no hub id
+    # to resolve. Without it that service calls snapshot_download() on a filesystem
+    # path and dies at startup.
+    model_dir = MODEL if MODEL.startswith("/") else snapshot_download(MODEL)
     started = time.perf_counter()
     _pipe = ov_genai.WhisperPipeline(model_dir, DEVICE)
     print(f"[whisper-ov] {MODEL} compiled for {DEVICE} in "

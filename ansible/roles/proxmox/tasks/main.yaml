@@ -47,7 +47,9 @@
 - name: Install and configure NUT
   ansible.builtin.import_tasks: nut.yaml
   when: proxmox_nut_enabled | bool
+  tags: nut
 
 - name: Install NUT exporter
   ansible.builtin.import_tasks: nut_exporter.yaml
   when: proxmox_nut_exporter_enabled | bool
+  tags: nut

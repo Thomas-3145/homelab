@@ -55,22 +55,32 @@ proxmox_ssh_authorized_key_file: ~/.ssh/id_rsa_4096.pub
 proxmox_tailscale_enabled: false
 proxmox_tailscale_vault_file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.sops.yaml"
 
-# NUT (Network UPS Tools) — opt-in. pve1 is the netserver (USB UPS attached),
-# pve3 is a netclient that connects over the LAN. Reads vault_nut_password
-# from the proxmox_vms group vault.
+# NUT (Network UPS Tools) — opt-in. The netserver is whichever host holds the
+# USB link to the UPS; every other host in the play becomes a netclient over
+# the LAN. Reads vault_nut_password from the proxmox_vms group vault.
+#
+# Moved pve3 → pve2 on 2026-08-31. The 2026-08-31 power cut killed pve3 hard
+# (its journal ends mid-line, no shutdown sequence) while pve1 and pve2 never
+# so much as rebooted — so pve3 was not actually on a battery outlet, and the
+# UPS monitoring lived on the one node guaranteed to die first. pve2 is also
+# the newest hardware (Core Ultra 5 235) and pve1 is being sold.
+#
+# NOTE: moving this variable is not enough on its own — the UPS USB cable has
+# to be physically moved to the new server host as well.
 proxmox_nut_enabled: false
 proxmox_nut_vault_file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.sops.yaml"
-proxmox_nut_server_host: pve3
-proxmox_nut_server_address: 192.168.10.13
+proxmox_nut_server_host: pve2
+proxmox_nut_server_address: 192.168.10.12
 proxmox_nut_ups_name: apc
 proxmox_nut_ups_desc: APC BE650G2-GR
 # Low-battery thresholds. These live ON THE UPS (settable via upsrw), not in a
 # config file, so without this task they survive reboots but are lost if the unit
 # is replaced — and they are invisible to code review.
 #
-# The stock 120 s is too little. Worst case for pve3's shutdown chain (5 guests,
-# 4 parallel workers, 180 s per-guest cap) is ~6 min, so the UPS must declare LB
-# with at least that much runtime left. 420 s = 7 min.
+# The stock 120 s is too little. Worst case for the server's shutdown chain
+# (5 guests, 4 parallel workers, 180 s per-guest cap) is ~6 min, so the UPS must
+# declare LB with at least that much runtime left. 420 s = 7 min. Re-checked for
+# pve2 on 2026-08-31: it also tops out at 5 guests, so 420 s still holds.
 #
 # Only meaningful on the server (it holds the USB link to the UPS).
 proxmox_nut_battery_runtime_low: 420

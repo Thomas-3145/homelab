@@ -1,9 +1,9 @@
 ---
-# NUT (Network UPS Tools) — APC BE650G2-GR connected to pve3 over USB.
+# NUT (Network UPS Tools) — APC BE650G2-GR connected to pve2 over USB.
 #
 # Topology:
-#   pve3 (netserver)  driver = usbhid-ups, listens on 0.0.0.0:3493
-#   clients           monitor apc@192.168.10.13, shut down on power loss
+#   pve2 (netserver)  driver = usbhid-ups, listens on 0.0.0.0:3493
+#   clients           monitor apc@192.168.10.12, shut down on power loss
 #
 # The role-on-host is decided by `proxmox_nut_server_host`. Anything else
 # in the play becomes a netclient. Source for the original setup:
@@ -35,6 +35,18 @@
     group: nut
     mode: "0640"
   notify: Restart NUT
+
+- name: Stop and disable nut-server on clients
+  # A host demoted from server to client keeps upsd running and listening on
+  # 3493 with no UPS attached — writing MODE=netclient does not stop it. Seen on
+  # pve3 after the 2026-08-31 move. Tolerate the missing unit on hosts that only
+  # ever had nut-client installed.
+  ansible.builtin.systemd:
+    name: nut-server
+    state: stopped
+    enabled: false
+  when: proxmox_nut_role == 'client'
+  failed_when: false
 
 - name: Configure /etc/nut/ups.conf (server)
   ansible.builtin.copy:
@@ -69,7 +81,8 @@
           password = {{ vault_nut_password }}
           upsmon master
           # SET is required for upsrw to write the low-battery thresholds below.
-          # Without it upsd answers ERR ACCESS-DENIED. Granted on pve3 2026-08-20.
+          # Without it upsd answers ERR ACCESS-DENIED. Granted 2026-08-20,
+          # while pve3 still held the USB link.
           actions = SET
 
       [upsmon-remote]
