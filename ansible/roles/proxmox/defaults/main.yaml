@@ -2,9 +2,19 @@
 # APT repos — switch from enterprise (paid) to no-subscription
 proxmox_pve_suite: trixie  # Debian 13 / Proxmox VE 9
 
-# Kernel pin — 6.17.13 triggers e1000e Hardware Unit Hang on HP EliteDesk G4.
-# 6.17.9-1-pve is the last known-good version.
-proxmox_pinned_kernel: 6.17.9-1-pve
+# Kernel pin. The original reason was an e1000e "Hardware Unit Hang" on the
+# I219-LM in the (since retired) HP EliteDesk G4, which made 6.17.13 unusable and
+# fixed the fleet at 6.17.9-1-pve.
+#
+# Revised 2026-09-01: pve1 and pve3 no longer carry traffic on e1000e at all —
+# both moved to the Flex IO I225-V (igc) cards on 2026-07-01 and their nic0 is
+# down. pve3 had already been running 7.0.14-12-pve without incident. The default
+# therefore moves forward to 7.0.14-12-pve.
+#
+# pve2 is the exception and stays on 6.17.9-1-pve: its onboard I219-LM is its
+# only NIC, so it is the one host where the e1000e bug could still bite. The
+# override lives in inventory/hosts.yaml next to its power-limit override.
+proxmox_pinned_kernel: 7.0.14-12-pve
 
 # UI — remove the "No valid subscription" popup on every login
 proxmox_disable_subscription_popup: true

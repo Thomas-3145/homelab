@@ -1,7 +1,9 @@
 ---
-# Pin to 6.17.9-1-pve. Newer 6.17.13 versions cause "e1000e Hardware Unit Hang"
-# on the Intel I219-LM NIC in HP EliteDesk G4 — confirmed root cause of
-# multiple unplanned outages on pve1.
+# Pin the boot kernel. Version comes from `proxmox_pinned_kernel` — 7.0.14-12-pve
+# by default, overridden to 6.17.9-1-pve for pve2 in inventory/hosts.yaml.
+# The pin exists because 6.17.13 caused "e1000e Hardware Unit Hang" on the Intel
+# I219-LM in the retired HP EliteDesk G4 — root cause of multiple unplanned
+# outages. Only pve2 still runs traffic over e1000e; see the role defaults.
 #
 # We deliberately do NOT reboot here — that's a manual decision for an HA
 # cluster. After running, check `proxmox-boot-tool kernel list` and reboot

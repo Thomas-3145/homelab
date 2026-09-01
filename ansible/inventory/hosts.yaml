@@ -107,6 +107,12 @@ all:
           # reaches 100 C under sustained load without plateauing, so cap PL1.
           # Only this host — pve1/pve3 run within their thermal envelope.
           proxmox_power_limit_watts: 45
+          # Stays on the old pinned kernel. pve1/pve3 moved to 7.0.14-12-pve on
+          # 2026-09-01 because their e1000e NIC is down (traffic runs over the
+          # I225-V cards). pve2's onboard I219-LM is its ONLY NIC, so it is the
+          # one host still exposed to the e1000e Hardware Unit Hang that the pin
+          # exists for. Do not move this without testing the NIC under load.
+          proxmox_pinned_kernel: 6.17.9-1-pve
         pve3:
           ansible_host: pve3.taild78f1d.ts.net
           ansible_user: root
