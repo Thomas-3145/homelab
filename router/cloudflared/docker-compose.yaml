@@ -15,6 +15,17 @@ services:
     # traffic leaves unredirected -- and public resolvers reached that way
     # answer A queries but time out on the SRV lookup for argotunnel.com that
     # the tunnel needs. AdGuard answers it correctly.
+    #
+    # ⚠️  docker0 is also guarded differently than the br-* bridges, and moving
+    # here took the tunnel down for two days (2026-08-31 → 09-02). The router's
+    # WAN guard is scoped to docker0 -- `blocked_interfaces wan` + `device
+    # docker0` in /etc/config/dockerd, plus a matching DROP in /etc/firewall.user
+    # -- and both rules rejected the SYN-ACK coming back from the Cloudflare
+    # edge, not just unsolicited inbound traffic. Symptom: `i/o timeout` on port
+    # 7844 and error 1033 at the edge, while DNS and egress looked healthy.
+    # Both rules now carry `-m conntrack ! --ctstate RELATED,ESTABLISHED`.
+    # Before moving this container again, read the router.md section
+    # "The WAN guard also blocks reply traffic".
     network_mode: bridge
     dns:
       - 172.17.0.1
