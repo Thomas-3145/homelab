@@ -57,3 +57,71 @@
       {% endif %}
   when: k3s_node_labels is defined or k3s_node_taints is defined
   notify: Restart k3s
+
+# Longhorn data disk (/dev/vda) — see defaults/main.yaml for why it exists.
+#
+# Registering the mounted path as a Longhorn disk is a separate, one-off step per
+# node and is NOT done here, because it talks to the Kubernetes API rather than the
+# host. After this role has run:
+#
+#   kubectl patch nodes.longhorn.io <node> -n longhorn-system --type=merge -p \
+#     '{"spec":{"disks":{"vda-disk":{"allowScheduling":true,"evictionRequested":false,
+#       "diskType":"filesystem","path":"/var/lib/longhorn-vda/","storageReserved":0,"tags":[]}}}}'
+#
+# Longhorn reports "Disk vda-disk ... is ready" within seconds of that patch.
+
+- name: Check whether the Longhorn data disk is present
+  ansible.builtin.stat:
+    path: "{{ k3s_node_longhorn_disk }}"
+  register: k3s_node_longhorn_dev
+
+- name: Determine the device backing the root filesystem
+  ansible.builtin.command: findmnt -no SOURCE /
+  register: k3s_node_root_source
+  changed_when: false
+  when: k3s_node_longhorn_dev.stat.exists
+
+# Hard stop rather than a silent skip: mkfs on the wrong device destroys the node.
+- name: Refuse to format the disk backing the root filesystem
+  ansible.builtin.assert:
+    that:
+      - not k3s_node_root_source.stdout.startswith(k3s_node_longhorn_disk)
+    fail_msg: >-
+      {{ k3s_node_longhorn_disk }} backs the root filesystem ({{ k3s_node_root_source.stdout }}).
+      Refusing to format it.
+  when: k3s_node_longhorn_dev.stat.exists
+
+# Idempotent: community.general.filesystem is a no-op when a filesystem already
+# exists, and force is false by default, so a re-run never touches live data.
+- name: Create the Longhorn data filesystem
+  community.general.filesystem:
+    fstype: ext4
+    dev: "{{ k3s_node_longhorn_disk }}"
+    opts: "-L {{ k3s_node_longhorn_label }}"
+  when: k3s_node_longhorn_dev.stat.exists
+
+# check_mode: false so --check still reads the real UUID. Without it the command
+# is skipped, the mount task below gets an empty src and reports a false "changed",
+# which makes a dry run useless for telling real drift from noise.
+- name: Read the Longhorn data filesystem UUID
+  ansible.builtin.command: "blkid -s UUID -o value {{ k3s_node_longhorn_disk }}"
+  register: k3s_node_longhorn_uuid
+  changed_when: false
+  check_mode: false
+  when: k3s_node_longhorn_dev.stat.exists
+
+# nofail so a missing or failed disk degrades Longhorn capacity instead of
+# blocking boot — an unbootable node is far worse than a smaller one.
+- name: Mount the Longhorn data disk
+  ansible.posix.mount:
+    path: "{{ k3s_node_longhorn_path }}"
+    src: "UUID={{ k3s_node_longhorn_uuid.stdout }}"
+    fstype: ext4
+    opts: defaults,nofail
+    # Explicit dump/passno: the module defaults passno to 0, which would rewrite
+    # (and keep rewriting) an fstab line written with the conventional 2 for a
+    # non-root data filesystem. Stating both makes the task genuinely idempotent.
+    dump: "0"
+    passno: "2"
+    state: mounted
+  when: k3s_node_longhorn_dev.stat.exists
