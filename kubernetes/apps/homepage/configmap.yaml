@@ -233,8 +233,8 @@ data:
               fields: ["title", "message", "priority", "lastReceived"]
         - UPS:
             icon: mdi-battery-charging
-            description: APC BE650G2-GR · pve3
-            # NUT has no web UI — it speaks its own protocol on pve3:3493. The
+            description: APC BE650G2-GR · pve2
+            # NUT has no web UI — it speaks its own protocol on pve2:3493. The
             # numbers come from nut-exporter (monitoring ns) via Prometheus.
             widget:
               type: prometheusmetric

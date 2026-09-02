@@ -22,7 +22,8 @@ endpoints:
 
   - name: ups-nut
     group: homelab
-    url: tcp://192.168.10.13:3493
+    # pve2 — NUT server moved here from pve3 around 2026-08-31
+    url: tcp://192.168.10.12:3493
     interval: 30s
     conditions:
       - "[CONNECTED] == true"
