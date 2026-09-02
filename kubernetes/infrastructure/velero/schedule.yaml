@@ -14,6 +14,8 @@ spec:
       - kube-public
       - kube-node-lease
     storageLocation: default
-    volumeSnapshotLocations:
-      - default
-    snapshotMoveData: false
+    # Back every volume up with the file system uploader (kopia). Without this the
+    # backup captures manifests only: PVCs are recorded, their contents are not.
+    # Verified 2026-09-02 — every run since the schedule was created was
+    # PartiallyFailed with 12 errors and zero bytes of PV data in R2.
+    defaultVolumesToFsBackup: true
