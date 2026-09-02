@@ -1,0 +1,15 @@
+---
+# Longhorn data disk. Every k3s VM is provisioned with a second 50 GB disk
+# (virtio0 = /dev/vda) that went unformatted and unmounted from creation until
+# 2026-09-02 — 300 GB idle across the cluster while Longhorn fought the OS and
+# containerd images for the same 48 GB root disk.
+#
+# That contention is not theoretical: it dropped cp-01 below Longhorn's 25 %
+# storage-minimal-available-percentage on 2026-08-02 and degraded all eight
+# volumes, and it did the same to cp-02 on 2026-09-02.
+#
+# Mounted alongside the existing /var/lib/longhorn rather than replacing it, so
+# adding it needs no drain, no eviction and no data movement.
+k3s_node_longhorn_disk: /dev/vda
+k3s_node_longhorn_path: /var/lib/longhorn-vda
+k3s_node_longhorn_label: longhorn-vda
