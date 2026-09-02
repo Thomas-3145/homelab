@@ -32,10 +32,17 @@ spec:
                 region: auto
                 s3ForcePathStyle: "true"
                 s3Url: https://46f834d31a5157b819ff9c879ee07851.r2.cloudflarestorage.com
-          volumeSnapshotLocation:
-            - name: default
-              provider: csi
-          features: EnableCSI
+          # No volumeSnapshotLocation and no EnableCSI: this cluster backs volumes
+          # up with Velero's file system backup (kopia), not CSI snapshots.
+          #
+          # EnableCSI was set without the snapshot.storage.k8s.io CRDs ever being
+          # installed — k3s does not ship them and Longhorn's csi-snapshotter is its
+          # own sidecar, not the external controller. Every nightly run therefore
+          # failed on all ten PVCs with "no matches for kind VolumeSnapshotClass",
+          # backing up manifests while silently skipping every byte of PV data.
+          #
+          # File system backup also puts the data in R2 rather than in a Longhorn-local
+          # snapshot, so it survives losing the cluster — which is the point.
         initContainers:
           - name: velero-plugin-for-aws
             image: velero/velero-plugin-for-aws:v1.11.0
@@ -51,7 +58,23 @@ spec:
         # The chart's CRD upgrade is a Helm hook job, which ArgoCD would run on
         # every sync. Velero's server reconciles its own CRDs at startup.
         upgradeCRDs: false
-        snapshotsEnabled: true
+        # Volume snapshots off — file system backup replaces them.
+        snapshotsEnabled: false
+        # node-agent does the actual file reading; without this DaemonSet the
+        # kopia uploader that --uploader-type already selects has no worker.
+        deployNodeAgent: true
+        nodeAgent:
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 50m
+            limits:
+              memory: 1Gi
+              cpu: 500m
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
   destination:
     server: https://kubernetes.default.svc
     namespace: velero
