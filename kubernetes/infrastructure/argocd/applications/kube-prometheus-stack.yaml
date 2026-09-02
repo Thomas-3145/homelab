@@ -16,6 +16,30 @@ spec:
       valuesObject:
         prometheus:
           prometheusSpec:
+            # Was an emptyDir: 10.6 GB of TSDB thrown away on every restart, and
+            # it filled k3s-cp-02's root disk until Longhorn marked the node
+            # Schedulable=False (23.1% free against its 25% threshold) — the same
+            # state that degraded all volumes on 2026-08-02.
+            #
+            # local-path, not longhorn: metrics are replaceable, and 3x replicating
+            # a TSDB that writes continuously costs disk this cluster does not have.
+            #
+            # Pinned to worker-02 because it is the only node with real headroom
+            # (36.9Gi free vs 11-20Gi elsewhere). Its PreferNoSchedule taint is a
+            # soft RAM guard for pve2 and does not block an explicit nodeSelector;
+            # Prometheus needs ~1.5Gi of its 6Gi. Revisit once vda is mounted.
+            retention: 15d
+            retentionSize: 12GB  # hard cap — retention alone has no size brake
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: local-path
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests:
+                      storage: 15Gi
+            nodeSelector:
+              kubernetes.io/hostname: k3s-worker-02
             additionalScrapeConfigs:
               - job_name: node-exporter-physical
                 static_configs:
@@ -172,6 +196,55 @@ spec:
                     annotations:
                       summary: "Node {{ $labels.node }} has been waiting for a reboot for 48h"
                       description: "kured has not been able to drain and reboot {{ $labels.node }}. Check `kubectl logs -n kube-system ds/kured`."
+              # Self-monitoring. Added 2026-09-02 after Loki sat in CrashLoopBackOff
+              # for two days (388 OOMKills) and cp-02 went Schedulable=False, both
+              # completely silently. Everything here answers "why did nobody tell me".
+              - name: self-monitoring
+                rules:
+                  - alert: PodCrashLooping
+                    expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+                    for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+                      description: "Container {{ $labels.container }} has restarted more than 3 times in 15 minutes."
+                  - alert: ContainerOOMKilled
+                    expr: kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Container {{ $labels.container }} in {{ $labels.namespace }}/{{ $labels.pod }} was OOMKilled"
+                      description: "The container hit its memory limit. Raise the limit or find the leak."
+                  # The rule the 2026-08-02 Longhorn incident called for: the node
+                  # stops being able to rebuild replicas long before the disk is full.
+                  - alert: LonghornNodeUnschedulable
+                    expr: longhorn_node_status{condition="schedulable"} == 0
+                    for: 15m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Longhorn node {{ $labels.node }} is unschedulable"
+                      description: "Longhorn cannot place or rebuild replicas on {{ $labels.node }}. Usually disk below the 25% threshold."
+                  - alert: PVCNearFull
+                    expr: kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes < 0.15
+                    for: 15m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is over 85% full"
+                      description: "Less than 15% free. Expand the volume or check that retention is actually deleting data."
+                  # Deliberately fires at 30%, above Longhorn's 25% cutoff — the
+                  # alert has to arrive before the node drops out, not after.
+                  - alert: NodeDiskSpaceLow
+                    expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.30
+                    for: 30m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Root disk on {{ $labels.instance }} is below 30% free"
+                      description: "Longhorn marks a node unschedulable below 25%. Check containerd images: `k3s crictl rmi --prune`."
         grafana:
           admin:
             existingSecret: grafana-admin-secret
