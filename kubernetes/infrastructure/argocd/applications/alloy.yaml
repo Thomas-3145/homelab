@@ -37,8 +37,9 @@ spec:
               memory: 256Mi
               cpu: 200m
           # River/Alloy config: discover pods -> relabel -> tail node-local files
-          # -> parse CRI -> ship to the existing Loki backend. Mirrors what the
-          # promtail DaemonSet was doing (same Loki push endpoint).
+          # -> parse CRI -> ship to the existing Loki backend. This replaced the
+          # promtail DaemonSet, removed 2026-09-02 — promtail reached EOL on
+          # 2026-03-02 and alloy is Grafana's designated successor.
           configMap:
             content: |-
               discovery.kubernetes "pod" {
