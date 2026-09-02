@@ -22,12 +22,20 @@ spec:
               effect: NoSchedule
         singleBinary:
           replicas: 1
+          # NOTE: the PVC deliberately stays at 10Gi. Expanding it is blocked —
+          # one of the three replicas lives on k3s-cp-02, and Longhorn rejects any
+          # growth that would take a disk under its 25% floor (that node is already
+          # at 23.1%). It is not needed either: Loki was dying of memory, not disk,
+          # and retention below shrinks the volume on its own. Revisit once
+          # Prometheus has moved off cp-02 and vda is mounted.
           resources:
             requests:
               memory: 192Mi
               cpu: 50m
             limits:
-              memory: 512Mi
+              # 512Mi was not enough to replay the WAL against a full disk —
+              # 388 OOMKills in 46h. WAL replay is the memory peak, not steady state.
+              memory: 1Gi
               cpu: 200m
           nodeSelector:
             node-role.kubernetes.io/control-plane: "true"
@@ -50,6 +58,14 @@ spec:
                   period: 24h
           storage:
             type: filesystem
+          # Without these two blocks Loki never deletes anything. That is what
+          # filled the volume and started the OOM loop — retention is not on by
+          # default, and the compactor does not run retention unless told to.
+          limits_config:
+            retention_period: 336h  # 14d
+          compactor:
+            retention_enabled: true
+            delete_request_store: filesystem
         chunksCache:
           enabled: false
         resultsCache:
