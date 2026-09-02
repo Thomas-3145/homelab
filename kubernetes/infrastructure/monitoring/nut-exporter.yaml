@@ -25,7 +25,10 @@ spec:
         - name: nut-exporter
           image: docker.io/druggeri/nut_exporter:3.2
           args:
-            - --nut.server=192.168.10.13
+            # pve2 — the NUT server moved here from pve3 around 2026-08-31
+            # (it holds the UPS USB link). This still pointed at pve3, which
+            # refuses connections on 3493, so UPS monitoring was silently down.
+            - --nut.server=192.168.10.12
             - --nut.vars_enable=battery.charge,battery.runtime,input.voltage,output.voltage,ups.load,ups.status
           env:
             - name: NUT_EXPORTER_USERNAME

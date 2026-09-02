@@ -20,7 +20,9 @@ written it wears roughly twice as fast. pve1 also has the healthiest boot disk
 (0 % wear) and the lowest load, and it already hosts templates 9000/9001.
 pve3 was rejected despite having the most RAM: PBS uses ext4, not ZFS, so it has
 no ARC to feed — and pve3 already carries the NUT server role plus a 35 %-worn
-boot disk.
+boot disk. (The NUT half of that argument has since expired: the NUT server moved
+to pve2 around 2026-08-31. The worn boot disk still stands, so the placement
+decision is unchanged.)
 
 
 ## Status

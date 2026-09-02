@@ -432,7 +432,7 @@ data:
                 title: UPS
                 title-url: https://grafana.3145.blog
                 cache: 30s
-                # NUT has no web UI — it speaks its own protocol on pve3:3493.
+                # NUT has no web UI — it speaks its own protocol on pve2:3493.
                 # These numbers come from nut-exporter via Prometheus.
                 url: *prom-url
                 parameters:
