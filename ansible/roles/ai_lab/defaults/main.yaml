@@ -119,9 +119,23 @@ ai_lab_vision_width: 1024
 # Generation is a per-token barrier and does not parallelise; extra threads only add
 # synchronisation cost. Prefill does scale, but not enough to pay for the loss.
 #
-# Never run 8 threads against the E-core set (host CPUs 6-13): that combination
-# measured 0.22 and 0.25 tok/s across two runs — some 50x worse than 6 threads on the
-# same cores, with normal prefill. Reproducible, and unexplained.
+# The old note here said 8 threads against the E-core set (host CPUs 6-13) measured
+# 0.22 and 0.25 tok/s, "reproducible, and unexplained". It is explained now, and it
+# was never about E-cores. Two separate effects were being read as one:
+#
+#   1. OVERSUBSCRIPTION. More threads than the cgroup's CPUs collapses throughput,
+#      because ggml's barrier busy-polls rather than sleeping — threads that cannot
+#      be scheduled burn the cores the working threads need. Measured 2026-09-03 at
+#      15.44 -> 0.06 tok/s on this MoE and 6.8 -> 0.15 on qwen3:8b. It is not an
+#      E-core property; the same collapse happens on the P-cores.
+#   2. CONTENTION. The arr-stack LXC (200) is pinned to 6-13, so an E-core run was
+#      never alone on those cores. Given headroom, E-cores measure 13.01 generation
+#      / 223.0 prefill against the P-cores' 15.44 / 314.8 — 16% and 29% worse, which
+#      is the real hybrid-topology penalty and is nothing like 50x.
+#
+# So the rule is not "avoid E-cores", it is "never let the thread count exceed the
+# cpuset". See LLAMA_ARG_THREADS in the compose template, which now enforces that for
+# callers that cannot send num_thread themselves.
 ai_lab_num_thread: 6
 
 # The whisper-ov service in this LXC, 3.3x faster than the pve3 one it replaced with

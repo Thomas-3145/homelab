@@ -113,6 +113,31 @@ services:
     environment:
       - OLLAMA_KEEP_ALIVE=0
       - OLLAMA_MAX_LOADED_MODELS=1
+      # Thread count for EVERY caller, not just the ones that send num_thread.
+      # Ollama has no OLLAMA_NUM_THREAD env var, and when a request omits
+      # num_thread it passes no -t at all and lets the embedded llama-server
+      # auto-detect. That detection reads /proc/cpuinfo, which lxcfs does not
+      # mask, so it sees the host's 14 CPUs while the cgroup allows only 0-5 —
+      # measured here as `n_threads = 14 ... / 14` in the runner log.
+      #
+      # ggml's thread barrier busy-polls, so 14 threads on 6 CPUs is not "a bit
+      # slower", it collapses:
+      #
+      #   qwen3.6:35b-a3b   15.44 tok/s with 6 threads    0.06 with the default
+      #   qwen3:8b           6.8  tok/s with 6 threads    0.15 with the default
+      #
+      # studieplugg and lecture.sh send num_thread themselves and were never
+      # affected. Karakeep and Open WebUI reach Ollama through the OpenAI-
+      # compatible API, which has no such field — they cannot opt in, and they
+      # were getting the collapsed path.
+      #
+      # llama-server reads this variable itself (`--threads N ... (env:
+      # LLAMA_ARG_THREADS)`), and Ollama hands its own environment to the
+      # subprocess, so it lands as the default while an explicit per-request
+      # num_thread still overrides it. Baking `PARAMETER num_thread` into the
+      # models via `ollama create` would also work but silently reverts on the
+      # next `ollama pull` of the same tag.
+      - LLAMA_ARG_THREADS={{ ai_lab_num_thread }}
       - TZ=Europe/Stockholm
     volumes:
       - /opt/ai-lab/ollama:/root/.ollama
