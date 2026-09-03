@@ -137,6 +137,9 @@ services:
       # num_thread still overrides it. Baking `PARAMETER num_thread` into the
       # models via `ollama create` would also work but silently reverts on the
       # next `ollama pull` of the same tag.
+      #
+      # Full measurements and the rejected alternatives:
+      # docs/adr-Architecture-Decision-Records/003-llm-inference-tuning-ai-lab.md
       - LLAMA_ARG_THREADS={{ ai_lab_num_thread }}
       - TZ=Europe/Stockholm
     volumes:
