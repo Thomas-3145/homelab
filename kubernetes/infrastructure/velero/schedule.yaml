@@ -13,6 +13,16 @@ spec:
       - kube-system
       - kube-public
       - kube-node-lease
+      # Velero's own namespace. Backing it up produced ~102 warnings per run:
+      # every kopia repository-maintenance Job pod is Succeeded, not Running, so
+      # the pod-volume plugin cannot read it and logs "pod is not in the expected
+      # status" twice per pod. With 17 backup repositories and latestJobsCount=3
+      # that is 51 pods, every night, drowning any real warning.
+      #
+      # Nothing here is worth restoring anyway: the credentials secret and the
+      # Helm values live in Git (SOPS + ArgoCD), and the Backup/BackupRepository
+      # CRs are rebuilt from the R2 bucket when Velero starts against it.
+      - velero
     storageLocation: default
     # Back every volume up with the file system uploader (kopia). Without this the
     # backup captures manifests only: PVCs are recorded, their contents are not.
