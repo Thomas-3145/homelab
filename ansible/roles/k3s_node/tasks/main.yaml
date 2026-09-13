@@ -69,6 +69,28 @@
 #       "diskType":"filesystem","path":"/var/lib/longhorn-vda/","storageReserved":0,"tags":[]}}}}'
 #
 # Longhorn reports "Disk vda-disk ... is ready" within seconds of that patch.
+#
+# Registering vda is not enough on its own. Longhorn never migrates an existing
+# replica, so after the patch above every replica stayed on the root disk and vda
+# sat at 32 KB used while cp-03 and worker-01 crossed the 25 % floor again
+# (2026-09-13). The second half of the change is to stop the root disk taking new
+# work, so rebuilds and new volumes land on vda:
+#
+#   kubectl patch nodes.longhorn.io <node> -n longhorn-system --type=merge -p \
+#     '{"spec":{"disks":{"<default-disk-name>":{"allowScheduling":false}}}}'
+#
+# Use a minimal patch: the disk key is `default-disk` on five nodes but
+# `default-disk-d6cda40028791315` on worker-03, and that one carries a non-zero
+# storageReserved (15.5 GB) plus a diskDriver field that a full-object merge would
+# silently reset.
+#
+# Existing replicas are deliberately left where they are — setting
+# evictionRequested would move ~13 GB per volume across the network for no gain.
+# They migrate for free the next time a replica is rebuilt.
+#
+# NOTE: nodes.longhorn.io is not managed by ArgoCD and the Longhorn Helm chart does
+# not template it, so neither patch is reconciled from Git. A rebuilt node needs
+# both applied by hand — this comment is the only record.
 
 - name: Check whether the Longhorn data disk is present
   ansible.builtin.stat:
