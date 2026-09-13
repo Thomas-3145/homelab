@@ -20,7 +20,13 @@ spec:
               operator: Exists
               effect: NoSchedule
         defaultSettings:
-          defaultReplicaCount: 2
+          # Was 2 while the `longhorn` StorageClass asked for 3. The StorageClass
+          # wins for every PVC that names it, so nothing actually ran at 2 — the
+          # mismatch only misled anyone reading the values. 3 is also the correct
+          # number here: with replicaZoneSoftAntiAffinity false and one zone per
+          # Proxmox host, 3 replicas put exactly one copy on each of pve1/pve2/pve3.
+          # At 2, one host would hold no copy of the volume at all.
+          defaultReplicaCount: 3
           taintToleration: "node-role.kubernetes.io/control-plane:NoSchedule"
           # The six k3s VMs sit two per Proxmox host. Without this, Longhorn only
           # knows they are distinct *nodes* and will happily put every replica of a
