@@ -3,10 +3,26 @@
 # Run: ansible-playbook -i inventory/hosts.yaml playbooks/k3s/prepare.yaml
 #
 # - Applies common role (DNS, updates, packages, SSH, Tailscale)
-# - Applies k3s_node role (swap off, hostname)
+# - Applies k3s_node role (swap off, hostname, config.yaml, Longhorn data disk)
+#
+# Split into two plays purely for the serial: 1 on the control plane. The
+# k3s_node role writes /etc/rancher/k3s/config.yaml and notifies a k3s restart
+# when it changes; the three CP nodes run embedded etcd, so restarting them
+# together loses quorum and takes the API server down with it. Workers are not
+# quorum-bearing and running containers survive a kubelet restart, so they run
+# in parallel.
 
-- name: Prepare nodes for k3s
-  hosts: k3s_control_plane:k3s_workers
+- name: Prepare control plane nodes for k3s
+  hosts: k3s_control_plane
+  become: true
+  serial: 1
+
+  roles:
+    - common
+    - k3s_node
+
+- name: Prepare worker nodes for k3s
+  hosts: k3s_workers
   become: true
 
   roles:

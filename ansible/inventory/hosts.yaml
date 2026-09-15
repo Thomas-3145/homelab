@@ -22,6 +22,19 @@ all:
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
       children:
         k3s_control_plane:
+          vars:
+            # Must be identical on EVERY server. A single server without these
+            # still runs the servicelb controller, which recreates the svclb
+            # DaemonSet for every LoadBalancer service — and the servers that do
+            # have it disabled drop net.ipv4.ip_forward from kubelet's
+            # unsafe-sysctl allowlist, so those pods are rejected with
+            # SysctlForbidden in a loop. Set on the group, not per host, so a new
+            # CP node cannot be added without them.
+            #
+            # Replaced in favour of MetalLB + ingress-nginx.
+            k3s_node_disable:
+              - traefik
+              - servicelb
           children:
             k3s_init:
               hosts:

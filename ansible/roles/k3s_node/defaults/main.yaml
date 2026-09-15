@@ -13,3 +13,19 @@
 k3s_node_longhorn_disk: /dev/vda
 k3s_node_longhorn_path: /var/lib/longhorn-vda
 k3s_node_longhorn_label: longhorn-vda
+
+# Bundled k3s components to disable, rendered into the `disable:` block of
+# /etc/rancher/k3s/config.yaml.
+#
+# Empty by default because it only means anything on servers — agents run no
+# component this can switch off. The control plane group sets it in the
+# inventory; see the comment there for why every server needs the same list.
+k3s_node_disable: []
+
+# Whether this node has anything to put in config.yaml. Written out rather than
+# repeated in two `when:` clauses so the file is never created empty, and never
+# half-written because one of the three vars was forgotten.
+k3s_node_config_wanted: >-
+  {{ (k3s_node_labels | default([]) | length > 0)
+     or (k3s_node_taints | default([]) | length > 0)
+     or (k3s_node_disable | length > 0) }}

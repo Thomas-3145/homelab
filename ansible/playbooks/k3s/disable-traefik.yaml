@@ -1,49 +1,22 @@
 ---
-# Disables Traefik and klipper-lb (servicelb) on an existing k3s cluster.
+# Removes the Traefik and klipper-lb (servicelb) resources a cluster that once ran
+# them has left behind. Replaced by MetalLB + ingress-nginx.
 # Run: ansible-playbook -i inventory/hosts.yaml playbooks/k3s/disable-traefik.yaml
 #
-# The disable flags must be set on EVERY server. A single server without them
-# still runs the servicelb controller, which recreates the svclb DaemonSet for
-# every LoadBalancer service. Worse, the servers that *do* have servicelb
-# disabled drop net.ipv4.ip_forward from kubelet's unsafe-sysctl allowlist, so
-# the svclb pods scheduled there are rejected with SysctlForbidden in a loop.
+# This playbook no longer writes /etc/rancher/k3s/config.yaml. It used to render
+# a `disable:` block with `copy:`, while the k3s_node role rendered node-label /
+# node-taint into the same file with its own `copy:` — two owners of one file, so
+# whichever ran last silently erased the other's block.
 #
-# serial: 1 restarts one control plane node at a time. Restarting all three at
-# once would drop the etcd quorum and take the API server down with it.
-
-- name: Disable Traefik and servicelb on k3s servers
-  hosts: k3s_control_plane
-  become: true
-  serial: 1
-
-  tasks:
-    - name: Ensure k3s config directory exists
-      ansible.builtin.file:
-        path: /etc/rancher/k3s
-        state: directory
-        mode: "0755"
-
-    - name: Write k3s config with Traefik and servicelb disabled
-      ansible.builtin.copy:
-        dest: /etc/rancher/k3s/config.yaml
-        content: |
-          disable:
-            - traefik
-            - servicelb
-        mode: "0644"
-      notify:
-        - Restart k3s
-        - Wait for k3s API to be ready
-
-  handlers:
-    - name: Restart k3s
-      ansible.builtin.systemd:
-        name: k3s
-        state: restarted
-
-    - name: Wait for k3s API to be ready
-      ansible.builtin.wait_for:
-        port: 6443
+# The disable flags now live in the inventory as `k3s_node_disable` on the
+# k3s_control_plane group, and the k3s_node role is the only writer. To change
+# which components are disabled, edit the inventory and run:
+#
+#   ansible-playbook -i inventory/hosts.yaml playbooks/k3s/prepare.yaml \
+#     --limit k3s_control_plane --tags k3s-config
+#
+# That play is serialised one CP node at a time, because restarting all three at
+# once drops the etcd quorum and takes the API server down with it.
 
 - name: Clean up Traefik and klipper-lb resources
   hosts: k3s_init
