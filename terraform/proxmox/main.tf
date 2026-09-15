@@ -145,11 +145,19 @@ resource "proxmox_virtual_environment_vm" "services" {
   }
 
   clone {
-    vm_id = each.value.template_id
+    # Explicit node_name, like the control plane and worker resources. Without it
+    # the clone only works while the template happens to live on the same node as
+    # the target VM — the Debian 13 template (9002) is on pve1, so moving a
+    # service VM to pve2 or pve3 would break apply.
+    node_name = var.template_node
+    vm_id     = each.value.template_id
   }
 
   cpu {
     cores = each.value.cores
+    # Matches the control plane and workers. The default (qemu64) hides SSE4.2
+    # and AES-NI from the guest, which measurably slows PBS's checksumming.
+    type = "host"
   }
 
   memory {
@@ -198,6 +206,16 @@ resource "proxmox_virtual_environment_vm" "services" {
       username = "ubuntu"
       keys     = [file(pathexpand(var.ssh_public_key_path))]
     }
+  }
+
+  # Same exemption the control plane and workers already carry, and for the same
+  # reason: Proxmox stores the cloud-init SSH key URL-encoded, so it reads back
+  # with a trailing %0A that never matches the file on disk. Without this the
+  # services resource had a permanent one-line diff, which meant `terraform plan`
+  # was never clean — and a plan that is never clean cannot be used to spot real
+  # drift, because the real drift drowns in the noise.
+  lifecycle {
+    ignore_changes = [initialization, clone]
   }
 
   provisioner "local-exec" {

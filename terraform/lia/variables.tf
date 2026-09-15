@@ -51,5 +51,10 @@ variable "vms" {
     # (AlmaLinux template = virtio0, Ubuntu cloud image template = scsi0);
     # otherwise the size applies to a second, unused disk.
     disk_interface = optional(string)
+    # Per-VM override of var.vm_datastore. source-03 was built on local-lvm while
+    # the variable says vmdata, so without a way to express that, every plan
+    # wanted to migrate its disk between storages — a real data move, proposed as
+    # an in-place update. Set it to where the disk actually is.
+    datastore = optional(string)
   }))
 }
