@@ -29,3 +29,221 @@ spec:
     # Verified 2026-09-02 — every run since the schedule was created was
     # PartiallyFailed with 12 errors and zero bytes of PV data in R2.
     defaultVolumesToFsBackup: true
+
+    # Database consistency.
+    #
+    # kopia walks a live filesystem file by file, so a database that is being
+    # written to during the walk is captured in an order no single point in time
+    # ever had. PostgreSQL's WAL recovery can repair an *atomic* snapshot — the
+    # kind a block-level or filesystem snapshot gives — but a file-by-file copy
+    # is not that, and Velero's own file-system-backup documentation says as
+    # much. A backup that restores into a corrupt database is worse than no
+    # backup, because it reports success.
+    #
+    # Each pre hook writes a consistent dump onto a volume that is itself backed
+    # up, and each post hook removes it again. Velero runs pre hooks, waits for
+    # the ItemBlock's PodVolumeBackup to reach a terminal state, then runs post
+    # hooks — so on a successful run the dump is in R2 before it is deleted
+    # locally, and the live volume carries no permanent second copy.
+    #
+    # Note the qualifier: Velero also considers a *failed* PodVolumeBackup
+    # terminal, so a run where the volume backup fails can still reach the post
+    # hook and delete a dump that never shipped. That surfaces as a failed or
+    # PartiallyFailed backup rather than silently — but it does mean a red
+    # backup must be treated as "no dump for that night", not merely a warning.
+    #
+    # onError: Fail on the pre hooks stops that pod's remaining hooks and marks
+    # the backup PartiallyFailed. It does NOT abort the whole run: other
+    # namespaces still back up. That is the intended trade — a PartiallyFailed
+    # run that is missing one database is honest, a Completed run containing an
+    # unrestorable database is not.
+    #
+    # Still NOT covered: ghost. Verified 2026-09-15 that `ghost backup` cannot
+    # work here — the CLI tries to start its own Ghost instance and dies with
+    # EADDRINUSE on port 2368 because the real one is already running — and no
+    # better-sqlite3 exists anywhere in the image. It needs a sidecar carrying
+    # sqlite3. Its SQLite runs in journal mode (no -wal file), which is a
+    # narrower window than vaultwarden's was, but not zero.
+    hooks:
+      resources:
+        - name: authentik-postgresql
+          includedNamespaces:
+            - authentik
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+              app.kubernetes.io/instance: authentik
+          pre:
+            - exec:
+                container: postgresql
+                # Password comes from the file the chart already mounts; it is
+                # not repeated here. --clean --if-exists makes the dump
+                # replayable into a non-empty database during a restore.
+                # Written to the PVC root, not into PGDATA (/bitnami/postgresql/data).
+                command:
+                  - /bin/sh
+                  - -c
+                  - >-
+                    PGPASSWORD="$(cat /opt/bitnami/postgresql/secrets/postgresql-password)"
+                    pg_dump -U authentik -d authentik --clean --if-exists
+                    -f /bitnami/postgresql/velero-dump.sql
+                # Mark the run PartiallyFailed rather than quietly shipping an
+                # inconsistent copy of the SSO database. See the note above for
+                # what Fail does and does not do.
+                onError: Fail
+                timeout: 10m
+          post:
+            - exec:
+                container: postgresql
+                command:
+                  - /bin/sh
+                  - -c
+                  - rm -f /bitnami/postgresql/velero-dump.sql
+                onError: Continue
+                timeout: 2m
+
+        - name: ibindex-postgres
+          includedNamespaces:
+            - ibindex
+          labelSelector:
+            matchLabels:
+              app: postgres
+          pre:
+            - exec:
+                container: postgres
+                # PGDATA is /var/lib/postgresql/data/pgdata, so the PVC root one
+                # level up is a safe place for the dump. Local socket auth needs
+                # no password here.
+                command:
+                  - /bin/sh
+                  - -c
+                  - >-
+                    pg_dump -U ibindex -d ibindex --clean --if-exists
+                    -f /var/lib/postgresql/data/velero-dump.sql
+                onError: Fail
+                timeout: 10m
+          post:
+            - exec:
+                container: postgres
+                command:
+                  - /bin/sh
+                  - -c
+                  - rm -f /var/lib/postgresql/data/velero-dump.sql
+                onError: Continue
+                timeout: 2m
+
+        - name: karakeep-sqlite
+          includedNamespaces:
+            - karakeep
+          labelSelector:
+            matchLabels:
+              app: karakeep
+          pre:
+            - exec:
+                container: karakeep
+                # VACUUM INTO is SQLite's own atomic copy: it takes a read lock,
+                # writes a new fully-formed database, and cannot observe a torn
+                # write. The image ships better-sqlite3, so no extra tooling is
+                # needed. Both databases on the PVC are covered.
+                #
+                # The destination is bound as a parameter rather than
+                # interpolated into the SQL. SQL string literals need single
+                # quotes, which would terminate the shell's own quoting around
+                # the script; binding sidesteps the escaping entirely.
+                #
+                # The rm first is load-bearing, not tidiness: VACUUM INTO
+                # refuses a destination that already exists and fails with
+                # SQLITE_ERROR (verified 2026-09-15). Without it, one missed
+                # post hook would make every later backup fail until someone
+                # deleted the file by hand.
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    rm -f /data/velero-db.db /data/velero-queue.db
+                    node -e '
+                      const D = require("better-sqlite3");
+                      for (const n of ["db", "queue"]) {
+                        const s = new D("/data/" + n + ".db", { readonly: true });
+                        s.prepare("VACUUM INTO ?").run("/data/velero-" + n + ".db");
+                        s.close();
+                      }
+                    '
+                onError: Fail
+                timeout: 10m
+          post:
+            - exec:
+                container: karakeep
+                command:
+                  - /bin/sh
+                  - -c
+                  - rm -f /data/velero-db.db /data/velero-queue.db
+                onError: Continue
+                timeout: 2m
+
+        - name: vaultwarden-sqlite
+          includedNamespaces:
+            - vaultwarden
+          labelSelector:
+            matchLabels:
+              app: vaultwarden
+          pre:
+            - exec:
+                container: vaultwarden
+                # Vaultwarden ships its own backup subcommand (since 1.32.1;
+                # this runs 1.37.1), which uses SQLite's online backup API and
+                # needs no sqlite3 binary and no admin cookie. It writes
+                # /data/db_<YYYYMMDD>_<HHMMSS>.sqlite3 onto the same PVC.
+                #
+                # This matters more than the others: WAL is active on this
+                # database (db.sqlite3-wal is written continuously), so a
+                # file-by-file copy of the password vault was the least
+                # trustworthy thing in the backup.
+                command:
+                  - /vaultwarden
+                  - backup
+                onError: Fail
+                timeout: 10m
+          post:
+            - exec:
+                container: vaultwarden
+                # Glob because the filename carries a timestamp. The underscore
+                # keeps this from matching the live db.sqlite3.
+                command:
+                  - /bin/sh
+                  - -c
+                  - rm -f /data/db_*.sqlite3
+                onError: Continue
+                timeout: 2m
+
+        - name: vikunja-dump
+          includedNamespaces:
+            - vikunja
+          labelSelector:
+            matchLabels:
+              app: vikunja
+          pre:
+            - exec:
+                container: vikunja
+                # The image is distroless — no shell, not even ls — so the
+                # command is the binary itself rather than sh -c. Velero execs
+                # directly, so that works.
+                #
+                # The dump goes to /tmp, which is an emptyDir, NOT to the PVC at
+                # /app/vikunja/files: `dump` includes the files directory in the
+                # archive, so writing it there would have the dump swallow
+                # itself. emptyDir volumes are covered by
+                # defaultVolumesToFsBackup, so /tmp is backed up too.
+                #
+                # No post hook: there is no rm to call. The filename is fixed
+                # and `dump` overwrites it (verified 2026-09-15), so nothing
+                # accumulates, and the emptyDir is discarded on pod restart.
+                command:
+                  - /app/vikunja/vikunja
+                  - dump
+                  - -p
+                  - /tmp
+                  - -f
+                  - velero-dump.zip
+                onError: Fail
+                timeout: 10m
