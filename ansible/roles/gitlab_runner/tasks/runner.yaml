@@ -1,0 +1,52 @@
+---
+- name: Add GitLab Runner apt repository
+  ansible.builtin.shell:
+    cmd: |
+      curl -fsSL https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | bash
+    creates: /etc/apt/sources.list.d/runner_gitlab-runner.list
+
+- name: Install GitLab Runner
+  ansible.builtin.apt:
+    name: gitlab-runner
+    state: present
+    update_cache: true
+
+- name: Create cache directory
+  ansible.builtin.file:
+    path: "{{ gitlab_runner_cache_dir }}"
+    state: directory
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: "0755"
+
+- name: Load runner token
+  community.sops.load_vars:
+    file: "{{ inventory_dir }}/group_vars/proxmox_vms/vault.sops.yaml"
+  no_log: true
+
+- name: Fail early if the runner token is missing
+  ansible.builtin.fail:
+    msg: >-
+      vault_gitlab_runner_token is not set. Create a project runner in the school's
+      GitLab (Settings -> CI/CD -> Runners -> New project runner), then add the
+      resulting glrt- token to inventory/group_vars/proxmox_vms/vault.sops.yaml.
+  when: vault_gitlab_runner_token is not defined
+
+# With authentication tokens the runner needs no `register` call: a complete
+# config.toml is all it reads at startup. That keeps this role declarative —
+# changing a setting is an edit here, not an unregister/re-register cycle.
+- name: Write runner configuration
+  ansible.builtin.template:
+    src: config.toml.j2
+    dest: /etc/gitlab-runner/config.toml
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart gitlab-runner
+
+- name: Enable and start GitLab Runner
+  ansible.builtin.systemd:
+    name: gitlab-runner
+    enabled: true
+    state: started

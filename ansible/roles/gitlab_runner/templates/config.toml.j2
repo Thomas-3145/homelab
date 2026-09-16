@@ -1,0 +1,29 @@
+# Managed by Ansible (roles/gitlab_runner) — local edits are overwritten.
+concurrent = {{ gitlab_runner_concurrent }}
+check_interval = 3
+log_level = "info"
+
+[[runners]]
+  name = "{{ gitlab_runner_description }}"
+  url = "{{ gitlab_runner_url }}"
+  token = "{{ vault_gitlab_runner_token }}"
+  executor = "docker"
+
+  [runners.docker]
+    image = "{{ gitlab_runner_default_image }}"
+    # The reason this runner is faster than a shared one: images already on disk
+    # are reused instead of pulled on every job. "always" is kept as a fallback
+    # so a moving tag can still be refreshed when the local copy is missing.
+    pull_policy = ["if-not-present", "always"]
+    privileged = false
+    tls_verify = false
+    shm_size = 0
+    # Job containers are throwaway; the cache directory is not.
+    volumes = ["{{ gitlab_runner_cache_dir }}:/cache:rw"]
+
+  [runners.cache]
+    # Local disk, no object storage needed: every job lands on this one host,
+    # so a shared S3 cache would only add round trips.
+    Type = "local"
+    [runners.cache.local]
+      Path = "/cache"

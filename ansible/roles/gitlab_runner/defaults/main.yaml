@@ -1,0 +1,18 @@
+---
+# GitLab instance the runner registers against. The school owns it; we only
+# supply the executor.
+gitlab_runner_url: "https://git.chas-lab.dev/"
+
+# Name shown in the project's runner list.
+gitlab_runner_description: "homelab-pve3-docker"
+
+# Default image for jobs that don't set one themselves.
+gitlab_runner_default_image: "alpine:3.22"
+
+# How many jobs run at once. Eight cores, so two jobs can each have real
+# parallelism without thrashing.
+gitlab_runner_concurrent: 2
+
+# Local cache directory, bind-mounted into every job container. This is what
+# makes reruns fast — dependency downloads survive between jobs.
+gitlab_runner_cache_dir: "/srv/gitlab-runner/cache"

@@ -1,0 +1,41 @@
+---
+- name: Configure GitLab Runner
+  hosts: gitlab-runner
+  become: true
+  gather_facts: false
+
+  # The common role hardens SSH to port 22456, but a freshly provisioned LXC still
+  # listens on 22. Probe both so this playbook works on first bootstrap and on
+  # every later run without manual overrides. Same approach as the whisper playbook.
+  pre_tasks:
+    - name: Probe candidate SSH ports (prefer hardened 22456)
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: "{{ item }}"
+        timeout: 3
+      delegate_to: localhost
+      become: false
+      register: gitlab_runner_ssh_probe
+      ignore_errors: true
+      # wait_for is skipped under --check, which would leave the probe with no
+      # results and silently select the hardened port on a host still on 22.
+      check_mode: false
+      loop:
+        - 22456
+        - 22
+
+    - name: Fail if neither SSH port is reachable
+      ansible.builtin.fail:
+        msg: "gitlab-runner ({{ ansible_host }}) is not reachable on port 22 or 22456."
+      when: gitlab_runner_ssh_probe.results | selectattr('failed', 'equalto', false) | list | length == 0
+
+    - name: Select the first reachable SSH port
+      ansible.builtin.set_fact:
+        ansible_port: "{{ gitlab_runner_ssh_probe.results | selectattr('failed', 'equalto', false) | map(attribute='item') | first }}"
+
+    - name: Gather facts now that the SSH port is known
+      ansible.builtin.setup:
+
+  roles:
+    - common
+    - gitlab_runner

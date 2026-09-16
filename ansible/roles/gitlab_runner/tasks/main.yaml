@@ -1,0 +1,6 @@
+---
+- name: Install Docker
+  ansible.builtin.import_tasks: docker.yaml
+
+- name: Install and register GitLab Runner
+  ansible.builtin.import_tasks: runner.yaml

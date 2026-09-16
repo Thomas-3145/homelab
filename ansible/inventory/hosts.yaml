@@ -72,6 +72,12 @@ all:
               # LXC 202 on pve3 — transcription, kept off pve2 so it doesn't
               # compete with the LLM. Same SSH port handling as ai-lab.
               ansible_port: 22456
+            gitlab-runner:
+              ansible_host: 192.168.10.43
+              ansible_user: root
+              # LXC 203 on pve3 — CI executor for the school project's GitLab.
+              # Same SSH port handling as whisper.
+              ansible_port: 22456
             pbs:
               ansible_host: 192.168.10.30
               # Debian 13 VM (cloud-init user "ubuntu", inherited from proxmox_vms).
