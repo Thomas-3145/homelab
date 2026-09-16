@@ -202,3 +202,75 @@ resource "proxmox_virtual_environment_container" "ai_lab" {
     ignore_changes = [initialization, operating_system]
   }
 }
+
+# GitLab Runner for the school project's CI. The school's shared runners are the
+# bottleneck this replaces — mostly queue time, but their executors are also small.
+#
+# On pve3 rather than in k3s: the workers are 2 vCPU / 6 GB and already ~70 %
+# committed, so a job pod would get less CPU than the shared runners give. Here it
+# can have 8 cores, and Docker's local image cache survives between jobs, which is
+# the single largest saving on a pipeline that runs the same images all day.
+#
+# pve3 also runs whisper (live lecture transcription) and cp-03's etcd, both
+# latency-sensitive. CPU units deprioritise CI against whisper's 20: bursty builds
+# take whatever is idle and yield the moment a lecture starts.
+resource "proxmox_virtual_environment_container" "gitlab_runner" {
+  node_name = "pve3"
+  vm_id     = 203
+
+  unprivileged = true
+
+  features {
+    nesting = true
+  }
+
+  initialization {
+    hostname = "gitlab-runner"
+
+    dns {
+      servers = ["1.1.1.1", "8.8.8.8"]
+    }
+
+    ip_config {
+      ipv4 {
+        address = "192.168.10.43/24"
+        gateway = "192.168.10.1"
+      }
+    }
+
+    user_account {
+      keys = [file(pathexpand(var.ssh_public_key_path))]
+    }
+  }
+
+  network_interface {
+    name   = "eth0"
+    bridge = "vmbr0"
+  }
+
+  operating_system {
+    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    type             = "ubuntu"
+  }
+
+  disk {
+    datastore_id = var.vm_datastore
+    # Docker image cache is the point of this container, so give it room to grow:
+    # a handful of language base images plus layers runs well past 20 GB.
+    size = 60
+  }
+
+  cpu {
+    cores = 8
+    # Below whisper's 20 — a lecture in progress outranks a build.
+    units = 10
+  }
+
+  memory {
+    dedicated = 8192
+  }
+
+  lifecycle {
+    ignore_changes = [initialization, operating_system]
+  }
+}
