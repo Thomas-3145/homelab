@@ -63,3 +63,8 @@ venv/
 # Node
 node_modules/
 package-lock.json
+
+# AI assistant tooling
+.claude/
+CLAUDE.md
+AI_CONTEXT.md
