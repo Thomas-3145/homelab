@@ -13,6 +13,10 @@ services:
       - TZ=Europe/Stockholm
     volumes:
       - /opt/arr-stack/jellyfin:/config
+      # Transcodes land in /cache. Unmounted it became an anonymous volume on
+      # the 32 GB root disk, and one runaway transcode filled it, breaking
+      # every *arr SQLite DB. Keep it on the large media disk instead.
+      - /mnt/media/jellyfin-cache:/cache
       # Read-only access to the library; subfolders /data/tv and /data/movies
       - /mnt/media/media:/data:ro
     devices:
